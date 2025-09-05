@@ -26,7 +26,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 
 #[derive(Clone)]
 pub struct PetriNetMarkupLanguage {
-    pub(crate) net: process_mining::PetriNet,
+    pub net: process_mining::PetriNet,
 }
 
 impl Importable for PetriNetMarkupLanguage {

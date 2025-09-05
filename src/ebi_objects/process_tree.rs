@@ -38,9 +38,9 @@ pub const FORMAT_SPECIFICATION: &str = "A process tree is a line-based structure
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct ProcessTree {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) tree: Vec<Node>,
-    pub(crate) transition2node: Vec<usize>,
+    pub activity_key: ActivityKey,
+    pub tree: Vec<Node>,
+    pub transition2node: Vec<usize>,
 }
 
 impl ProcessTree {

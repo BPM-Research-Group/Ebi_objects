@@ -7,7 +7,7 @@ use std::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Marking {
-    pub(crate) place2token: Vec<u64>, //for each place: number of tokens in that place
+    pub place2token: Vec<u64>, //for each place: number of tokens in that place
 }
 
 impl Marking {

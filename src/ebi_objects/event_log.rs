@@ -16,8 +16,8 @@ use crate::{
 #[derive(ActivityKey, Clone)]
 pub struct EventLog {
     classifier: EventLogClassifier,
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) traces: Vec<Vec<Activity>>,
+    pub activity_key: ActivityKey,
+    pub traces: Vec<Vec<Activity>>,
     rust4pm_log: process_mining::EventLog,
 }
 

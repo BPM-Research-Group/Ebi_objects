@@ -9,14 +9,14 @@ use std::{
 #[derive(Clone, Copy, Ord, Eq, PartialEq, PartialOrd)]
 #[cfg(not(test))]
 pub struct Activity {
-    pub(crate) id: usize,
+    pub id: usize,
 }
 
 #[derive(Clone, Copy, Eq)]
 #[cfg(test)]
 pub struct Activity {
-    pub(crate) id: usize,
-    pub(crate) activity_key_uuid: Uuid, //In testing, an uuid is kept of the activity key.
+    pub id: usize,
+    pub activity_key_uuid: Uuid, //In testing, an uuid is kept of the activity key.
 }
 
 impl PartialEq<usize> for Activity {

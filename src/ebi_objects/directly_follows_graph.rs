@@ -12,22 +12,26 @@ use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
-    TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    json,
-    traits::{exportable::Exportable, graphable, importable::Importable},
+    constants::ebi_object::EbiObject, format_comparison, json, traits::{exportable::Exportable, graphable, importable::Importable}, Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable, TranslateActivityKey
 };
+
+pub const FORMAT_SPECIFICATION: &str = concat!(
+    "A directly follows graph is a JSON structure.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.dfg}",
+    format_comparison!()
+);
 
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) empty_traces_weight: Fraction,
-    pub(crate) sources: Vec<Activity>, //edge -> source of edge
-    pub(crate) targets: Vec<Activity>, //edge -> target of edge
-    pub(crate) weights: Vec<Fraction>, //edge -> how often observed
-    pub(crate) start_activities: HashMap<Activity, Fraction>, //activity -> how often observed
-    pub(crate) end_activities: HashMap<Activity, Fraction>, //activity -> how often observed
+    pub activity_key: ActivityKey,
+    pub empty_traces_weight: Fraction,
+    pub sources: Vec<Activity>, //edge -> source of edge
+    pub targets: Vec<Activity>, //edge -> target of edge
+    pub weights: Vec<Fraction>, //edge -> how often observed
+    pub start_activities: HashMap<Activity, Fraction>, //activity -> how often observed
+    pub end_activities: HashMap<Activity, Fraction>, //activity -> how often observed
 }
 
 impl DirectlyFollowsGraph {
@@ -148,7 +152,7 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub(crate) fn binary_search(&self, source: Activity, target: Activity) -> (bool, usize) {
+    pub fn binary_search(&self, source: Activity, target: Activity) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }

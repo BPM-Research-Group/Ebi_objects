@@ -32,14 +32,14 @@ pub const FORMAT_SPECIFICATION: &str = "A stochastic deterministic finite automa
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticDeterministicFiniteAutomaton {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) initial_state: Option<usize>,
-    pub(crate) max_state: usize,
-    pub(crate) sources: Vec<usize>,       //transition -> source of arc
-    pub(crate) targets: Vec<usize>,       //transition -> target of arc
-    pub(crate) activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
-    pub(crate) probabilities: Vec<Fraction>, //transition -> probability of arc
-    pub(crate) terminating_probabilities: Vec<Fraction>, //state -> termination probability
+    pub activity_key: ActivityKey,
+    pub initial_state: Option<usize>,
+    pub max_state: usize,
+    pub sources: Vec<usize>,       //transition -> source of arc
+    pub targets: Vec<usize>,       //transition -> target of arc
+    pub activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
+    pub probabilities: Vec<Fraction>, //transition -> probability of arc
+    pub terminating_probabilities: Vec<Fraction>, //state -> termination probability
 }
 
 impl StochasticDeterministicFiniteAutomaton {
@@ -220,7 +220,7 @@ impl StochasticDeterministicFiniteAutomaton {
         }
     }
 
-    pub(crate) fn binary_search(&self, source: usize, activity: usize) -> (bool, usize) {
+    pub fn binary_search(&self, source: usize, activity: usize) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }

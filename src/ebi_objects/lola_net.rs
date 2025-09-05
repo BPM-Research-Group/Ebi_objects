@@ -23,7 +23,7 @@ pub const FORMAT_SPECIFICATION: &str =
 For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/mutex.lola}";
 
-pub struct LolaNet(pub(crate) LabelledPetriNet);
+pub struct LolaNet(pub LabelledPetriNet);
 
 impl LolaNet {
     pub fn escape_transition_label(label: &str) -> String {

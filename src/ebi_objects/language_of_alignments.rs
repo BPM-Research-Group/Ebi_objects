@@ -10,8 +10,8 @@ pub const HEADER: &str = "language of alignments";
 
 #[derive(ActivityKey, Clone)]
 pub struct LanguageOfAlignments {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) alignments: Vec<Vec<Move>>,
+    pub activity_key: ActivityKey,
+    pub alignments: Vec<Vec<Move>>,
 }
 
 impl LanguageOfAlignments {

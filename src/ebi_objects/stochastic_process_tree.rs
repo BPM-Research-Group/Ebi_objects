@@ -33,15 +33,15 @@ pub const FORMAT_SPECIFICATION: &str = "A stochastic process tree is a line-base
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticProcessTree {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) tree: Vec<Node>,
-    pub(crate) transition2node: Vec<usize>,
-    pub(crate) weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
-    pub(crate) termination_weight: Fraction,
+    pub activity_key: ActivityKey,
+    pub tree: Vec<Node>,
+    pub transition2node: Vec<usize>,
+    pub weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
+    pub termination_weight: Fraction,
 }
 
 impl StochasticProcessTree {
-    pub(crate) fn node_to_string(
+    pub fn node_to_string(
         &self,
         indent: usize,
         node: usize,
@@ -187,7 +187,7 @@ impl StochasticProcessTree {
         Ok(())
     }
 
-    pub(crate) fn node_to_dot(
+    pub fn node_to_dot(
         &self,
         graph: &mut VisualGraph,
         node: usize,

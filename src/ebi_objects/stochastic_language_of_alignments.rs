@@ -29,9 +29,9 @@ pub const FORMAT_SPECIFICATION: &str = "A stochastic language of alignments is a
 
 #[derive(ActivityKey, Clone)]
 pub struct StochasticLanguageOfAlignments {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) alignments: Vec<Vec<Move>>,
-    pub(crate) probabilities: Vec<Fraction>,
+    pub activity_key: ActivityKey,
+    pub alignments: Vec<Vec<Move>>,
+    pub probabilities: Vec<Fraction>,
 }
 
 impl StochasticLanguageOfAlignments {

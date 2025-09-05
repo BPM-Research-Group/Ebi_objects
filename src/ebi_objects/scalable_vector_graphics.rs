@@ -8,7 +8,7 @@ use crate::{EbiObject, Exportable, Graphable, Infoable};
 pub const FORMAT_SPECIFICATION: &str = "Ebi does not support importing of SVG files.";
 
 #[derive(Clone)]
-pub struct ScalableVectorGraphics(pub(crate) String);
+pub struct ScalableVectorGraphics(pub String);
 
 impl ScalableVectorGraphics {
     pub fn empty() -> Self {

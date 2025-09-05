@@ -27,14 +27,14 @@ pub const HEADER: &str = "labelled Petri net";
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct LabelledPetriNet {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) initial_marking: Marking,
-    pub(crate) labels: Vec<Option<Activity>>,
-    pub(crate) place2output_transitions: Vec<Vec<usize>>,
-    pub(crate) transition2input_places: Vec<Vec<usize>>,
-    pub(crate) transition2output_places: Vec<Vec<usize>>,
-    pub(crate) transition2input_places_cardinality: Vec<Vec<u64>>,
-    pub(crate) transition2output_places_cardinality: Vec<Vec<u64>>, //fields are the same as in StochasticLabelledPetriNet
+    pub activity_key: ActivityKey,
+    pub initial_marking: Marking,
+    pub labels: Vec<Option<Activity>>,
+    pub place2output_transitions: Vec<Vec<usize>>,
+    pub transition2input_places: Vec<Vec<usize>>,
+    pub transition2output_places: Vec<Vec<usize>>,
+    pub transition2input_places_cardinality: Vec<Vec<u64>>,
+    pub transition2output_places_cardinality: Vec<Vec<u64>>, //fields are the same as in StochasticLabelledPetriNet
 }
 
 impl LabelledPetriNet {

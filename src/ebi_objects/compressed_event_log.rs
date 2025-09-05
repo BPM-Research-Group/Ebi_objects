@@ -3,11 +3,16 @@ use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
 use std::io::{BufRead, BufReader, Write};
 
 use crate::{
-    constants::ebi_object::EbiObject, ebi_objects::event_log::EventLog, traits::{exportable::Exportable, importable::Importable}
+    constants::ebi_object::EbiObject,
+    ebi_objects::event_log::EventLog,
+    traits::{exportable::Exportable, importable::Importable},
 };
 
+pub const FORMAT_SPECIFICATION: &str = "A compressed event log is a gzipped event log file in the IEEE XES format~\\cite{DBLP:journals/cim/AcamporaVSAGV17}.
+Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
+
 pub struct CompressedEventLog {
-    pub(crate) log: EventLog,
+    pub log: EventLog,
 }
 
 impl Importable for CompressedEventLog {

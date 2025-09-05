@@ -10,18 +10,33 @@ use std::{
 };
 
 use crate::{
-    json, traits::graphable, Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, json, traits::graphable,
 };
+
+pub const FORMAT_SPECIFICATION: &str = "A deterministic finite automaton is a JSON structure with the top level being an object.
+    This object contains the following key-value pairs:
+    \\begin{itemize}
+    \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the DFA has an empty language.
+    \\item \\texttt{finalStates} being a list of indices of the final states.
+    A final state is not necessarily a deadlock state.
+    \\item \\texttt{transitions} being a list of transitions. 
+    Each transition is an object with \\texttt{from} being the source state index of the transition, \\texttt{to} being the target state index of the transition, and \texttt{{label}} being the activity of the transition. 
+    Silent transitions are not supported.
+    The file format supports deadlocks and livelocks.
+    \\end{itemize}
+    For instance:
+    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.dfa}";
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct DeterministicFiniteAutomaton {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) initial_state: Option<usize>,
-    pub(crate) max_state: usize,
-    pub(crate) sources: Vec<usize>,       //transition -> source of arc
-    pub(crate) targets: Vec<usize>,       //transition -> target of arc
-    pub(crate) activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
-    pub(crate) final_states: Vec<bool>,
+    pub activity_key: ActivityKey,
+    pub initial_state: Option<usize>,
+    pub max_state: usize,
+    pub sources: Vec<usize>,       //transition -> source of arc
+    pub targets: Vec<usize>,       //transition -> target of arc
+    pub activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
+    pub final_states: Vec<bool>,
 }
 
 impl DeterministicFiniteAutomaton {
@@ -148,7 +163,7 @@ impl DeterministicFiniteAutomaton {
         }
     }
 
-    pub(crate) fn binary_search(&self, source: usize, activity: usize) -> (bool, usize) {
+    pub fn binary_search(&self, source: usize, activity: usize) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }

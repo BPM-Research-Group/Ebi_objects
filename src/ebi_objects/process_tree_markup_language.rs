@@ -25,7 +25,7 @@ For instance:
 
 #[derive(Clone)]
 pub struct ProcessTreeMarkupLanguage {
-    pub(crate) tree: ProcessTree,
+    pub tree: ProcessTree,
 }
 
 struct State {

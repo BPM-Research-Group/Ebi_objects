@@ -33,14 +33,14 @@ pub const FORMAT_SPECIFICATION: &str = concat!("A stochstic directly follows mod
 
 #[derive(ActivityKey, Debug, Clone)]
 pub struct StochasticDirectlyFollowsModel {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) node_2_activity: Vec<Activity>,
-    pub(crate) empty_traces_weight: Fraction,
-    pub(crate) sources: Vec<NodeIndex>, //edge -> source of edge
-    pub(crate) targets: Vec<NodeIndex>, //edge -> target of edge
-    pub(crate) weights: Vec<Fraction>,  //edge -> how often observed
-    pub(crate) start_node_weights: Vec<Fraction>, //node -> how often observed
-    pub(crate) end_node_weights: Vec<Fraction>, //node -> how often observed
+    pub activity_key: ActivityKey,
+    pub node_2_activity: Vec<Activity>,
+    pub empty_traces_weight: Fraction,
+    pub sources: Vec<NodeIndex>, //edge -> source of edge
+    pub targets: Vec<NodeIndex>, //edge -> target of edge
+    pub weights: Vec<Fraction>,  //edge -> how often observed
+    pub start_node_weights: Vec<Fraction>, //node -> how often observed
+    pub end_node_weights: Vec<Fraction>, //node -> how often observed
 }
 
 pub type NodeIndex = usize;
@@ -123,7 +123,7 @@ impl StochasticDirectlyFollowsModel {
         }
     }
 
-    pub(crate) fn binary_search(&self, source: NodeIndex, target: NodeIndex) -> (bool, usize) {
+    pub fn binary_search(&self, source: NodeIndex, target: NodeIndex) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }

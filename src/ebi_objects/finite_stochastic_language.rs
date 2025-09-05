@@ -18,8 +18,8 @@ pub const HEADER: &str = "finite stochastic language";
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct FiniteStochasticLanguage {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) traces: HashMap<Vec<Activity>, Fraction>,
+    pub activity_key: ActivityKey,
+    pub traces: HashMap<Vec<Activity>, Fraction>,
 }
 
 impl FiniteStochasticLanguage {

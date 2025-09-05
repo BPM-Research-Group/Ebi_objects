@@ -51,13 +51,13 @@ pub const FORMAT_SPECIFICATION: &str = concat!("A directly follows model is a li
 
 #[derive(ActivityKey, Debug, Clone)]
 pub struct DirectlyFollowsModel {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) node_2_activity: Vec<Activity>,
-    pub(crate) empty_traces: bool,
-    pub(crate) sources: Vec<NodeIndex>, //edge -> source of edge
-    pub(crate) targets: Vec<NodeIndex>, //edge -> target of edge
-    pub(crate) start_nodes: Vec<bool>,  //node -> how often observed
-    pub(crate) end_nodes: Vec<bool>,    //node -> how often observed
+    pub activity_key: ActivityKey,
+    pub node_2_activity: Vec<Activity>,
+    pub empty_traces: bool,
+    pub sources: Vec<NodeIndex>, //edge -> source of edge
+    pub targets: Vec<NodeIndex>, //edge -> target of edge
+    pub start_nodes: Vec<bool>,  //node -> how often observed
+    pub end_nodes: Vec<bool>,    //node -> how often observed
 }
 
 impl DirectlyFollowsModel {
@@ -135,7 +135,7 @@ impl DirectlyFollowsModel {
         }
     }
 
-    pub(crate) fn binary_search(&self, source: NodeIndex, target: NodeIndex) -> (bool, usize) {
+    pub fn binary_search(&self, source: NodeIndex, target: NodeIndex) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }

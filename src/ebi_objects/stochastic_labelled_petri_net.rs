@@ -34,15 +34,15 @@ pub const FORMAT_SPECIFICATION: &str = "A stochastic labelled Petri net is a lin
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct StochasticLabelledPetriNet {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) initial_marking: Marking,
-    pub(crate) labels: Vec<Option<Activity>>,
-    pub(crate) transition2input_places: Vec<Vec<usize>>,
-    pub(crate) transition2output_places: Vec<Vec<usize>>,
-    pub(crate) transition2input_places_cardinality: Vec<Vec<u64>>,
-    pub(crate) transition2output_places_cardinality: Vec<Vec<u64>>, //fields are the same as in LabelledPetriNet
-    pub(crate) place2output_transitions: Vec<Vec<usize>>,
-    pub(crate) weights: Vec<Fraction>,
+    pub activity_key: ActivityKey,
+    pub initial_marking: Marking,
+    pub labels: Vec<Option<Activity>>,
+    pub transition2input_places: Vec<Vec<usize>>,
+    pub transition2output_places: Vec<Vec<usize>>,
+    pub transition2input_places_cardinality: Vec<Vec<u64>>,
+    pub transition2output_places_cardinality: Vec<Vec<u64>>, //fields are the same as in LabelledPetriNet
+    pub place2output_transitions: Vec<Vec<usize>>,
+    pub weights: Vec<Fraction>,
 }
 
 impl StochasticLabelledPetriNet {
