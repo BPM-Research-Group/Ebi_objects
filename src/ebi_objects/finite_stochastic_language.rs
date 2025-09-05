@@ -9,8 +9,9 @@ use std::{
 };
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject, line_reader::LineReader,
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
+    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    line_reader::LineReader,
 };
 
 pub const HEADER: &str = "finite stochastic language";
@@ -47,8 +48,11 @@ impl FiniteStochasticLanguage {
     }
 
     pub fn normalise(&mut self) {
-        if self.len() != 0 {
-            let sum = self.get_probability_sum();
+        if self.number_of_traces() != 0 {
+            let sum = self.traces.values().fold(Fraction::zero(), |mut x, y| {
+                x += y;
+                x
+            });
             log::info!("the extracted traces cover a sum of {}", sum);
             self.traces.retain(|_, v| {
                 *v /= &sum;
@@ -248,8 +252,8 @@ impl Importable for FiniteStochasticLanguage {
 impl Exportable for FiniteStochasticLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::Object(EbiObject::FiniteStochasticLanguage(slang)) => slang.export(f),
-            EbiObject::Object(EbiObject::EventLog(log)) => Into::<Self>::into(log).export(f),
+            EbiObject::FiniteStochasticLanguage(slang) => slang.export(f),
+            EbiObject::EventLog(log) => Into::<Self>::into(log).export(f),
             _ => unreachable!(),
         }
     }
@@ -272,10 +276,17 @@ impl Infoable for FiniteStochasticLanguage {
             "Number of activities\t{}",
             self.activity_key().get_number_of_activities()
         )?;
-        writeln!(f, "Sum of probabilities\t{:.4}", self.get_probability_sum())?;
+        writeln!(
+            f,
+            "Sum of probabilities\t{:.4}",
+            self.traces.values().fold(Fraction::zero(), |mut x, y| {
+                x += y;
+                x
+            })
+        )?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }
@@ -301,13 +312,23 @@ impl fmt::Display for FiniteStochasticLanguage {
     }
 }
 
+impl IndexTrace for FiniteStochasticLanguage {
+    fn number_of_traces(&self) -> usize {
+        self.traces.len()
+    }
+
+    fn get_trace(&self, trace_index: usize) -> Option<&Vec<Activity>> {
+        self.traces.keys().nth(trace_index)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
 
     use ebi_arithmetic::{Fraction, Zero};
 
-    use crate::ebi_objects::finite_stochastic_language::FiniteStochasticLanguage;
+    use crate::{IndexTrace, ebi_objects::finite_stochastic_language::FiniteStochasticLanguage};
 
     #[test]
     fn empty_slang() {
@@ -315,7 +336,13 @@ mod tests {
         let mut slang = fin.parse::<FiniteStochasticLanguage>().unwrap();
         slang.normalise();
 
-        assert_eq!(slang.len(), 0);
-        assert_eq!(slang.get_probability_sum(), Fraction::zero());
+        assert_eq!(slang.number_of_traces(), 0);
+        assert_eq!(
+            slang.traces.values().fold(Fraction::zero(), |mut x, y| {
+                x += y;
+                x
+            }),
+            Fraction::zero()
+        );
     }
 }

@@ -4,7 +4,7 @@ use ebi_derive::ActivityKey;
 use std::{fmt::Display, str::FromStr};
 
 use crate::{
-    line_reader::LineReader, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Importable, Infoable, TranslateActivityKey
+    line_reader::LineReader, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable, Infoable, TranslateActivityKey
 };
 
 use super::language_of_alignments::Move;
@@ -329,7 +329,7 @@ impl Infoable for StochasticLanguageOfAlignments {
         writeln!(f, "Number of alignments\t\t{}", self.alignments.len())?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }

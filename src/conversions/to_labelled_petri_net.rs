@@ -4,7 +4,20 @@ use anyhow::{Error, Result, anyhow};
 
 use crate::{
     ActivityKeyTranslator, HasActivityKey,
-    ebi_objects::{labelled_petri_net::LabelledPetriNet, process_tree::{Node, Operator}}, 
+    ebi_objects::{
+        deterministic_finite_automaton::DeterministicFiniteAutomaton,
+        directly_follows_graph::DirectlyFollowsGraph,
+        directly_follows_model::DirectlyFollowsModel,
+        labelled_petri_net::LabelledPetriNet,
+        lola_net::LolaNet,
+        petri_net_markup_language::PetriNetMarkupLanguage,
+        process_tree::{Node, Operator, ProcessTree},
+        process_tree_markup_language::ProcessTreeMarkupLanguage,
+        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+        stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+        stochastic_labelled_petri_net::StochasticLabelledPetriNet,
+        stochastic_process_tree::StochasticProcessTree,
+    },
     marking::Marking,
 };
 
@@ -19,10 +32,8 @@ macro_rules! tree {
                 }
 
                 let mut result = LabelledPetriNet::new();
-                let translator = ActivityKeyTranslator::new(
-                    value.activity_key(),
-                    result.activity_key_mut(),
-                );
+                let translator =
+                    ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
                 let source = result.add_place();
                 let sink = result.add_place();
                 result
@@ -258,16 +269,14 @@ macro_rules! dfm {
             fn from(value: $t) -> LabelledPetriNet {
                 log::info!("convert (S)DFM to LPN");
 
-                if value.get_initial_state().is_none() {
+                if value.node_2_activity.is_empty() && !value.has_empty_traces() {
                     //SDFA has an empty language, return a livelocked SLPN
                     return Self::new_empty_language();
                 }
 
                 let mut result = LabelledPetriNet::new();
-                let translator = ActivityKeyTranslator::new(
-                    value.get_activity_key(),
-                    result.get_activity_key_mut(),
-                );
+                let translator =
+                    ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
                 let source = result.add_place();
                 let sink = result.add_place();
                 result
@@ -400,7 +409,7 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
 
         let mut result = LabelledPetriNet::new();
         let translator =
-            ActivityKeyTranslator::new(value.get_activity_key(), result.get_activity_key_mut());
+            ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
 
         //add places
         let mut state2place = vec![];
@@ -465,7 +474,7 @@ impl TryFrom<PetriNetMarkupLanguage> for LabelledPetriNet {
         let mut transition2index = HashMap::new();
         for (transition_id, transition) in &pnml.net.transitions {
             let label = match &transition.label {
-                Some(activity) => Some(result.get_activity_key_mut().process_activity(activity)),
+                Some(activity) => Some(result.activity_key_mut().process_activity(activity)),
                 None => None,
             };
             let transition = result.add_transition(label);
@@ -539,17 +548,32 @@ impl TryFrom<PetriNetMarkupLanguage> for LabelledPetriNet {
                 }
 
                 //verify that this is a deadlock marking
-                let mut state = LPNMarking {
-                    marking: new_final_marking,
-                    enabled_transitions: bitvec![0; result.get_number_of_transitions()],
-                    number_of_enabled_transitions: 0,
-                };
-                result.compute_enabled_transitions(&mut state);
-                if !result.is_final_state(&state) {
-                    return Err(anyhow!(
-                        "This PNML file has a final marking that is not a deadlock. In Ebi, each final marking must be a deadlock. This final marking is {:?}",
-                        final_marking
-                    ));
+                for transition in 0..result.transition2input_places.len() {
+                    let mut marking = new_final_marking.clone();
+                    let mut enabled = true;
+                    for (in_place_pos, in_place) in result.transition2input_places[transition]
+                        .iter()
+                        .enumerate()
+                    {
+                        if marking.place2token[*in_place]
+                            < result.transition2input_places_cardinality[transition][in_place_pos]
+                        {
+                            //transition not enabled
+                            enabled = false;
+                            break;
+                        } else {
+                            //transition may be enabled
+                            marking.place2token[*in_place] -=
+                                result.transition2input_places_cardinality[transition][in_place_pos]
+                        }
+                    }
+
+                    if enabled {
+                        return Err(anyhow!(
+                            "This PNML file has a final marking that is not a deadlock. In Ebi, each final marking must be a deadlock. This final marking is {:?}",
+                            final_marking
+                        ));
+                    }
                 }
             }
         }

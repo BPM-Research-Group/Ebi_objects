@@ -6,11 +6,15 @@ use process_mining::{
     petri_net::petri_net_struct::{self, ArcType},
 };
 
-use crate::{
-    ebi_objects::{
-        deterministic_finite_automaton::DeterministicFiniteAutomaton, directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel, labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage, process_tree::ProcessTree, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton, stochastic_directly_follows_model::StochasticDirectlyFollowsModel, stochastic_labelled_petri_net::StochasticLabelledPetriNet, stochastic_process_tree::StochasticProcessTree
-    },
-    ebi_traits::ebi_trait_semantics::Semantics,
+use crate::ebi_objects::{
+    deterministic_finite_automaton::DeterministicFiniteAutomaton,
+    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
+    labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
+    process_tree::ProcessTree,
+    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
+    stochastic_process_tree::StochasticProcessTree,
 };
 
 impl TryFrom<LabelledPetriNet> for PetriNetMarkupLanguage {
@@ -31,7 +35,7 @@ impl TryFrom<LabelledPetriNet> for PetriNetMarkupLanguage {
         }
 
         //create transitions
-        for transition in 0..lpn.get_number_of_transitions() {
+        for transition in 0..lpn.transition2input_places.len() {
             let new_transition = result.add_transition(
                 match lpn.get_transition_label(transition) {
                     Some(activity) => {

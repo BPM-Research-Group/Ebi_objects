@@ -9,8 +9,7 @@ use std::{
 };
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject, line_reader::LineReader,
+    constants::ebi_object::EbiObject, line_reader::LineReader, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
@@ -19,8 +18,8 @@ pub const HEADER: &str = "finite language";
 
 #[derive(ActivityKey, Clone)]
 pub struct FiniteLanguage {
-    activity_key: ActivityKey,
-    traces: HashSet<Vec<Activity>, FnvBuildHasher>,
+    pub activity_key: ActivityKey,
+    pub traces: HashSet<Vec<Activity>, FnvBuildHasher>,
 }
 
 impl FiniteLanguage {
@@ -100,9 +99,9 @@ impl Infoable for FiniteLanguage {
 impl Display for FiniteLanguage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
-        writeln!(f, "# number of traces\n{}", self.len())?;
+        writeln!(f, "# number of traces\n{}", self.number_of_traces())?;
 
-        for (pos, trace) in self.iter().enumerate() {
+        for (pos, trace) in self.traces.iter().enumerate() {
             writeln!(f, "# trace {}", pos)?;
 
             writeln!(f, "# number of events\n{}", trace.len())?;
@@ -191,25 +190,12 @@ impl Importable for FiniteLanguage {
     }
 }
 
-impl From<HashSet<Vec<String>>> for FiniteLanguage {
-    fn from(value: HashSet<Vec<String>>) -> Self {
-        let mut activity_key = ActivityKey::new();
-        let traces = value
-            .into_iter()
-            .map(|trace| activity_key.process_trace(&trace))
-            .collect();
-        Self {
-            activity_key: activity_key,
-            traces: traces,
-        }
+impl IndexTrace for FiniteLanguage {
+    fn number_of_traces(&self) -> usize {
+        self.traces.len()
     }
-}
 
-impl From<(ActivityKey, HashSet<Vec<Activity>, FnvBuildHasher>)> for FiniteLanguage {
-    fn from(value: (ActivityKey, HashSet<Vec<Activity>, FnvBuildHasher>)) -> Self {
-        Self {
-            activity_key: value.0,
-            traces: value.1,
-        }
+    fn get_trace(&self, trace_index: usize) -> Option<&Vec<Activity>> {
+        self.traces.iter().nth(trace_index)
     }
 }

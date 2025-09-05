@@ -1,6 +1,5 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
-    Infoable, TranslateActivityKey, json,
+    json, traits::graphable, Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey
 };
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed};
@@ -338,7 +337,7 @@ impl Infoable for StochasticDeterministicFiniteAutomaton {
         )?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }
@@ -378,7 +377,7 @@ impl Graphable for StochasticDeterministicFiniteAutomaton {
 
         let mut places = vec![];
         for state in 0..=self.max_state {
-            places.push(Graphable::create_place(
+            places.push(graphable::create_place(
                 &mut graph,
                 &format!("{}", self.terminating_probabilities[state]),
             ));
@@ -391,7 +390,7 @@ impl Graphable for StochasticDeterministicFiniteAutomaton {
             let probability = &self.probabilities[pos];
             let activity = self.activity_key.get_activity_label(&self.activities[pos]);
 
-            Graphable::create_edge(
+            graphable::create_edge(
                 &mut graph,
                 &source,
                 &target,

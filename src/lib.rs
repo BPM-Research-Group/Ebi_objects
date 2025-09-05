@@ -53,8 +53,10 @@ pub mod traits {
     pub mod exportable;
     pub mod graphable;
     pub mod importable;
+    pub mod index_trace;
     pub mod infoable;
 }
+pub mod data_type;
 pub mod json;
 pub mod line_reader;
 pub mod marking;
@@ -70,4 +72,5 @@ pub use crate::constants::ebi_object_type::EbiObjectType;
 pub use crate::traits::exportable::Exportable;
 pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
+pub use crate::traits::index_trace::IndexTrace;
 pub use crate::traits::infoable::Infoable;

@@ -1,7 +1,7 @@
 use ebi_arithmetic::{Fraction, Signed, Zero, f};
 
 use crate::{
-    ebi_framework::activity_key::HasActivityKey,
+    HasActivityKey,
     ebi_objects::{
         directly_follows_graph::DirectlyFollowsGraph,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
@@ -53,8 +53,8 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
             .zip(targets.into_iter().zip(weights.into_iter()))
         {
             if weight.is_positive() {
-                let source_index = result.get_activity_key().get_id_from_activity(source);
-                let target_index = result.get_activity_key().get_id_from_activity(target);
+                let source_index = result.activity_key().get_id_from_activity(source);
+                let target_index = result.activity_key().get_id_from_activity(target);
                 result.add_edge(source_index, target_index, weight.into())
             }
         }

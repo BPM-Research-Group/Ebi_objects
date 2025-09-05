@@ -24,7 +24,7 @@ impl Display for ScalableVectorGraphics {
 
 impl Infoable for ScalableVectorGraphics {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        write!(f, "SVG object");
+        Ok(write!(f, "SVG object")?)
     }
 }
 

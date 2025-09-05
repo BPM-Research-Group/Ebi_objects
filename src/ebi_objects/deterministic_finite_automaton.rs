@@ -10,19 +10,7 @@ use std::{
 };
 
 use crate::{
-    activity_key::{
-        activity::Activity,
-        activity_key::{ActivityKey, ActivityKeyTranslator},
-        translate_activity_key::TranslateActivityKey,
-    },
-    constants::ebi_object::EbiObject,
-    json,
-    traits::{
-        exportable::Exportable,
-        graphable::Graphable,
-        importable::Importable,
-        infoable::Infoable,
-    },
+    json, traits::graphable, Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey
 };
 
 #[derive(Debug, ActivityKey, Clone)]
@@ -342,13 +330,13 @@ impl Graphable for DeterministicFiniteAutomaton {
         let mut places = vec![];
         for state in 0..=self.max_state {
             if self.can_terminate_in_state(state) {
-                places.push(Graphable::create_transition(
+                places.push(graphable::create_transition(
                     &mut graph,
                     &state.to_string(),
                     "",
                 ));
             } else {
-                places.push(Graphable::create_place(&mut graph, &state.to_string()));
+                places.push(graphable::create_place(&mut graph, &state.to_string()));
             }
         }
 
@@ -357,7 +345,7 @@ impl Graphable for DeterministicFiniteAutomaton {
             let target = places[self.targets[pos]];
             let activity = self.activity_key.get_activity_label(&self.activities[pos]);
 
-            Graphable::create_edge(&mut graph, &source, &target, activity);
+            graphable::create_edge(&mut graph, &source, &target, activity);
         }
 
         Ok(graph)
@@ -366,13 +354,15 @@ impl Graphable for DeterministicFiniteAutomaton {
 
 #[cfg(test)]
 mod tests {
+    use crate::HasActivityKey;
+
     use super::DeterministicFiniteAutomaton;
 
     #[test]
     fn insert_wrong_edge() {
         let mut dfa = DeterministicFiniteAutomaton::new();
-        let state = dfa.get_initial_state().unwrap();
-        let activity = dfa.get_activity_key_mut().process_activity("a");
+        let state = dfa.initial_state.unwrap();
+        let activity = dfa.activity_key_mut().process_activity("a");
 
         dfa.get_sources();
 

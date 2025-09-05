@@ -5,12 +5,14 @@ use layout::topo::layout::VisualGraph;
 use std::{
     cmp::Ordering,
     fmt::Display,
-    io::{self, BufRead, Write},
+    io::{self, Write},
     str::FromStr,
 };
 
 use crate::{
-    constants::ebi_object::EbiObject, line_reader::LineReader, Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, Importable, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    line_reader::LineReader, traits::graphable,
 };
 
 use super::stochastic_directly_follows_model::NodeIndex;
@@ -78,31 +80,31 @@ impl DirectlyFollowsModel {
         self.empty_traces
     }
 
-    pub(crate) fn can_terminate_in_node(&self, node: NodeIndex) -> bool {
+    pub fn can_terminate_in_node(&self, node: NodeIndex) -> bool {
         self.end_nodes[node]
     }
 
-    pub(crate) fn number_of_start_nodes(&self) -> usize {
+    pub fn number_of_start_nodes(&self) -> usize {
         self.start_nodes
             .iter()
             .fold(0, |a, b| if *b { a + 1 } else { a })
     }
 
-    pub(crate) fn number_of_end_nodes(&self) -> usize {
+    pub fn number_of_end_nodes(&self) -> usize {
         self.start_nodes
             .iter()
             .fold(0, |a, b| if *b { a + 1 } else { a })
     }
 
-    pub(crate) fn is_start_node(&self, node: NodeIndex) -> bool {
+    pub fn is_start_node(&self, node: NodeIndex) -> bool {
         self.start_nodes[node]
     }
 
-    pub(crate) fn is_end_node(&self, node: NodeIndex) -> bool {
+    pub fn is_end_node(&self, node: NodeIndex) -> bool {
         self.end_nodes[node]
     }
 
-    pub(crate) fn can_execute_edge(&self, _edge: usize) -> bool {
+    pub fn can_execute_edge(&self, _edge: usize) -> bool {
         true
     }
 
@@ -347,18 +349,18 @@ impl Graphable for DirectlyFollowsModel {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         //source + sink
-        let source = Graphable::create_place(&mut graph, "");
-        let sink = Graphable::create_place(&mut graph, "");
+        let source = graphable::create_place(&mut graph, "");
+        let sink = graphable::create_place(&mut graph, "");
 
         //empty traces
         if self.empty_traces {
-            Graphable::create_edge(&mut graph, &source, &sink, "");
+            graphable::create_edge(&mut graph, &source, &sink, "");
         }
 
         //nodes
         let mut nodes = vec![];
         for n in &self.node_2_activity {
-            nodes.push(Graphable::create_transition(
+            nodes.push(graphable::create_transition(
                 &mut graph,
                 self.activity_key.get_activity_label(n),
                 "",
@@ -368,20 +370,20 @@ impl Graphable for DirectlyFollowsModel {
         //start activities
         for (activity, is) in self.start_nodes.iter().enumerate() {
             if *is {
-                Graphable::create_edge(&mut graph, &source, &nodes[activity], "");
+                graphable::create_edge(&mut graph, &source, &nodes[activity], "");
             }
         }
 
         //end activities
         for (activity, is) in self.end_nodes.iter().enumerate() {
             if *is {
-                Graphable::create_edge(&mut graph, &nodes[activity], &sink, "");
+                graphable::create_edge(&mut graph, &nodes[activity], &sink, "");
             }
         }
 
         //edges
         for (source, target) in self.sources.iter().zip(self.targets.iter()) {
-            Graphable::create_edge(&mut graph, &nodes[*source], &nodes[*target], "");
+            graphable::create_edge(&mut graph, &nodes[*source], &nodes[*target], "");
         }
 
         Ok(graph)
@@ -426,7 +428,7 @@ impl Infoable for DirectlyFollowsModel {
         writeln!(f, "Number of end nodes\t{}", self.number_of_end_nodes())?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }

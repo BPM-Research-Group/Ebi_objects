@@ -1,10 +1,14 @@
 use ebi_arithmetic::ebi_number::{Signed, Zero};
 
-use crate::{activity_key::has_activity_key::HasActivityKey, ebi_objects::{
-    deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog,
-    finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage,
-    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
-}};
+use crate::{
+    IndexTrace,
+    activity_key::has_activity_key::HasActivityKey,
+    ebi_objects::{
+        deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog,
+        finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage,
+        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+    },
+};
 
 impl From<FiniteLanguage> for DeterministicFiniteAutomaton {
     fn from(value: FiniteLanguage) -> Self {
@@ -12,10 +16,10 @@ impl From<FiniteLanguage> for DeterministicFiniteAutomaton {
         let mut result = DeterministicFiniteAutomaton::new();
         result.set_activity_key(value.activity_key().clone());
 
-        if value.len().is_zero() {
+        if value.number_of_traces().is_zero() {
             result.set_initial_state(None);
         } else {
-            for trace in value.iter() {
+            for trace in value.traces.iter() {
                 let mut state = result.initial_state.unwrap();
 
                 for activity in trace {

@@ -3,12 +3,12 @@ use std::collections::{HashMap, hash_map::Entry};
 use ebi_arithmetic::{Fraction, One, Zero};
 
 use crate::{
-    ebi_framework::activity_key::HasActivityKey,
+    HasActivityKey,
     ebi_objects::{
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
-    ebi_traits::ebi_trait_event_log::IndexTrace,
+    IndexTrace,
 };
 
 impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
@@ -16,7 +16,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
         log::info!("convert finite stochastic language to SDFA");
 
         let mut result = StochasticDeterministicFiniteAutomaton::new();
-        if value.len().is_zero() {
+        if value.number_of_traces().is_zero() {
             result.set_initial_state(None);
         } else {
             let mut final_states = HashMap::new();
@@ -60,15 +60,15 @@ impl From<EventLog> for StochasticDeterministicFiniteAutomaton {
         log::info!("convert event log to SDFA");
 
         let mut result = StochasticDeterministicFiniteAutomaton::new();
-        result.set_activity_key(value.get_activity_key());
+        result.set_activity_key(value.activity_key());
 
-        if value.len().is_zero() {
+        if value.number_of_traces().is_zero() {
             result.set_initial_state(None);
         } else {
             let mut final_states = HashMap::new();
 
             //create automaton
-            for trace_index in 0..value.len() {
+            for trace_index in 0..value.number_of_traces() {
                 let trace = value.get_trace(trace_index).unwrap();
                 let mut state = result.get_initial_state().unwrap();
 

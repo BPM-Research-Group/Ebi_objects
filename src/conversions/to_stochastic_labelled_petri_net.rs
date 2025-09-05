@@ -1,12 +1,14 @@
 use ebi_arithmetic::{Fraction, One, Signed};
 
 use crate::{
-    ebi_framework::activity_key::{ActivityKeyTranslator, HasActivityKey},
+    ActivityKeyTranslator, HasActivityKey,
     ebi_objects::{
-        directly_follows_graph::DirectlyFollowsGraph, labelled_petri_net::LabelledPetriNet, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton, stochastic_directly_follows_model::StochasticDirectlyFollowsModel, stochastic_labelled_petri_net::StochasticLabelledPetriNet
+        directly_follows_graph::DirectlyFollowsGraph, labelled_petri_net::LabelledPetriNet,
+        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+        stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+        stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     },
-    ebi_traits::ebi_trait_semantics::Semantics,
-    marking::Marking
+    marking::Marking,
 };
 
 impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet {
@@ -30,7 +32,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
 
         let mut result = LabelledPetriNet::new();
         let translator =
-            ActivityKeyTranslator::new(value.get_activity_key(), result.get_activity_key_mut());
+            ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
         let mut weights = vec![];
 
         let source = result.add_place();
@@ -85,14 +87,14 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
     fn from(value: StochasticDirectlyFollowsModel) -> Self {
         log::info!("convert SDFM to SLPN");
 
-        if value.get_initial_state().is_none() {
+        if value.node_2_activity.is_empty() && !value.has_empty_traces() {
             //SDFA has an empty language, return a livelocked SLPN
             return Self::new_empty_language();
         }
 
         let mut result = StochasticLabelledPetriNet::new();
         let translator =
-            ActivityKeyTranslator::new(value.get_activity_key(), result.get_activity_key_mut());
+            ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
         let source = result.add_place();
         let sink = result.add_place();
         result

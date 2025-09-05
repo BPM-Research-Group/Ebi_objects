@@ -12,8 +12,9 @@ use itertools::Itertools;
 use layout::topo::layout::VisualGraph;
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
-    Infoable, TranslateActivityKey, format_comparison, line_reader::LineReader,
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, format_comparison, line_reader::LineReader,
+    traits::graphable,
 };
 
 pub const HEADER: &str = "stochastic directly follows model";
@@ -65,31 +66,31 @@ impl StochasticDirectlyFollowsModel {
         self.empty_traces_weight.is_positive()
     }
 
-    pub(crate) fn can_terminate_in_node(&self, node: NodeIndex) -> bool {
+    pub fn can_terminate_in_node(&self, node: NodeIndex) -> bool {
         self.end_node_weights[node].is_positive()
     }
 
-    pub(crate) fn number_of_start_nodes(&self) -> usize {
+    pub fn number_of_start_nodes(&self) -> usize {
         self.start_node_weights
             .iter()
             .fold(0, |a, b| if b.is_positive() { a + 1 } else { a })
     }
 
-    pub(crate) fn number_of_end_nodes(&self) -> usize {
+    pub fn number_of_end_nodes(&self) -> usize {
         self.end_node_weights
             .iter()
             .fold(0, |a, b| if b.is_positive() { a + 1 } else { a })
     }
 
-    pub(crate) fn is_start_node(&self, node: NodeIndex) -> bool {
+    pub fn is_start_node(&self, node: NodeIndex) -> bool {
         self.start_node_weights[node].is_positive()
     }
 
-    pub(crate) fn is_end_node(&self, node: NodeIndex) -> bool {
+    pub fn is_end_node(&self, node: NodeIndex) -> bool {
         self.end_node_weights[node].is_positive()
     }
 
-    pub(crate) fn can_execute_edge(&self, edge: usize) -> bool {
+    pub fn can_execute_edge(&self, edge: usize) -> bool {
         self.weights[edge].is_positive()
     }
 
@@ -406,12 +407,12 @@ impl Graphable for StochasticDirectlyFollowsModel {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         //source + sink
-        let source = Graphable::create_place(&mut graph, "");
-        let sink = Graphable::create_place(&mut graph, "");
+        let source = graphable::create_place(&mut graph, "");
+        let sink = graphable::create_place(&mut graph, "");
 
         //empty traces
         if self.empty_traces_weight.is_positive() {
-            Graphable::create_edge(
+            graphable::create_edge(
                 &mut graph,
                 &source,
                 &sink,
@@ -422,7 +423,7 @@ impl Graphable for StochasticDirectlyFollowsModel {
         //nodes
         let mut nodes = vec![];
         for node in &self.node_2_activity {
-            nodes.push(Graphable::create_transition(
+            nodes.push(graphable::create_transition(
                 &mut graph,
                 self.activity_key.get_activity_label(node),
                 "",
@@ -432,7 +433,7 @@ impl Graphable for StochasticDirectlyFollowsModel {
         //start activities
         for (activity, weight) in self.start_node_weights.iter().enumerate() {
             if weight.is_positive() {
-                Graphable::create_edge(
+                graphable::create_edge(
                     &mut graph,
                     &source,
                     &nodes[activity],
@@ -444,12 +445,7 @@ impl Graphable for StochasticDirectlyFollowsModel {
         //end activities
         for (activity, weight) in self.end_node_weights.iter().enumerate() {
             if weight.is_positive() {
-                Graphable::create_edge(
-                    &mut graph,
-                    &nodes[activity],
-                    &sink,
-                    &format!("{}", weight),
-                );
+                graphable::create_edge(&mut graph, &nodes[activity], &sink, &format!("{}", weight));
             }
         }
 
@@ -459,7 +455,7 @@ impl Graphable for StochasticDirectlyFollowsModel {
             .iter()
             .zip(self.targets.iter().zip(self.weights.iter()))
         {
-            Graphable::create_edge(
+            graphable::create_edge(
                 &mut graph,
                 &nodes[*source],
                 &nodes[*target],
@@ -490,7 +486,7 @@ impl Infoable for StochasticDirectlyFollowsModel {
         writeln!(f, "Sum weight of edges\t{}", sum)?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }

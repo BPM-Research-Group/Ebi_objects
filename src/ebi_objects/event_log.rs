@@ -6,13 +6,11 @@ use process_mining::{
     event_log::{Trace, event_log_struct::EventLogClassifier},
 };
 use std::{
-    io::{self, BufRead, Write},
-    str::FromStr,
+    collections::HashMap, io::{self, BufRead, Write}, str::FromStr
 };
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject,
+    constants::ebi_object::EbiObject, data_type::DataType, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
 };
 
 #[derive(ActivityKey, Clone)]
@@ -75,6 +73,25 @@ impl EventLog {
         std::mem::swap(&mut self.traces, &mut traces);
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
     }
+
+    pub fn get_trace_attributes(&self) -> HashMap<String, DataType> {
+        let mut map: HashMap<String, DataType> = HashMap::new();
+        for trace in &self.rust4pm_log.traces {
+            for attribute in &trace.attributes {
+                match map.entry(attribute.key.clone()) {
+                    std::collections::hash_map::Entry::Occupied(mut e) => {
+                        e.get_mut().update(&attribute.value);
+                        ()
+                    }
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        e.insert(DataType::init(&attribute.value));
+                        ()
+                    }
+                }
+            }
+        }
+        map
+    }
 }
 
 impl TranslateActivityKey for EventLog {
@@ -135,13 +152,13 @@ impl Exportable for EventLog {
 
 impl fmt::Display for EventLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "event log with {} traces", self.len())
+        write!(f, "event log with {} traces", self.number_of_traces())
     }
 }
 
 impl Infoable for EventLog {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of traces\t{}", self.len())?;
+        writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
         writeln!(
             f,
             "Number of events\t{}",
@@ -150,11 +167,11 @@ impl Infoable for EventLog {
         writeln!(
             f,
             "Number of activities\t{}",
-            self.get_activity_key().get_number_of_activities()
+            self.activity_key().get_number_of_activities()
         )?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         let trace_atts = self.get_trace_attributes();
         let t: Vec<String> = trace_atts
@@ -168,11 +185,21 @@ impl Infoable for EventLog {
     }
 }
 
+impl IndexTrace for EventLog {
+    fn number_of_traces(&self) -> usize {
+        self.traces.len()
+    }
+
+    fn get_trace(&self, trace_index: usize) -> Option<&Vec<Activity>> {
+        self.traces.get(trace_index)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
 
-    use crate::{ActivityKey, ebi_objects::finite_stochastic_language::FiniteStochasticLanguage};
+    use crate::{ebi_objects::finite_stochastic_language::FiniteStochasticLanguage, ActivityKey, IndexTrace, TranslateActivityKey};
 
     use super::EventLog;
 
@@ -205,28 +232,16 @@ mod tests {
     }
 
     #[test]
-    fn len_retain() {
-        let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
-        let mut log = fin.parse::<EventLog>().unwrap();
-
-        assert_eq!(log.len(), 2);
-
-        log.retain_traces(Box::new(|_| false));
-
-        assert_eq!(log.len(), 0);
-    }
-
-    #[test]
     fn len_retain_mut() {
         let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
         let mut log = fin.parse::<EventLog>().unwrap();
 
-        assert_eq!(log.len(), 2);
+        assert_eq!(log.number_of_traces(), 2);
         assert_eq!(log.rust4pm_log.traces.len(), 2);
 
         log.retain_traces_mut(&mut |_| false);
 
-        assert_eq!(log.len(), 0);
+        assert_eq!(log.number_of_traces(), 0);
         assert_eq!(log.rust4pm_log.traces.len(), 0);
     }
 }

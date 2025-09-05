@@ -2,7 +2,7 @@
 mod tests {
     use std::fs;
 
-    use crate::{ebi_objects::directly_follows_model::DirectlyFollowsModel, ActivityKey, TranslateActivityKey};
+    use crate::{ebi_objects::directly_follows_model::DirectlyFollowsModel, ActivityKey, HasActivityKey, TranslateActivityKey};
 
     #[test]
     fn activity_key_translating() {
@@ -15,7 +15,7 @@ mod tests {
         dfm.translate_using_activity_key(&mut activity_key);
 
         assert_eq!(
-            dfm.get_activity_key().get_activity_label(&x),
+            dfm.activity_key().get_activity_label(&x),
             activity_key.get_activity_label(&x)
         );
     }

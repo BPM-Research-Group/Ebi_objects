@@ -8,9 +8,7 @@ use std::{
 };
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject, line_reader::LineReader,
-    marking::Marking,
+    constants::ebi_object::EbiObject, line_reader::LineReader, marking::Marking, traits::graphable, Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey
 };
 
 use super::{
@@ -99,7 +97,7 @@ impl LabelledPetriNet {
         self.transition2input_places_cardinality.push(vec![]);
         self.transition2output_places.push(vec![]);
         self.transition2output_places_cardinality.push(vec![]);
-        self.get_number_of_transitions() - 1
+        self.transition2input_places.len() - 1
     }
 
     pub fn add_transition_place_arc(
@@ -108,11 +106,11 @@ impl LabelledPetriNet {
         to_place: usize,
         cardinality: u64,
     ) -> Result<()> {
-        if from_transition >= self.get_number_of_transitions() {
+        if from_transition >= self.transition2input_places.len() {
             return Err(anyhow!(
                 "non-existing transition {} referenced, while there are {}",
                 from_transition,
-                self.get_number_of_transitions()
+                self.transition2input_places.len()
             ));
         } else if to_place >= self.get_number_of_places() {
             return Err(anyhow!(
@@ -140,11 +138,11 @@ impl LabelledPetriNet {
         to_transition: TransitionIndex,
         cardinality: u64,
     ) -> Result<()> {
-        if to_transition >= self.get_number_of_transitions() {
+        if to_transition >= self.transition2input_places.len() {
             return Err(anyhow!(
                 "non-existing transition {} referenced, while there are {}",
                 to_transition,
-                self.get_number_of_transitions()
+                self.transition2input_places.len()
             ));
         } else if from_place >= self.get_number_of_places() {
             return Err(anyhow!(
@@ -269,24 +267,24 @@ impl Infoable for LabelledPetriNet {
         writeln!(
             f,
             "Number of transitions\t\t{}",
-            self.get_number_of_transitions()
+            self.transition2input_places.len()
         )?;
         writeln!(
             f,
             "Number of activities\t\t{}",
-            self.get_activity_key().get_number_of_activities()
+            self.activity_key().get_number_of_activities()
         )?;
         writeln!(
             f,
             "Number of silent transitions\t{}",
-            (0..self.get_number_of_transitions())
+            (0..self.transition2input_places.len())
                 .into_iter()
                 .filter(|transition| self.is_transition_silent(*transition))
                 .count()
         )?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }
@@ -305,10 +303,10 @@ impl fmt::Display for LabelledPetriNet {
         writeln!(
             f,
             "# number of transitions\n{}",
-            self.get_number_of_transitions()
+            self.transition2input_places.len()
         )?;
 
-        for transition in 0..self.get_number_of_transitions() {
+        for transition in 0..self.transition2input_places.len() {
             writeln!(f, "# transition {}", transition)?;
 
             if let Some(activity) = self.get_transition_label(transition) {
@@ -529,24 +527,24 @@ impl Graphable for LabelledPetriNet {
                 "".to_string()
             };
 
-            places.push(Graphable::create_place(&mut graph, &label));
+            places.push(graphable::create_place(&mut graph, &label));
         }
 
-        for transition in 0..self.get_number_of_transitions() {
+        for transition in 0..self.transition2input_places.len() {
             let node = if let Some(activity) = self.get_transition_label(transition) {
-                Graphable::create_transition(
+                graphable::create_transition(
                     &mut graph,
                     self.activity_key.get_activity_label(&activity),
                     "",
                 )
             } else {
-                Graphable::create_silent_transition(&mut graph, "")
+                graphable::create_silent_transition(&mut graph, "")
             };
 
             for (pos, inplace) in self.transition2input_places[transition].iter().enumerate() {
                 let place_node = places.get(*inplace).unwrap();
                 if self.transition2input_places_cardinality[transition][pos] > 1 {
-                    Graphable::create_edge(
+                    graphable::create_edge(
                         &mut graph,
                         place_node,
                         &node,
@@ -556,14 +554,14 @@ impl Graphable for LabelledPetriNet {
                         ),
                     );
                 } else {
-                    Graphable::create_edge(&mut graph, place_node, &node, "");
+                    graphable::create_edge(&mut graph, place_node, &node, "");
                 }
             }
 
             for (pos, outplace) in self.transition2output_places[transition].iter().enumerate() {
                 let place_node = places.get(*outplace).unwrap();
                 if self.transition2output_places_cardinality[transition][pos] > 1 {
-                    Graphable::create_edge(
+                    graphable::create_edge(
                         &mut graph,
                         &node,
                         place_node,
@@ -573,7 +571,7 @@ impl Graphable for LabelledPetriNet {
                         ),
                     );
                 } else {
-                    Graphable::create_edge(&mut graph, &node, place_node, "");
+                    graphable::create_edge(&mut graph, &node, place_node, "");
                 }
             }
         }

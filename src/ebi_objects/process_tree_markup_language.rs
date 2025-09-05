@@ -12,7 +12,7 @@ use quick_xml::{
 };
 
 use crate::{
-    Activity, ActivityKey, Exportable, Graphable, Importable,
+    Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable,
     constants::ebi_object::EbiObject,
     ebi_objects::process_tree::{Node, Operator},
 };
@@ -404,7 +404,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     "<manualTask id=\"{}\" name=\"{}\"/>",
                     node_id,
                     quick_xml::escape::escape(
-                        self.tree.get_activity_key().deprocess_activity(activity)
+                        self.tree.activity_key().deprocess_activity(activity)
                     )
                 )?,
                 Node::Operator(Operator::Loop, 1) => {

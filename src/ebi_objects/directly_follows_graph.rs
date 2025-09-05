@@ -12,10 +12,11 @@ use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Graphable, Infoable, TranslateActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
+    TranslateActivityKey,
     constants::ebi_object::EbiObject,
     json,
-    traits::{exportable::Exportable, importable::Importable},
+    traits::{exportable::Exportable, graphable, importable::Importable},
 };
 
 #[derive(ActivityKey, Clone, Debug)]
@@ -443,7 +444,7 @@ impl Infoable for DirectlyFollowsGraph {
         writeln!(f, "Sum weight of edges\t\t{}", sum)?;
 
         writeln!(f, "")?;
-        self.get_activity_key().info(f)?;
+        self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
     }
@@ -524,12 +525,12 @@ impl Graphable for DirectlyFollowsGraph {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         //source + sink
-        let source = Graphable::create_place(&mut graph, "");
-        let sink = Graphable::create_place(&mut graph, "");
+        let source = graphable::create_place(&mut graph, "");
+        let sink = graphable::create_place(&mut graph, "");
 
         //empty traces
         if self.empty_traces_weight.is_positive() {
-            Graphable::create_edge(
+            graphable::create_edge(
                 &mut graph,
                 &source,
                 &sink,
@@ -541,7 +542,7 @@ impl Graphable for DirectlyFollowsGraph {
         let mut nodes = vec![sink; self.activity_key.get_number_of_activities()];
         for n in &self.activity_key.get_activities() {
             let id = self.activity_key.get_id_from_activity(*n);
-            nodes[id] = Graphable::create_transition(
+            nodes[id] = graphable::create_transition(
                 &mut graph,
                 self.activity_key.get_activity_label(n),
                 "",
@@ -551,7 +552,7 @@ impl Graphable for DirectlyFollowsGraph {
         //start activities
         for (activity, weight) in self.start_activities.iter() {
             if weight.is_positive() {
-                Graphable::create_edge(
+                graphable::create_edge(
                     &mut graph,
                     &source,
                     &nodes[self.activity_key.get_id_from_activity(activity)],
@@ -563,7 +564,7 @@ impl Graphable for DirectlyFollowsGraph {
         //end activities
         for (activity, weight) in self.end_activities.iter() {
             if weight.is_positive() {
-                Graphable::create_edge(
+                graphable::create_edge(
                     &mut graph,
                     &nodes[self.activity_key.get_id_from_activity(activity)],
                     &sink,
@@ -578,7 +579,7 @@ impl Graphable for DirectlyFollowsGraph {
             .iter()
             .zip(self.targets.iter().zip(self.weights.iter()))
         {
-            Graphable::create_edge(
+            graphable::create_edge(
                 &mut graph,
                 &nodes[self.activity_key.get_id_from_activity(source)],
                 &nodes[self.activity_key.get_id_from_activity(target)],

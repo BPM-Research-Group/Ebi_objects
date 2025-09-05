@@ -11,9 +11,9 @@ use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
-    Infoable, TranslateActivityKey, ebi_objects::labelled_petri_net::TransitionIndex,
-    line_reader::LineReader,
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, ebi_objects::labelled_petri_net::TransitionIndex,
+    line_reader::LineReader, traits::graphable,
 };
 
 use super::stochastic_process_tree::StochasticProcessTree;
@@ -90,17 +90,17 @@ impl ProcessTree {
     ) -> usize {
         match self.tree[node] {
             Node::Tau => {
-                Graphable::create_edge(graph, entry, exit, "");
+                graphable::create_edge(graph, entry, exit, "");
                 node + 1
             }
             Node::Activity(activity) => {
-                let transition = Graphable::create_transition(
+                let transition = graphable::create_transition(
                     graph,
                     self.activity_key.get_activity_label(&activity),
                     "",
                 );
-                Graphable::create_edge(graph, entry, &transition, "");
-                Graphable::create_edge(graph, &transition, exit, "");
+                graphable::create_edge(graph, entry, &transition, "");
+                graphable::create_edge(graph, &transition, exit, "");
                 node + 1
             }
             Node::Operator(Operator::Xor, number_of_children) => {
@@ -112,7 +112,7 @@ impl ProcessTree {
             }
             Node::Operator(Operator::Sequence, number_of_children) => {
                 let intermediate_nodes = (0..(number_of_children - 1))
-                    .map(|_| Graphable::create_dot(graph))
+                    .map(|_| graphable::create_dot(graph))
                     .collect::<Vec<_>>();
 
                 let mut child = node + 1;
@@ -133,10 +133,10 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Concurrent, number_of_children) => {
-                let split = Graphable::create_gateway(graph, "+");
-                Graphable::create_edge(graph, entry, &split, "");
-                let join = Graphable::create_gateway(graph, "+");
-                Graphable::create_edge(graph, &join, exit, "");
+                let split = graphable::create_gateway(graph, "+");
+                graphable::create_edge(graph, entry, &split, "");
+                let join = graphable::create_gateway(graph, "+");
+                graphable::create_edge(graph, &join, exit, "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -145,10 +145,10 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Or, number_of_children) => {
-                let split = Graphable::create_gateway(graph, "o");
-                Graphable::create_edge(graph, entry, &split, "");
-                let join = Graphable::create_gateway(graph, "o");
-                Graphable::create_edge(graph, &join, exit, "");
+                let split = graphable::create_gateway(graph, "o");
+                graphable::create_edge(graph, entry, &split, "");
+                let join = graphable::create_gateway(graph, "o");
+                graphable::create_edge(graph, &join, exit, "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -157,10 +157,10 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Interleaved, number_of_children) => {
-                let split = Graphable::create_gateway(graph, "↔");
-                Graphable::create_edge(graph, entry, &split, "");
-                let join = Graphable::create_gateway(graph, "↔");
-                Graphable::create_edge(graph, &join, exit, "");
+                let split = graphable::create_gateway(graph, "↔");
+                graphable::create_edge(graph, entry, &split, "");
+                let join = graphable::create_gateway(graph, "↔");
+                graphable::create_edge(graph, &join, exit, "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -169,17 +169,17 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Loop, number_of_children) => {
-                let split = Graphable::create_dot(graph);
-                Graphable::create_edge(graph, entry, &split, "");
-                let join = Graphable::create_dot(graph);
-                Graphable::create_edge(graph, &join, exit, "");
+                let split = graphable::create_dot(graph);
+                graphable::create_edge(graph, entry, &split, "");
+                let join = graphable::create_dot(graph);
+                graphable::create_edge(graph, &join, exit, "");
 
                 let mut child = node + 1;
 
                 child = ProcessTree::node_to_dot(&self, graph, child, &split, &join);
 
                 if number_of_children == 1 {
-                    Graphable::create_edge(graph, &join, &split, "");
+                    graphable::create_edge(graph, &join, &split, "");
                 } else {
                     for _ in 1..number_of_children {
                         child = ProcessTree::node_to_dot(&self, graph, child, &join, &split);
@@ -421,11 +421,11 @@ macro_rules! tree {
                 writeln!(
                     f,
                     "Number of activities\t\t{}",
-                    $t::get_activity_key(self).get_number_of_activities()
+                    $t::activity_key(self).get_number_of_activities()
                 )?;
 
                 writeln!(f, "")?;
-                self.get_activity_key().info(f)?;
+                self.activity_key().info(f)?;
 
                 Ok(write!(f, "")?)
             }
@@ -434,8 +434,8 @@ macro_rules! tree {
         impl Graphable for $t {
             fn to_dot(&self) -> Result<layout::topo::layout::VisualGraph> {
                 let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
-                let source = Graphable::create_place(&mut graph, "");
-                let sink = Graphable::create_place(&mut graph, "");
+                let source = graphable::create_place(&mut graph, "");
+                let sink = graphable::create_place(&mut graph, "");
                 if !self.tree.is_empty() {
                     $t::node_to_dot(&self, &mut graph, 0, &source, &sink);
                 }

@@ -5,7 +5,7 @@ use std::{
     io::{BufRead, Write},
 };
 
-use crate::{constants::ebi_object::EbiObject, Exportable, Graphable, Importable};
+use crate::{Exportable, Graphable, HasActivityKey, Importable, constants::ebi_object::EbiObject};
 
 use super::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -152,15 +152,15 @@ impl Exportable for LolaNet {
                 .join(",\n")
         )?;
 
-        for transition in 0..self.0.get_number_of_transitions() {
+        for transition in 0..self.0.transition2input_places.len() {
             write!(f, "TRANSITION")?;
-            if let Some(activity) = self.0.get_transition_activity(transition) {
+            if let Some(activity) = self.0.labels[transition] {
                 //labelled transition
                 writeln!(
                     f,
                     "{}.{}",
                     Self::escape_transition_label(
-                        self.0.get_activity_key().get_activity_label(&activity)
+                        self.0.activity_key().get_activity_label(&activity)
                     ),
                     transition
                 )?;
@@ -426,7 +426,7 @@ impl<'a> Tokeniser<'a> {
                 }
                 State::SeenTransition => {
                     if Self::is_identifier(token) {
-                        let label = lpn.get_activity_key_mut().process_activity(token);
+                        let label = lpn.activity_key_mut().process_activity(token);
                         let transition = lpn.add_transition(Some(label));
                         state = State::SeenLabel(transition);
                     } else {
