@@ -6,7 +6,7 @@ use crate::{
     ebi_objects::{
         event_log::EventLog, finite_language::FiniteLanguage,
         finite_stochastic_language::FiniteStochasticLanguage,
-    }, Activity, ActivityKey
+    }, Activity, ActivityKey, CompressedEventLog
 };
 
 impl From<EventLog> for FiniteLanguage {
@@ -21,6 +21,12 @@ impl From<EventLog> for FiniteLanguage {
         let map: HashSet<Vec<Activity>, FnvBuildHasher> = traces.into_iter().collect();
 
         FiniteLanguage::from((activity_key, map))
+    }
+}
+
+impl From<CompressedEventLog> for FiniteLanguage {
+    fn from(value: CompressedEventLog) -> Self {
+        value.log.into()
     }
 }
 
