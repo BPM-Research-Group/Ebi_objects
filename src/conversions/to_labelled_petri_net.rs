@@ -3,22 +3,19 @@ use std::collections::HashMap;
 use anyhow::{Error, Result, anyhow};
 
 use crate::{
-    ActivityKeyTranslator, HasActivityKey,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
         directly_follows_graph::DirectlyFollowsGraph,
         directly_follows_model::DirectlyFollowsModel,
         labelled_petri_net::LabelledPetriNet,
         lola_net::LolaNet,
-        petri_net_markup_language::PetriNetMarkupLanguage,
         process_tree::{Node, Operator, ProcessTree},
         process_tree_markup_language::ProcessTreeMarkupLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
         stochastic_process_tree::StochasticProcessTree,
-    },
-    marking::Marking,
+    }, marking::Marking, ActivityKeyTranslator, HasActivityKey, PetriNetMarkupLanguage
 };
 
 macro_rules! tree {
@@ -263,6 +260,13 @@ impl From<LolaNet> for LabelledPetriNet {
     }
 }
 
+impl From<PetriNetMarkupLanguage> for LabelledPetriNet {
+    fn from(value: PetriNetMarkupLanguage) -> Self {
+        log::info!("convert PNML to LPN");
+        value.0
+    }
+}
+
 macro_rules! dfm {
     ($t:ident) => {
         impl From<$t> for LabelledPetriNet {
@@ -455,24 +459,24 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
     }
 }
 
-impl TryFrom<PetriNetMarkupLanguage> for LabelledPetriNet {
+impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
     type Error = Error;
 
-    fn try_from(pnml: PetriNetMarkupLanguage) -> Result<Self, Self::Error> {
+    fn try_from(pnml: process_mining::PetriNet) -> Result<Self, Self::Error> {
         log::info!("convert PNML to LPN");
 
         let mut result = LabelledPetriNet::new();
 
         //create map of places
         let mut place2index = HashMap::new();
-        for (place_id, _) in pnml.net.places {
+        for (place_id, _) in pnml.places {
             let place = result.add_place();
             place2index.insert(place_id, place);
         }
 
         //transitions
         let mut transition2index = HashMap::new();
-        for (transition_id, transition) in &pnml.net.transitions {
+        for (transition_id, transition) in &pnml.transitions {
             let label = match &transition.label {
                 Some(activity) => Some(result.activity_key_mut().process_activity(activity)),
                 None => None,
@@ -483,7 +487,7 @@ impl TryFrom<PetriNetMarkupLanguage> for LabelledPetriNet {
         }
 
         //arcs
-        for arc in pnml.net.arcs.iter() {
+        for arc in pnml.arcs.iter() {
             match arc.from_to {
                 process_mining::petri_net::petri_net_struct::ArcType::PlaceTransition(
                     place_id,
@@ -522,7 +526,7 @@ impl TryFrom<PetriNetMarkupLanguage> for LabelledPetriNet {
 
         //initial marking
         // for (place_id, cardinality) in pnml.net.initial_marking.as_ref().ok_or(anyhow!("The given net has no initial marking. Ebi requires an initial marking for its Petri nets."))?.iter() {
-        if let Some(marking) = pnml.net.initial_marking.as_ref() {
+        if let Some(marking) = pnml.initial_marking.as_ref() {
             for (place_id, cardinality) in marking {
                 let new_place = place2index
                     .get(&place_id.get_uuid())
@@ -534,7 +538,7 @@ impl TryFrom<PetriNetMarkupLanguage> for LabelledPetriNet {
         }
 
         //final markings
-        if let Some(final_markings) = &pnml.net.final_markings {
+        if let Some(final_markings) = &pnml.final_markings {
             //The nets used by Ebi do not have final markings, as each of their deadlocks is taken as a final marking.
             //The best we can do here is to verify that no non-deadlocks have been declared as final markings.
             for final_marking in final_markings.iter() {

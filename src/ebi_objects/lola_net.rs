@@ -5,7 +5,10 @@ use std::{
     io::{BufRead, Write},
 };
 
-use crate::{Exportable, Graphable, HasActivityKey, Importable, constants::ebi_object::EbiObject};
+use crate::{
+    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+};
 
 use super::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -205,6 +208,22 @@ impl Exportable for LolaNet {
 impl Graphable for LolaNet {
     fn to_dot(&self) -> Result<layout::topo::layout::VisualGraph> {
         self.0.to_dot()
+    }
+}
+
+impl HasActivityKey for LolaNet {
+    fn activity_key(&self) -> &crate::ActivityKey {
+        &self.0.activity_key
+    }
+
+    fn activity_key_mut(&mut self) -> &mut crate::ActivityKey {
+        &mut self.0.activity_key
+    }
+}
+
+impl TranslateActivityKey for LolaNet {
+    fn translate_using_activity_key(&mut self, to_activity_key: &mut crate::ActivityKey) {
+        self.0.translate_using_activity_key(to_activity_key);
     }
 }
 

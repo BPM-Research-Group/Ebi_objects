@@ -3,6 +3,7 @@ use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
 use std::io::{BufRead, BufReader, Write};
 
 use crate::{
+    HasActivityKey, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     ebi_objects::event_log::EventLog,
     traits::{exportable::Exportable, importable::Importable},
@@ -42,5 +43,21 @@ impl Exportable for CompressedEventLog {
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
         let mut writer = GzEncoder::new(f, Compression::best());
         self.log.export(&mut writer)
+    }
+}
+
+impl HasActivityKey for CompressedEventLog {
+    fn activity_key(&self) -> &crate::ActivityKey {
+        &self.log.activity_key
+    }
+
+    fn activity_key_mut(&mut self) -> &mut crate::ActivityKey {
+        &mut self.log.activity_key
+    }
+}
+
+impl TranslateActivityKey for CompressedEventLog {
+    fn translate_using_activity_key(&mut self, to_activity_key: &mut crate::ActivityKey) {
+        self.log.translate_using_activity_key(to_activity_key);
     }
 }

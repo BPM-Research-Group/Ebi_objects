@@ -17,10 +17,10 @@ use crate::ebi_objects::{
     stochastic_process_tree::StochasticProcessTree,
 };
 
-impl TryFrom<LabelledPetriNet> for PetriNetMarkupLanguage {
+impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
     type Error = anyhow::Error;
 
-    fn try_from(lpn: LabelledPetriNet) -> std::result::Result<Self, Self::Error> {
+    fn try_from(lpn: &LabelledPetriNet) -> std::result::Result<Self, Self::Error> {
         log::info!("Convert LPN into PNML.");
 
         let mut result = PetriNet::new();
@@ -107,18 +107,27 @@ impl TryFrom<LabelledPetriNet> for PetriNetMarkupLanguage {
         }
         result.initial_marking = Some(new_initial_marking);
 
-        Ok(Self { net: result })
+        Ok(result)
     }
 }
 
 macro_rules! from {
     ($t:ident) => {
+        impl TryFrom<$t> for process_mining::PetriNet {
+            type Error = Error;
+
+            fn try_from(value: $t) -> Result<Self, Self::Error> {
+                let lpn: LabelledPetriNet = value.into();
+                (&lpn).try_into()
+            }
+        }
+
         impl TryFrom<$t> for PetriNetMarkupLanguage {
             type Error = Error;
 
             fn try_from(value: $t) -> Result<Self, Self::Error> {
                 let lpn: LabelledPetriNet = value.into();
-                lpn.try_into()
+                Ok(Self(lpn))
             }
         }
     };
