@@ -1,6 +1,6 @@
 [package]
 name = "ebi_objects"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 keywords = ["stochastic-processes", "process-mining", "business-processes"]
@@ -29,7 +29,7 @@ eapproximatearithmetic = []
 
 [dependencies]
 ebi_arithmetic = "0.2.22"
-ebi_derive = "0.2.1"
+ebi_derive = "0.2.2"
 anyhow = "1.0.99"
 process_mining = "0.3.25"
 log = "0.4.28"
