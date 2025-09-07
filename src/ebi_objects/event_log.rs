@@ -13,12 +13,18 @@ use crate::{
     constants::ebi_object::EbiObject, data_type::DataType, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
 };
 
+pub const FORMAT_SPECIFICATION: &str =
+    "An event log file follows the IEEE XES format~\\cite{DBLP:journals/cim/AcamporaVSAGV17}. 
+Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
+For instance:
+    \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
+
 #[derive(ActivityKey, Clone)]
 pub struct EventLog {
     classifier: EventLogClassifier,
     pub activity_key: ActivityKey,
     pub traces: Vec<Vec<Activity>>,
-    rust4pm_log: process_mining::EventLog,
+    pub rust4pm_log: process_mining::EventLog,
 }
 
 impl EventLog {

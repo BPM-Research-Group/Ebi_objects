@@ -8,7 +8,9 @@ use std::{
 };
 
 use crate::{
-    constants::ebi_object::EbiObject, line_reader::LineReader, marking::Marking, traits::graphable, Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    line_reader::LineReader, marking::Marking, traits::graphable,
 };
 
 use super::{
@@ -24,6 +26,19 @@ use super::{
 pub type TransitionIndex = usize;
 
 pub const HEADER: &str = "labelled Petri net";
+
+pub const FORMAT_SPECIFICATION: &str = "A labelled Petri net is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `labelled Petri net'.
+    The second line is the number of places in the net.
+    The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
+    The next line is the number of transitions in the net.
+    Then, for each transition, the following lines are next: 
+    (i) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled;
+    (ii) the number of input places, followed by a line for each input place with the index of the place;
+    (iii) the number of output places, followed by a line for each output place with the index of the place.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lpn}";
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct LabelledPetriNet {

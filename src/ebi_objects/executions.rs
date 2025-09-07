@@ -11,6 +11,8 @@ use crate::{Exportable, Importable, Infoable, constants::ebi_object::EbiObject};
 
 pub const HEADER: &str = "executions";
 
+pub const FORMAT_SPECIFICATION: &str = "not yet finalised.";
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Executions {
     executions: Vec<Execution>,

@@ -9,12 +9,24 @@ use std::{
 };
 
 use crate::{
-    constants::ebi_object::EbiObject, line_reader::LineReader, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
+    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    line_reader::LineReader,
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
 
 pub const HEADER: &str = "finite language";
+
+pub const FORMAT_SPECIFICATION: &str =
+    "A finite language is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `finite language'.
+    The second line is the number of traces in the language.
+    For each trace, the first line contains the number of events in the trace.
+    Then, each subsequent line contains the activity name of one event.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lang}";
 
 #[derive(ActivityKey, Clone)]
 pub struct FiniteLanguage {
