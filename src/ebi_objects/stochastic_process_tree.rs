@@ -1,8 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    ActivityKey, EbiObject, Exportable, Importable,
-    line_reader::LineReader, traits::graphable,
+    ActivityKey, EbiObject, Exportable, Importable, line_reader::LineReader, traits::graphable,
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -41,6 +40,10 @@ pub struct StochasticProcessTree {
 }
 
 impl StochasticProcessTree {
+    pub fn number_of_leaves(&self) -> usize {
+        self.tree.iter().filter(|node| node.is_leaf()).count() + 1
+    }
+    
     pub fn node_to_string(
         &self,
         indent: usize,
