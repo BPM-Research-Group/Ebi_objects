@@ -2,7 +2,6 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, hash_map::Entry},
     fmt::Display,
-    io::BufRead,
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -12,7 +11,11 @@ use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 
 use crate::{
-    constants::ebi_object::EbiObject, format_comparison, json, traits::{exportable::Exportable, graphable, importable::Importable}, Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
+    TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    format_comparison, json,
+    traits::{exportable::Exportable, graphable, importable::Importable},
 };
 
 pub const FORMAT_SPECIFICATION: &str = concat!(
@@ -45,28 +48,6 @@ impl DirectlyFollowsGraph {
             start_activities: HashMap::new(),
             end_activities: HashMap::new(),
         }
-    }
-
-    pub fn import_as_directly_follows_model(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let dfg = Self::import(reader)?;
-        Ok(EbiObject::DirectlyFollowsModel(dfg.into()))
-    }
-
-    pub fn import_as_stochastic_directly_follows_model(
-        reader: &mut dyn BufRead,
-    ) -> Result<EbiObject> {
-        let dfg = Self::import(reader)?;
-        Ok(EbiObject::StochasticDirectlyFollowsModel(dfg.into()))
-    }
-
-    pub fn import_as_labelled_petri_net(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let dfg = Self::import(reader)?;
-        Ok(EbiObject::LabelledPetriNet(dfg.into()))
-    }
-
-    pub fn import_as_stochastic_labelled_petri_net(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let dfg = Self::import(reader)?;
-        Ok(EbiObject::StochasticLabelledPetriNet(dfg.into()))
     }
 
     pub fn get_max_state(&self) -> usize {

@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    io::{self, BufRead},
+    io::{self},
     str::FromStr,
 };
 
@@ -395,11 +395,6 @@ macro_rules! tree {
                 }
 
                 if last { Some(transitions - 1) } else { None }
-            }
-
-            pub fn import_as_labelled_petri_net(reader: &mut dyn BufRead) -> Result<EbiObject> {
-                let tree = Self::import(reader)?;
-                Ok(EbiObject::LabelledPetriNet(tree.into()))
             }
         }
 

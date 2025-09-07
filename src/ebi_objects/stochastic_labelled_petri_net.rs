@@ -74,11 +74,6 @@ impl StochasticLabelledPetriNet {
         };
     }
 
-    pub fn import_as_labelled_petri_net(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let net = Self::import(reader)?;
-        Ok(EbiObject::LabelledPetriNet(net.into()))
-    }
-
     pub fn get_number_of_places(&self) -> usize {
         self.place2output_transitions.len()
     }
