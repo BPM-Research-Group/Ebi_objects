@@ -3,10 +3,29 @@ use ebi_derive::ActivityKey;
 use std::{fmt::Display, str::FromStr};
 
 use crate::{
-    constants::ebi_object::EbiObject, ebi_objects::labelled_petri_net::TransitionIndex, line_reader::LineReader, Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
+    TranslateActivityKey, constants::ebi_object::EbiObject,
+    ebi_objects::labelled_petri_net::TransitionIndex, line_reader::LineReader,
 };
 
 pub const HEADER: &str = "language of alignments";
+
+pub const FORMAT_SPECIFICATION: &str = "A language of alignments is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `language of alignments'.
+    The second line is the number of alignments in the language.
+    For each alignment, the first line contains the number of moves in the alignment.
+    Then, each move is given as either 
+    \\begin{itemize}
+        \\item `synchronous move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved transition.
+        \\item `silent move', followed by a line with the index of the silent transition.
+        \\item `log move', followed by a line with the word `label', then a space, and then the activity label.
+        \\item `model move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved ransition.
+    \\end{itemize}
+    Note that the Semantics trait of Ebi, which is what most alignment computations use, requires that every final marking is a deadlock.
+    Consequently, an implicit silent transition may be added by the Semantics trait that is not in the model.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.ali}";
 
 #[derive(ActivityKey, Clone)]
 pub struct LanguageOfAlignments {
