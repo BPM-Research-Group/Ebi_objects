@@ -10,7 +10,9 @@ impl TryFrom<(ProcessTree, Vec<Fraction>, Fraction)> for StochasticProcessTree {
     fn try_from(value: (ProcessTree, Vec<Fraction>, Fraction)) -> Result<Self, Self::Error> {
         if value.0.number_of_leaves() != value.1.len() {
             return Err(anyhow!(
-                "non-appropriate number of weights: must be equal to the number of leaves"
+                "non-appropriate number of weights ({}): must be equal to the number of leaves ({})",
+                value.0.number_of_leaves(),
+                value.1.len()
             ));
         }
         Ok(Self {
