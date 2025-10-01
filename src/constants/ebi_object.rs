@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::fmt::Display;
 
 use crate::{
+    EventLogTraceAttributes,
     constants::ebi_object_type::EbiObjectType,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -26,6 +27,7 @@ pub enum EbiObject {
     FiniteStochasticLanguage(FiniteStochasticLanguage),
     StochasticDeterministicFiniteAutomaton(StochasticDeterministicFiniteAutomaton),
     EventLog(EventLog),
+    EventLogTraceAttributes(EventLogTraceAttributes),
     FiniteLanguage(FiniteLanguage),
     DirectlyFollowsModel(DirectlyFollowsModel),
     StochasticDirectlyFollowsModel(StochasticDirectlyFollowsModel),
@@ -49,6 +51,7 @@ impl EbiObject {
                 EbiObjectType::StochasticDeterministicFiniteAutomaton
             }
             EbiObject::EventLog(_) => EbiObjectType::EventLog,
+            EbiObject::EventLogTraceAttributes(_) => EbiObjectType::EventLogTraceAttributes,
             EbiObject::FiniteLanguage(_) => EbiObjectType::FiniteLanguage,
             EbiObject::DirectlyFollowsModel(_) => EbiObjectType::DirectlyFollowsModel,
             EbiObject::StochasticDirectlyFollowsModel(_) => {
@@ -78,6 +81,7 @@ impl Display for EbiObject {
             EbiObject::FiniteStochasticLanguage(o) => write!(f, "{}", o),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => write!(f, "{}", o),
             EbiObject::EventLog(o) => write!(f, "{}", o),
+            EbiObject::EventLogTraceAttributes(o) => write!(f, "{}", o),
             EbiObject::FiniteLanguage(o) => write!(f, "{}", o),
             EbiObject::DirectlyFollowsModel(o) => write!(f, "{}", o),
             EbiObject::StochasticDirectlyFollowsModel(o) => write!(f, "{}", o),
@@ -101,6 +105,7 @@ impl Infoable for EbiObject {
             EbiObject::FiniteStochasticLanguage(o) => o.info(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => o.info(f),
             EbiObject::EventLog(o) => o.info(f),
+            EbiObject::EventLogTraceAttributes(o) => o.info(f),
             EbiObject::FiniteLanguage(o) => o.info(f),
             EbiObject::DirectlyFollowsModel(o) => o.info(f),
             EbiObject::StochasticDirectlyFollowsModel(o) => o.info(f),

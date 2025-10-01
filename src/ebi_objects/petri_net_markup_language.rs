@@ -86,6 +86,9 @@ impl Exportable for PetriNetMarkupLanguage {
             }
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
+            EbiObject::EventLogTraceAttributes(_) => {
+                Err(anyhow!("Cannot export event log as PNML."))
+            }
             EbiObject::Executions(_) => Err(anyhow!("Cannot export executions as PNML.")),
             EbiObject::FiniteLanguage(_) => Err(anyhow!("Cannot export finite language as PNML.")),
             EbiObject::FiniteStochasticLanguage(_) => {

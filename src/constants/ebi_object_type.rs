@@ -12,6 +12,7 @@ pub enum EbiObjectType {
     DirectlyFollowsModel,
     StochasticDirectlyFollowsModel,
     EventLog,
+    EventLogTraceAttributes,
     FiniteLanguage,
     FiniteStochasticLanguage,
     LabelledPetriNet,
@@ -31,6 +32,7 @@ impl EbiObjectType {
             EbiObjectType::FiniteStochasticLanguage => "a",
             EbiObjectType::StochasticDeterministicFiniteAutomaton => "a",
             EbiObjectType::EventLog => "an",
+            EbiObjectType::EventLogTraceAttributes => "an",
             EbiObjectType::FiniteLanguage => "a",
             EbiObjectType::DirectlyFollowsModel => "a",
             EbiObjectType::StochasticDirectlyFollowsModel => "a",
@@ -60,6 +62,7 @@ impl Display for EbiObjectType {
                 EbiObjectType::StochasticDeterministicFiniteAutomaton =>
                     "stochastic deterministic finite automaton",
                 EbiObjectType::EventLog => "event log",
+                EbiObjectType::EventLogTraceAttributes => "event log with trace attributes",
                 EbiObjectType::FiniteLanguage => "finite language",
                 EbiObjectType::DirectlyFollowsModel => "directly follows model",
                 EbiObjectType::StochasticDirectlyFollowsModel =>

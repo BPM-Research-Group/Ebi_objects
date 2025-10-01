@@ -14,6 +14,7 @@ pub mod conversions {
     pub mod to_deterministic_finite_automaton;
     pub mod to_directly_follows_model;
     pub mod to_event_log;
+    pub mod to_event_log_trace_attributes;
     pub mod to_finite_language;
     pub mod to_finite_stochastic_language;
     pub mod to_labelled_petri_net;
@@ -32,6 +33,7 @@ pub mod ebi_objects {
     pub mod directly_follows_graph;
     pub mod directly_follows_model;
     pub mod event_log;
+    pub mod event_log_trace_attributes;
     pub mod executions;
     pub mod finite_language;
     pub mod finite_stochastic_language;
@@ -80,6 +82,7 @@ pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomato
 pub use ebi_objects::directly_follows_graph::DirectlyFollowsGraph;
 pub use ebi_objects::directly_follows_model::DirectlyFollowsModel;
 pub use ebi_objects::event_log::EventLog;
+pub use ebi_objects::event_log_trace_attributes::EventLogTraceAttributes;
 pub use ebi_objects::executions::Executions;
 pub use ebi_objects::finite_language::FiniteLanguage;
 pub use ebi_objects::finite_stochastic_language::FiniteStochasticLanguage;

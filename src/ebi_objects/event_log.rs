@@ -1,16 +1,15 @@
 use anyhow::{Error, Result, anyhow};
 use core::fmt;
 use ebi_derive::ActivityKey;
-use process_mining::{
-    XESImportOptions,
-    event_log::{Trace, event_log_struct::EventLogClassifier},
-};
+use process_mining::{XESImportOptions, event_log::event_log_struct::EventLogClassifier};
 use std::{
-    collections::HashMap, io::{self, BufRead, Write}, str::FromStr
+    io::{self, BufRead, Write},
+    str::FromStr,
 };
 
 use crate::{
-    constants::ebi_object::EbiObject, data_type::DataType, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
+    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -21,83 +20,8 @@ For instance:
 
 #[derive(ActivityKey, Clone)]
 pub struct EventLog {
-    classifier: EventLogClassifier,
     pub activity_key: ActivityKey,
     pub traces: Vec<Vec<Activity>>,
-    pub rust4pm_log: process_mining::EventLog,
-}
-
-impl EventLog {
-    pub fn new(log: process_mining::EventLog, classifier: EventLogClassifier) -> Self {
-        let mut result = Self {
-            classifier: classifier,
-            rust4pm_log: log,
-            activity_key: ActivityKey::new(),
-            traces: vec![],
-        };
-
-        for trace_index in 0..result.rust4pm_log.traces.len() {
-            result.traces.push(
-                result.rust4pm_log.traces[trace_index]
-                    .events
-                    .iter()
-                    .map(|event| {
-                        result
-                            .activity_key
-                            .process_activity(&result.classifier.get_class_identity(event))
-                    })
-                    .collect::<Vec<Activity>>(),
-            );
-        }
-
-        result
-    }
-
-    pub fn retain_traces_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut((&Vec<Activity>, &Trace)) -> bool,
-    {
-        //get our hands free to change the traces without cloning
-        let mut traces = vec![];
-        let mut rust4pm_traces = vec![];
-        std::mem::swap(&mut self.traces, &mut traces);
-        std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
-
-        (traces, rust4pm_traces) = traces
-            .into_iter()
-            .zip(rust4pm_traces.into_iter())
-            .filter_map(|(mut trace, mut rust4pm_trace)| {
-                if f((&mut trace, &mut rust4pm_trace)) {
-                    Some((trace, rust4pm_trace))
-                } else {
-                    None
-                }
-            })
-            .unzip();
-
-        //swap the the traces back
-        std::mem::swap(&mut self.traces, &mut traces);
-        std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
-    }
-
-    pub fn get_trace_attributes(&self) -> HashMap<String, DataType> {
-        let mut map: HashMap<String, DataType> = HashMap::new();
-        for trace in &self.rust4pm_log.traces {
-            for attribute in &trace.attributes {
-                match map.entry(attribute.key.clone()) {
-                    std::collections::hash_map::Entry::Occupied(mut e) => {
-                        e.get_mut().update(&attribute.value);
-                        ()
-                    }
-                    std::collections::hash_map::Entry::Vacant(e) => {
-                        e.insert(DataType::init(&attribute.value));
-                        ()
-                    }
-                }
-            }
-        }
-        map
-    }
 }
 
 impl TranslateActivityKey for EventLog {
@@ -129,7 +53,7 @@ impl Importable for EventLog {
             name: "concept:name".to_string(),
             keys: vec!["concept:name".to_string()],
         };
-        Ok(EventLog::new(log, classifier))
+        Ok((log, classifier).into())
     }
 }
 
@@ -151,7 +75,36 @@ impl Exportable for EventLog {
     }
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
-        process_mining::event_log::export_xes::export_xes_event_log(f, &self.rust4pm_log)?;
+        writeln!(f, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>")?;
+        writeln!(f, "<log xes.version=\"1.0\">")?;
+        writeln!(
+            f,
+            "<extension name=\"Concept\" prefix=\"concept\" uri=\"http://code.deckfour.org/xes/concept.xesext\"/>"
+        )?;
+        writeln!(
+            f,
+            "<global scope=\"trace\"><string key=\"concept:name\" value=\"name\"/></global>"
+        )?;
+        writeln!(
+            f,
+            "<global scope=\"event\"><string key=\"concept:name\" value=\"name\"/></global>"
+        )?;
+        writeln!(f, "<classifier name=\"Activity\" keys=\"concept:name\"/>")?;
+
+        for trace in self.traces.iter() {
+            writeln!(f, "<trace>")?;
+            for activity in trace {
+                writeln!(
+                    f,
+                    "<event><string key=\"concept:name\" value=\"{}\"/></event>",
+                    quick_xml::escape::escape(self.activity_key().get_activity_label(activity))
+                )?;
+            }
+            writeln!(f, "</trace>")?;
+        }
+
+        writeln!(f, "</log>")?;
+
         Ok(())
     }
 }
@@ -179,14 +132,6 @@ impl Infoable for EventLog {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        let trace_atts = self.get_trace_attributes();
-        let t: Vec<String> = trace_atts
-            .iter()
-            .map(|(att, data_type)| format!("{}\t{}", att, data_type))
-            .collect();
-        writeln!(f, "Trace attributes:")?;
-        writeln!(f, "\t{}", t.join("\n\t"))?;
-
         Ok(write!(f, "")?)
     }
 }
@@ -205,7 +150,10 @@ impl IndexTrace for EventLog {
 mod tests {
     use std::fs;
 
-    use crate::{ebi_objects::finite_stochastic_language::FiniteStochasticLanguage, ActivityKey, IndexTrace, TranslateActivityKey};
+    use crate::{
+        ActivityKey, TranslateActivityKey,
+        ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
+    };
 
     use super::EventLog;
 
@@ -235,19 +183,5 @@ mod tests {
         let log = fin.parse::<EventLog>().unwrap();
 
         assert_eq!(format!("{}", log), "event log with 2 traces");
-    }
-
-    #[test]
-    fn len_retain_mut() {
-        let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
-        let mut log = fin.parse::<EventLog>().unwrap();
-
-        assert_eq!(log.number_of_traces(), 2);
-        assert_eq!(log.rust4pm_log.traces.len(), 2);
-
-        log.retain_traces_mut(&mut |_| false);
-
-        assert_eq!(log.number_of_traces(), 0);
-        assert_eq!(log.rust4pm_log.traces.len(), 0);
     }
 }

@@ -1,8 +1,49 @@
-use crate::ebi_objects::{compressed_event_log::CompressedEventLog, event_log::EventLog};
+use process_mining::event_log::event_log_struct::EventLogClassifier;
+
+use crate::{
+    Activity, ActivityKey, EventLogTraceAttributes,
+    ebi_objects::{compressed_event_log::CompressedEventLog, event_log::EventLog},
+};
 
 impl From<CompressedEventLog> for EventLog {
     fn from(value: CompressedEventLog) -> Self {
         log::info!("Convert compressed event log into event log.");
-        value.log
+        value.log.into()
+    }
+}
+
+impl From<EventLogTraceAttributes> for EventLog {
+    fn from(value: EventLogTraceAttributes) -> Self {
+        Self {
+            activity_key: value.activity_key,
+            traces: value.traces,
+        }
+    }
+}
+
+impl From<(process_mining::EventLog, EventLogClassifier)> for EventLog {
+    fn from(value: (process_mining::EventLog, EventLogClassifier)) -> Self {
+        let mut result = Self {
+            activity_key: ActivityKey::new(),
+            traces: vec![],
+        };
+
+        let (rust4pm_log, classifier) = value;
+
+        for trace_index in 0..rust4pm_log.traces.len() {
+            result.traces.push(
+                rust4pm_log.traces[trace_index]
+                    .events
+                    .iter()
+                    .map(|event| {
+                        result
+                            .activity_key
+                            .process_activity(&classifier.get_class_identity(event))
+                    })
+                    .collect::<Vec<Activity>>(),
+            );
+        }
+
+        result
     }
 }

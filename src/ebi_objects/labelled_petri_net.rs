@@ -254,6 +254,9 @@ impl Exportable for LabelledPetriNet {
             }
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as LPN.")),
+            EbiObject::EventLogTraceAttributes(_) => {
+                Err(anyhow!("Cannot export event log as LPN."))
+            }
             EbiObject::Executions(_) => Err(anyhow!("Cannot export executions as LPN.")),
             EbiObject::FiniteLanguage(_) => Err(anyhow!("Cannot export finite language as LPN.")),
             EbiObject::FiniteStochasticLanguage(_) => {

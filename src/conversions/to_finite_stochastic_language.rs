@@ -2,9 +2,10 @@ use std::collections::{HashMap, hash_map::Entry};
 
 use ebi_arithmetic::{Fraction, One};
 
-use crate::{ebi_objects::{
-    event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
-}, CompressedEventLog};
+use crate::{
+    CompressedEventLog, EventLogTraceAttributes,
+    ebi_objects::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage},
+};
 
 impl From<EventLog> for FiniteStochasticLanguage {
     fn from(value: EventLog) -> Self {
@@ -37,5 +38,12 @@ impl From<EventLog> for FiniteStochasticLanguage {
 impl From<CompressedEventLog> for FiniteStochasticLanguage {
     fn from(value: CompressedEventLog) -> Self {
         value.log.into()
+    }
+}
+
+impl From<EventLogTraceAttributes> for FiniteStochasticLanguage {
+    fn from(value: EventLogTraceAttributes) -> Self {
+        let log: EventLog = value.into();
+        log.into()
     }
 }
