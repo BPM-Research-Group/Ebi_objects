@@ -24,6 +24,28 @@ pub struct EventLog {
     pub traces: Vec<Vec<Activity>>,
 }
 
+impl EventLog {
+    pub fn retain_traces_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&Vec<Activity>) -> bool,
+    {
+        //get our hands free to change the traces without cloning
+        let mut traces = vec![];
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        traces = traces.into_iter().filter_map(|mut trace| {
+            if f(&mut trace) {
+                Some(trace)
+            } else {
+                None
+            }
+        }).collect();
+
+        //swap the the traces back
+        std::mem::swap(&mut self.traces, &mut traces);
+    }
+}
+
 impl TranslateActivityKey for EventLog {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
