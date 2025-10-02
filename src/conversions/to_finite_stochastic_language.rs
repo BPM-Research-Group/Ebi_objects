@@ -35,15 +35,16 @@ impl From<EventLog> for FiniteStochasticLanguage {
     }
 }
 
-impl From<CompressedEventLog> for FiniteStochasticLanguage {
-    fn from(value: CompressedEventLog) -> Self {
-        value.log.into()
-    }
+macro_rules! from_via_log {
+    ($t:ident) => {
+        impl From<$t> for FiniteStochasticLanguage {
+            fn from(value: $t) -> Self {
+                let log: EventLog = value.into();
+                log.into()
+            }
+        }
+    };
 }
 
-impl From<EventLogTraceAttributes> for FiniteStochasticLanguage {
-    fn from(value: EventLogTraceAttributes) -> Self {
-        let log: EventLog = value.into();
-        log.into()
-    }
-}
+from_via_log!(CompressedEventLog);
+from_via_log!(EventLogTraceAttributes);

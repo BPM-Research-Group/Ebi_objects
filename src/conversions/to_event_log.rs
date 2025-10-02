@@ -8,7 +8,12 @@ use crate::{
 impl From<CompressedEventLog> for EventLog {
     fn from(value: CompressedEventLog) -> Self {
         log::info!("Convert compressed event log into event log.");
-        value.log.into()
+        match value {
+            CompressedEventLog::EventLog(event_log) => event_log,
+            CompressedEventLog::EventLogTraceAttributes(event_log_trace_attributes) => {
+                event_log_trace_attributes.into()
+            }
+        }
     }
 }
 

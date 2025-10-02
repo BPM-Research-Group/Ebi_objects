@@ -34,7 +34,8 @@ impl From<EventLogTraceAttributes> for FiniteLanguage {
 
 impl From<CompressedEventLog> for FiniteLanguage {
     fn from(value: CompressedEventLog) -> Self {
-        value.log.into()
+        let log: EventLog = value.into();
+        log.into()
     }
 }
 
