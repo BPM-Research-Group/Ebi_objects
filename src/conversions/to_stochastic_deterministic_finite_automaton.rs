@@ -57,7 +57,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
 macro_rules! log {
     ($t: ident) => {
         impl From<$t> for StochasticDeterministicFiniteAutomaton {
-            fn from(mut value: $t) -> Self {
+            fn from(value: $t) -> Self {
                 log::info!("convert event log to SDFA");
 
                 let mut result = StochasticDeterministicFiniteAutomaton::new();
@@ -69,8 +69,9 @@ macro_rules! log {
                     let mut final_states = HashMap::new();
 
                     //create automaton
+                    let mut trace_cache = vec![];
                     for trace_index in 0..value.number_of_traces() {
-                        let trace = value.get_trace(trace_index).unwrap();
+                        let trace = value.get_trace(trace_index, &mut trace_cache).unwrap();
                         let mut state = result.get_initial_state().unwrap();
 
                         for activity in trace {

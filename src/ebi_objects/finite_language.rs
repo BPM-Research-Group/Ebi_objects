@@ -207,7 +207,11 @@ impl IndexTrace for FiniteLanguage {
         self.traces.len()
     }
 
-    fn get_trace(&mut self, trace_index: usize) -> Option<&Vec<Activity>> {
+    fn get_trace<'a>(
+        &'a self,
+        trace_index: usize,
+        _result_cache: &'a mut Vec<Activity>,
+    ) -> Option<&'a Vec<Activity>> {
         self.traces.iter().nth(trace_index)
     }
 }

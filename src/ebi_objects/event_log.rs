@@ -33,13 +33,10 @@ impl EventLog {
         let mut traces = vec![];
         std::mem::swap(&mut self.traces, &mut traces);
 
-        traces = traces.into_iter().filter_map(|mut trace| {
-            if f(&mut trace) {
-                Some(trace)
-            } else {
-                None
-            }
-        }).collect();
+        traces = traces
+            .into_iter()
+            .filter_map(|mut trace| if f(&mut trace) { Some(trace) } else { None })
+            .collect();
 
         //swap the the traces back
         std::mem::swap(&mut self.traces, &mut traces);
@@ -163,7 +160,11 @@ impl IndexTrace for EventLog {
         self.traces.len()
     }
 
-    fn get_trace(&mut self, trace_index: usize) -> Option<&Vec<Activity>> {
+    fn get_trace<'a>(
+        &'a self,
+        trace_index: usize,
+        _result_cache: &'a mut Vec<Activity>,
+    ) -> Option<&'a Vec<Activity>> {
         self.traces.get(trace_index)
     }
 }

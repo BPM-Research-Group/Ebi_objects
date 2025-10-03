@@ -29,11 +29,10 @@ For instance:
 
 #[derive(ActivityKey, Clone)]
 pub struct EventLogTraceAttributes {
-    pub(crate) classifier: EventLogClassifier,
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) rust4pm_log: process_mining::EventLog,
-    pub(crate) attribute_key: AttributeKey,
-    pub(crate) trace_cache: Vec<Activity>,
+    pub classifier: EventLogClassifier,
+    pub activity_key: ActivityKey,
+    pub rust4pm_log: process_mining::EventLog,
+    pub attribute_key: AttributeKey,
 }
 
 impl EventLogTraceAttributes {
@@ -187,20 +186,21 @@ impl IndexTrace for EventLogTraceAttributes {
         self.rust4pm_log.traces.len()
     }
 
-    fn get_trace(&mut self, trace_index: usize) -> Option<&Vec<Activity>> {
-        self.trace_cache = self
-            .rust4pm_log
-            .traces
-            .get(trace_index)?
-            .events
-            .iter()
-            .map(|event| {
-                self.activity_key
-                    .process_activity_attempt(&self.classifier.get_class_identity(event))
-            })
-            .scan((), |_, b| b)
-            .collect::<Vec<Activity>>();
-        Some(&self.trace_cache)
+    fn get_trace<'a>(
+        &self,
+        trace_index: usize,
+        result_cache: &'a mut Vec<Activity>,
+    ) -> Option<&'a Vec<Activity>> {
+        result_cache.clear();
+
+        for event in self.rust4pm_log.traces.get(trace_index)?.events.iter() {
+            let activity = self
+                .activity_key
+                .process_activity_attempt(&self.classifier.get_class_identity(event))?;
+            result_cache.push(activity);
+        }
+
+        Some(result_cache)
     }
 }
 
