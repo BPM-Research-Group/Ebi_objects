@@ -1,15 +1,25 @@
-use anyhow::{anyhow, Error};
+use process_mining::event_log::event_log_struct::EventLogClassifier;
 
-use crate::{EventLogTraceAttributes, ebi_objects::compressed_event_log::CompressedEventLog};
+use crate::{
+    ActivityKey, AttributeKey, EventLogTraceAttributes,
+    ebi_objects::compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+};
 
-impl TryFrom<CompressedEventLog> for EventLogTraceAttributes {
-    type Error = Error;
-    
-    fn try_from(value: CompressedEventLog) -> Result<Self, Self::Error> {
-        if let CompressedEventLog::EventLogTraceAttributes(log) = value {
-            Ok(log)
-        } else {
-            Err(anyhow!("cannot transform an event log into an event log with trace attributes"))
-        }
+impl From<CompressedEventLogTraceAttributes> for EventLogTraceAttributes {
+    fn from(value: CompressedEventLogTraceAttributes) -> Self {
+        value.log
+    }
+}
+
+impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogTraceAttributes {
+    fn from(value: (process_mining::EventLog, EventLogClassifier)) -> Self {
+        let mut result = Self {
+            classifier: value.1,
+            rust4pm_log: value.0,
+            activity_key: ActivityKey::new(),
+            attribute_key: AttributeKey::new(),
+        };
+        result.process_activity_key();
+        result
     }
 }

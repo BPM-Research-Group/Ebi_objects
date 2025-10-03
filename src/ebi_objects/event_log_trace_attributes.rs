@@ -1,20 +1,21 @@
+use crate::{
+    Activity, ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable,
+    Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    data_type::DataType, traits::index_trace_attributes::IndexTraceAttributes,
+};
 use anyhow::{Error, Result, anyhow};
+use chrono::{DateTime, FixedOffset};
 use core::fmt;
+use ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
 use process_mining::{
     XESImportOptions,
-    event_log::{Trace, event_log_struct::EventLogClassifier},
+    event_log::{
+        AttributeValue, Trace, XESEditableAttribute, event_log_struct::EventLogClassifier,
+    },
 };
 use std::{
-    collections::HashMap,
-    io::{self, BufRead, Write},
-    str::FromStr,
-};
-
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    data_type::DataType,
+    collections::HashMap, io::{self, BufRead, Write}, mem, str::FromStr
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -25,62 +26,44 @@ For instance:
 
 #[derive(ActivityKey, Clone)]
 pub struct EventLogTraceAttributes {
-    classifier: EventLogClassifier,
+    pub classifier: EventLogClassifier,
     pub activity_key: ActivityKey,
-    pub traces: Vec<Vec<Activity>>,
     pub rust4pm_log: process_mining::EventLog,
+    pub attribute_key: AttributeKey,
 }
 
 impl EventLogTraceAttributes {
-    pub fn new(log: process_mining::EventLog, classifier: EventLogClassifier) -> Self {
-        let mut result = Self {
-            classifier: classifier,
-            rust4pm_log: log,
-            activity_key: ActivityKey::new(),
-            traces: vec![],
-        };
-
-        for trace_index in 0..result.rust4pm_log.traces.len() {
-            result.traces.push(
-                result.rust4pm_log.traces[trace_index]
-                    .events
-                    .iter()
-                    .map(|event| {
-                        result
-                            .activity_key
-                            .process_activity(&result.classifier.get_class_identity(event))
-                    })
-                    .collect::<Vec<Activity>>(),
-            );
-        }
-
-        result
+    pub fn process_activity_key(&mut self) {
+        let mut activity_key = ActivityKey::new();
+        mem::swap(&mut activity_key, &mut self.activity_key);
+        self.rust4pm_log.traces.iter().for_each(|trace| {
+            trace.events.iter().for_each(|event| {
+                activity_key.process_activity(&self.classifier.get_class_identity(event));
+            })
+        });
+        mem::swap(&mut activity_key, &mut self.activity_key);
     }
 
     pub fn retain_traces_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut((&Vec<Activity>, &Trace)) -> bool,
+        F: FnMut(&Trace) -> bool,
     {
         //get our hands free to change the traces without cloning
-        let mut traces = vec![];
         let mut rust4pm_traces = vec![];
-        std::mem::swap(&mut self.traces, &mut traces);
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
 
-        (traces, rust4pm_traces) = traces
+        rust4pm_traces = rust4pm_traces
             .into_iter()
-            .zip(rust4pm_traces.into_iter())
-            .filter_map(|(mut trace, mut rust4pm_trace)| {
-                if f((&mut trace, &mut rust4pm_trace)) {
-                    Some((trace, rust4pm_trace))
+            .filter_map(|mut rust4pm_trace| {
+                if f(&mut rust4pm_trace) {
+                    Some(rust4pm_trace)
                 } else {
                     None
                 }
             })
-            .unzip();
+            .collect();
 
         //swap the the traces back
-        std::mem::swap(&mut self.traces, &mut traces);
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
     }
 
@@ -106,10 +89,6 @@ impl EventLogTraceAttributes {
 
 impl TranslateActivityKey for EventLogTraceAttributes {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
-        let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
-        self.traces
-            .iter_mut()
-            .for_each(|trace| translator.translate_trace_mut(trace));
         self.activity_key = to_activity_key.clone();
     }
 }
@@ -133,7 +112,7 @@ impl Importable for EventLogTraceAttributes {
             name: "concept:name".to_string(),
             keys: vec!["concept:name".to_string()],
         };
-        Ok(EventLogTraceAttributes::new(log, classifier))
+        Ok(EventLogTraceAttributes::from((log, classifier)))
     }
 }
 
@@ -172,7 +151,11 @@ impl Infoable for EventLogTraceAttributes {
         writeln!(
             f,
             "Number of events\t{}",
-            self.traces.iter().map(|trace| trace.len()).sum::<usize>()
+            self.rust4pm_log
+                .traces
+                .iter()
+                .map(|trace| trace.events.len())
+                .sum::<usize>()
         )?;
         writeln!(
             f,
@@ -195,13 +178,100 @@ impl Infoable for EventLogTraceAttributes {
     }
 }
 
-impl IndexTrace for EventLogTraceAttributes {
+impl IndexTraceAttributes for EventLogTraceAttributes {
     fn number_of_traces(&self) -> usize {
-        self.traces.len()
+        self.rust4pm_log.traces.len()
     }
 
-    fn get_trace(&self, trace_index: usize) -> Option<&Vec<Activity>> {
-        self.traces.get(trace_index)
+    fn get_trace(&self, trace_index: usize) -> Option<Vec<Activity>> {
+        Some(
+            self.rust4pm_log
+                .traces
+                .get(trace_index)?
+                .events
+                .iter()
+                .map(|event| {
+                    self.activity_key
+                        .process_activity_attempt(&self.classifier.get_class_identity(event))
+                })
+                .scan((), |_, b| b)
+                .collect::<Vec<Activity>>(),
+        )
+    }
+
+    fn get_trace_attribute_categorical(
+        &self,
+        trace_index: usize,
+        attribute: Attribute,
+    ) -> Option<String> {
+        let attribute = self
+            .rust4pm_log
+            .traces
+            .get(trace_index)?
+            .attributes
+            .get_by_key(self.attribute_key.attribute_to_label(attribute)?)?;
+
+        match &attribute.value {
+            AttributeValue::String(x) => Some(x.to_owned()),
+            AttributeValue::Date(_) => None,
+            AttributeValue::Int(x) => Some(x.to_string()),
+            AttributeValue::Float(x) => Some(x.to_string()),
+            AttributeValue::Boolean(x) => Some(x.to_string()),
+            AttributeValue::ID(_) => None,
+            AttributeValue::List(_) => None,
+            AttributeValue::Container(_) => None,
+            AttributeValue::None() => None,
+        }
+    }
+
+    fn get_trace_attribute_time(
+        &self,
+        trace_index: usize,
+        attribute: Attribute,
+    ) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+        let attribute = self
+            .rust4pm_log
+            .traces
+            .get(trace_index)?
+            .attributes
+            .get_by_key(self.attribute_key.attribute_to_label(attribute)?)?;
+
+        match &attribute.value {
+            AttributeValue::String(x) => Some(x.parse::<DateTime<FixedOffset>>().ok()?),
+            AttributeValue::Date(x) => Some(*x),
+            AttributeValue::Int(_) => None,
+            AttributeValue::Float(_) => None,
+            AttributeValue::Boolean(_) => None,
+            AttributeValue::ID(_) => None,
+            AttributeValue::List(_) => None,
+            AttributeValue::Container(_) => None,
+            AttributeValue::None() => None,
+        }
+    }
+
+    fn get_trace_attribute_numeric(
+        &self,
+        trace_index: usize,
+        attribute: Attribute,
+    ) -> Option<ebi_arithmetic::Fraction> {
+        let attribute = self
+            .rust4pm_log
+            .traces
+            .get(trace_index)?
+            .attributes
+            .get_by_key(self.attribute_key.attribute_to_label(attribute)?)?;
+
+        match &attribute.value {
+            AttributeValue::String(x) => Some(x.parse::<Fraction>().ok()?),
+            AttributeValue::Date(_) => None,
+            AttributeValue::Int(x) => Some(Fraction::from(*x)),
+            AttributeValue::Float(x) => Some(x.to_string().parse::<Fraction>().ok()?),
+            AttributeValue::Boolean(_) => None,
+            AttributeValue::ID(_) => None,
+            AttributeValue::List(_) => None,
+            AttributeValue::Container(_) => None,
+            AttributeValue::None() => None,
+        }
     }
 }
 
@@ -210,8 +280,9 @@ mod tests {
     use std::fs;
 
     use crate::{
-        ActivityKey, IndexTrace, TranslateActivityKey,
+        ActivityKey, TranslateActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
+        traits::index_trace_attributes::IndexTraceAttributes,
     };
 
     use super::EventLogTraceAttributes;

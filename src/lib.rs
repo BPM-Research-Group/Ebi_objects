@@ -11,6 +11,7 @@ pub mod constants {
 }
 pub mod conversions {
     pub mod to_compressed_event_log;
+    pub mod to_compressed_event_log_trace_attributes;
     pub mod to_deterministic_finite_automaton;
     pub mod to_directly_follows_model;
     pub mod to_event_log;
@@ -29,6 +30,7 @@ pub mod conversions {
 }
 pub mod ebi_objects {
     pub mod compressed_event_log;
+    pub mod compressed_event_log_trace_attributes;
     pub mod deterministic_finite_automaton;
     pub mod directly_follows_graph;
     pub mod directly_follows_model;
@@ -56,8 +58,11 @@ pub mod traits {
     pub mod graphable;
     pub mod importable;
     pub mod index_trace;
+    pub mod index_trace_attributes;
     pub mod infoable;
 }
+pub mod attribute;
+pub mod attribute_key;
 pub mod data_type;
 pub mod json;
 pub mod line_reader;
@@ -76,6 +81,8 @@ pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
 pub use crate::traits::index_trace::IndexTrace;
 pub use crate::traits::infoable::Infoable;
+pub use crate::attribute::Attribute;
+pub use crate::attribute_key::AttributeKey;
 
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomaton;

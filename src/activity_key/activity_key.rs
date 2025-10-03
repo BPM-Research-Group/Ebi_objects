@@ -7,7 +7,7 @@ use std::{
 #[cfg(test)]
 use uuid::Uuid;
 
-use crate::{activity_key::activity::Activity, Infoable};
+use crate::{Infoable, activity_key::activity::Activity};
 
 #[derive(Clone, Debug)]
 #[cfg(test)]
@@ -181,6 +181,10 @@ impl<'a> ActivityKey {
                 return result;
             }
         }
+    }
+
+    pub fn process_activity_attempt(&self, activity: &str) -> Option<Activity> {
+        self.name2activity.get(activity).copied()
     }
 
     #[cfg(test)]

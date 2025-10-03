@@ -8,6 +8,7 @@ use crate::{
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
+    traits::index_trace_attributes::IndexTraceAttributes,
 };
 
 impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
@@ -74,8 +75,11 @@ macro_rules! log {
                         let mut state = result.get_initial_state().unwrap();
 
                         for activity in trace {
-                            state =
-                                result.take_or_add_transition(state, *activity, Fraction::one());
+                            state = result.take_or_add_transition(
+                                state,
+                                activity.clone(),
+                                Fraction::one(),
+                            );
                         }
 
                         match final_states.entry(state) {
