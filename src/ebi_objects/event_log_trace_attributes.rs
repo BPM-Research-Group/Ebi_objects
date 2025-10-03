@@ -1,6 +1,6 @@
 use crate::{
     Activity, ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable,
-    Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
     data_type::DataType, traits::index_trace_attributes::IndexTraceAttributes,
 };
 use anyhow::{Error, Result, anyhow};
@@ -15,7 +15,10 @@ use process_mining::{
     },
 };
 use std::{
-    collections::HashMap, io::{self, BufRead, Write}, mem, str::FromStr
+    collections::HashMap,
+    io::{self, BufRead, Write},
+    mem,
+    str::FromStr,
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -26,10 +29,11 @@ For instance:
 
 #[derive(ActivityKey, Clone)]
 pub struct EventLogTraceAttributes {
-    pub classifier: EventLogClassifier,
-    pub activity_key: ActivityKey,
-    pub rust4pm_log: process_mining::EventLog,
-    pub attribute_key: AttributeKey,
+    pub(crate) classifier: EventLogClassifier,
+    pub(crate) activity_key: ActivityKey,
+    pub(crate) rust4pm_log: process_mining::EventLog,
+    pub(crate) attribute_key: AttributeKey,
+    pub(crate) trace_cache: Vec<Activity>,
 }
 
 impl EventLogTraceAttributes {
@@ -178,27 +182,29 @@ impl Infoable for EventLogTraceAttributes {
     }
 }
 
-impl IndexTraceAttributes for EventLogTraceAttributes {
+impl IndexTrace for EventLogTraceAttributes {
     fn number_of_traces(&self) -> usize {
         self.rust4pm_log.traces.len()
     }
 
-    fn get_trace(&self, trace_index: usize) -> Option<Vec<Activity>> {
-        Some(
-            self.rust4pm_log
-                .traces
-                .get(trace_index)?
-                .events
-                .iter()
-                .map(|event| {
-                    self.activity_key
-                        .process_activity_attempt(&self.classifier.get_class_identity(event))
-                })
-                .scan((), |_, b| b)
-                .collect::<Vec<Activity>>(),
-        )
+    fn get_trace(&mut self, trace_index: usize) -> Option<&Vec<Activity>> {
+        self.trace_cache = self
+            .rust4pm_log
+            .traces
+            .get(trace_index)?
+            .events
+            .iter()
+            .map(|event| {
+                self.activity_key
+                    .process_activity_attempt(&self.classifier.get_class_identity(event))
+            })
+            .scan((), |_, b| b)
+            .collect::<Vec<Activity>>();
+        Some(&self.trace_cache)
     }
+}
 
+impl IndexTraceAttributes for EventLogTraceAttributes {
     fn get_trace_attribute_categorical(
         &self,
         trace_index: usize,
@@ -280,9 +286,8 @@ mod tests {
     use std::fs;
 
     use crate::{
-        ActivityKey, TranslateActivityKey,
+        ActivityKey, IndexTrace, TranslateActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
-        traits::index_trace_attributes::IndexTraceAttributes,
     };
 
     use super::EventLogTraceAttributes;
@@ -321,11 +326,9 @@ mod tests {
         let mut log = fin.parse::<EventLogTraceAttributes>().unwrap();
 
         assert_eq!(log.number_of_traces(), 2);
-        assert_eq!(log.rust4pm_log.traces.len(), 2);
 
         log.retain_traces_mut(&mut |_| false);
 
         assert_eq!(log.number_of_traces(), 0);
-        assert_eq!(log.rust4pm_log.traces.len(), 0);
     }
 }

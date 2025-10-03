@@ -1,11 +1,9 @@
 use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::Fraction;
 
-use crate::{Activity, Attribute};
+use crate::{Attribute, IndexTrace};
 
-pub trait IndexTraceAttributes: Sync {
-    fn number_of_traces(&self) -> usize;
-    fn get_trace(&self, trace_index: usize) -> Option<Vec<Activity>>;
+pub trait IndexTraceAttributes: IndexTrace {
     fn get_trace_attribute_categorical(
         &self,
         trace_index: usize,

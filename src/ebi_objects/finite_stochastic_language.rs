@@ -329,7 +329,7 @@ impl IndexTrace for FiniteStochasticLanguage {
         self.traces.len()
     }
 
-    fn get_trace(&self, trace_index: usize) -> Option<&Vec<Activity>> {
+    fn get_trace(&mut self, trace_index: usize) -> Option<&Vec<Activity>> {
         self.traces.keys().nth(trace_index)
     }
 }

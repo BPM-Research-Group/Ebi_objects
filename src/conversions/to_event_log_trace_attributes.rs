@@ -18,6 +18,7 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogTraceAttri
             rust4pm_log: value.0,
             activity_key: ActivityKey::new(),
             attribute_key: AttributeKey::new(),
+            trace_cache: vec![],
         };
         result.process_activity_key();
         result

@@ -8,7 +8,6 @@ use crate::{
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
-    traits::index_trace_attributes::IndexTraceAttributes,
 };
 
 impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
@@ -58,7 +57,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
 macro_rules! log {
     ($t: ident) => {
         impl From<$t> for StochasticDeterministicFiniteAutomaton {
-            fn from(value: $t) -> Self {
+            fn from(mut value: $t) -> Self {
                 log::info!("convert event log to SDFA");
 
                 let mut result = StochasticDeterministicFiniteAutomaton::new();
