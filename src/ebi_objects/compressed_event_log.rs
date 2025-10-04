@@ -12,7 +12,7 @@ pub const FORMAT_SPECIFICATION: &str = "A compressed event log is a gzipped even
 Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
 
 pub struct CompressedEventLog {
-    pub(crate) log: EventLog,
+    pub log: EventLog,
 }
 
 impl Importable for CompressedEventLog {
