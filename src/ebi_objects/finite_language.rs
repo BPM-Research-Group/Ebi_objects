@@ -203,11 +203,13 @@ impl Importable for FiniteLanguage {
 }
 
 impl IndexTrace for FiniteLanguage {
+    type Iter<'a> = Iter<'a, Vec<Activity>>;
+
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
 
-    fn iter(&self) -> impl Iterator<Item = &Vec<Activity>> {
+    fn iter(&self) -> Self::Iter<'_> {
         self.traces.iter()
     }
 }

@@ -157,11 +157,13 @@ impl Infoable for EventLog {
 }
 
 impl IndexTrace for EventLog {
+    type Iter<'a> = Iter<'a, Vec<Activity>>;
+
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
 
-    fn iter(&self) -> impl Iterator<Item = &Vec<Activity>> {
+    fn iter(&self) -> Self::Iter<'_> {
         self.traces.iter()
     }
 }

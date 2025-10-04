@@ -296,11 +296,13 @@ impl fmt::Display for FiniteStochasticLanguage {
 }
 
 impl IndexTrace for FiniteStochasticLanguage {
+    type Iter<'a> = FiniteStochasticLanguageIterator<'a>;
+
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
 
-    fn iter(&self) -> impl Iterator<Item = &Vec<Activity>> {
+    fn iter(&self) -> Self::Iter<'_> {
         FiniteStochasticLanguageIterator {
             iter: self.traces.keys(),
         }
