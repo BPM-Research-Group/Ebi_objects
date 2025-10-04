@@ -4,7 +4,7 @@ use ebi_derive::ActivityKey;
 use std::{
     collections::{
         HashMap,
-        hash_map::{Iter, Keys},
+        hash_map::{IntoIter, Iter},
     },
     fmt,
     io::{self, BufRead, Write},
@@ -14,7 +14,7 @@ use std::{
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
     IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader,
+    line_reader::LineReader, traits::index_trace::TraceIterator,
 };
 
 pub const HEADER: &str = "finite stochastic language";
@@ -296,34 +296,26 @@ impl fmt::Display for FiniteStochasticLanguage {
 }
 
 impl IndexTrace for FiniteStochasticLanguage {
-    type Iter<'a> = FiniteStochasticLanguageIterator<'a>;
-
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
 
-    fn iter(&self) -> Self::Iter<'_> {
-        FiniteStochasticLanguageIterator {
-            iter: self.traces.keys(),
-        }
+    fn iter_traces(&self) -> TraceIterator<'_> {
+        TraceIterator::Keys(self.traces.keys())
     }
 }
 
-pub struct FiniteStochasticLanguageIterator<'a> {
-    iter: Keys<'a, Vec<Activity>, Fraction>,
-}
+impl IntoIterator for FiniteStochasticLanguage {
+    type Item = (Vec<Activity>, Fraction);
+    type IntoIter = IntoIter<Vec<Activity>, Fraction>;
 
-impl<'a> Iterator for FiniteStochasticLanguageIterator<'a> {
-    type Item = &'a Vec<Activity>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.into_iter()
     }
 }
 
 impl<'a> IntoIterator for &'a FiniteStochasticLanguage {
     type Item = (&'a Vec<Activity>, &'a Fraction);
-
     type IntoIter = Iter<'a, Vec<Activity>, Fraction>;
 
     fn into_iter(self) -> Self::IntoIter {

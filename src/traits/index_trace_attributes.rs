@@ -6,7 +6,7 @@ use crate::{Activity, Attribute};
 pub trait IndexTraceAttributes {
     fn number_of_traces(&self) -> usize;
 
-    fn iter(&self) -> impl Iterator<Item = Vec<Activity>>;
+    fn iter_traces(&self) -> impl Iterator<Item = Vec<Activity>>;
 
     fn get_trace_attribute_categorical(
         &self,

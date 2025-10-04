@@ -2,7 +2,10 @@ use anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use fnv::FnvBuildHasher;
 use std::{
-    collections::{HashSet, hash_set::Iter},
+    collections::{
+        HashSet,
+        hash_set::{IntoIter, Iter},
+    },
     fmt::Display,
     io::{self, BufRead},
     str::FromStr,
@@ -11,7 +14,7 @@ use std::{
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
     IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader,
+    line_reader::LineReader, traits::index_trace::TraceIterator,
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
@@ -203,20 +206,26 @@ impl Importable for FiniteLanguage {
 }
 
 impl IndexTrace for FiniteLanguage {
-    type Iter<'a> = Iter<'a, Vec<Activity>>;
-
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
 
-    fn iter(&self) -> Self::Iter<'_> {
-        self.traces.iter()
+    fn iter_traces(&self) -> TraceIterator<'_> {
+        TraceIterator::HashSet(self.traces.iter())
+    }
+}
+
+impl IntoIterator for FiniteLanguage {
+    type Item = Vec<Activity>;
+    type IntoIter = IntoIter<Vec<Activity>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.into_iter()
     }
 }
 
 impl<'a> IntoIterator for &'a FiniteLanguage {
     type Item = &'a Vec<Activity>;
-
     type IntoIter = Iter<'a, Vec<Activity>>;
 
     fn into_iter(self) -> Self::IntoIter {

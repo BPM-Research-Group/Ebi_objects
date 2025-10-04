@@ -4,13 +4,15 @@ use ebi_derive::ActivityKey;
 use process_mining::{XESImportOptions, event_log::event_log_struct::EventLogClassifier};
 use std::{
     io::{self, BufRead, Write},
-    slice::Iter,
+    slice::{Iter, IterMut},
     str::FromStr,
+    vec::IntoIter,
 };
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
     IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    traits::index_trace::TraceIterator,
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -157,24 +159,39 @@ impl Infoable for EventLog {
 }
 
 impl IndexTrace for EventLog {
-    type Iter<'a> = Iter<'a, Vec<Activity>>;
-
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
 
-    fn iter(&self) -> Self::Iter<'_> {
-        self.traces.iter()
+    fn iter_traces(&self) -> TraceIterator<'_> {
+        TraceIterator::Vec(self.traces.iter())
+    }
+}
+
+impl IntoIterator for EventLog {
+    type Item = Vec<Activity>;
+    type IntoIter = IntoIter<Vec<Activity>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.into_iter()
     }
 }
 
 impl<'a> IntoIterator for &'a EventLog {
     type Item = &'a Vec<Activity>;
-
     type IntoIter = Iter<'a, Vec<Activity>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.traces.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut EventLog {
+    type Item = &'a mut Vec<Activity>;
+    type IntoIter = IterMut<'a, Vec<Activity>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.iter_mut()
     }
 }
 

@@ -69,7 +69,7 @@ macro_rules! log {
                     let mut final_states = HashMap::new();
 
                     //create automaton
-                    for trace in value.iter() {
+                    for trace in value.iter_traces() {
                         let mut state = result.get_initial_state().unwrap();
 
                         for activity in trace {

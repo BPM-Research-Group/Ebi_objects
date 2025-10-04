@@ -209,10 +209,10 @@ impl IndexTraceAttributes for EventLogTraceAttributes {
         self.rust4pm_log.traces.len()
     }
 
-    fn iter(&self) -> impl Iterator<Item = Vec<Activity>> {
+    fn iter_traces(&self) -> impl Iterator<Item = Vec<Activity>> {
         EventLogTraceAttributesIterator { log: self, next: 0 }
     }
-    
+
     fn get_trace_attribute_categorical(
         &self,
         trace_index: usize,
