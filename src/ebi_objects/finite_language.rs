@@ -2,7 +2,7 @@ use anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use fnv::FnvBuildHasher;
 use std::{
-    collections::HashSet,
+    collections::{HashSet, hash_set::Iter},
     fmt::Display,
     io::{self, BufRead},
     str::FromStr,
@@ -207,11 +207,17 @@ impl IndexTrace for FiniteLanguage {
         self.traces.len()
     }
 
-    fn get_trace<'a>(
-        &'a self,
-        trace_index: usize,
-        _result_cache: &'a mut Vec<Activity>,
-    ) -> Option<&'a Vec<Activity>> {
-        self.traces.iter().nth(trace_index)
+    fn iter(&self) -> impl Iterator<Item = &Vec<Activity>> {
+        self.traces.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a FiniteLanguage {
+    type Item = &'a Vec<Activity>;
+
+    type IntoIter = Iter<'a, Vec<Activity>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.iter()
     }
 }

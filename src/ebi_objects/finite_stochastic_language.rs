@@ -2,7 +2,10 @@ use anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use std::{
-    collections::HashMap,
+    collections::{
+        HashMap,
+        hash_map::{Iter, Keys},
+    },
     fmt,
     io::{self, BufRead, Write},
     str::FromStr,
@@ -118,38 +121,6 @@ impl PartialEq for FiniteStochasticLanguage {
         }
 
         return true;
-    }
-}
-
-impl From<HashMap<Vec<String>, Fraction>> for FiniteStochasticLanguage {
-    /**
-     * Normalises the distribution. Use new_raw to avoid normalisation.
-     */
-    fn from(mut value: HashMap<Vec<String>, Fraction>) -> Self {
-        Self::normalise_before(&mut value);
-        let mut activity_key = ActivityKey::new();
-        let a_traces = value
-            .into_iter()
-            .map(|(trace, probability)| (activity_key.process_trace(&trace), probability))
-            .collect();
-        Self {
-            activity_key: activity_key,
-            traces: a_traces,
-        }
-    }
-}
-
-impl From<(ActivityKey, HashMap<Vec<Activity>, Fraction>)> for FiniteStochasticLanguage {
-    /**
-     * Normalises the distribution. Use new_raw to avoid normalisation.
-     */
-    fn from(value: (ActivityKey, HashMap<Vec<Activity>, Fraction>)) -> Self {
-        let mut result = Self {
-            activity_key: value.0,
-            traces: value.1,
-        };
-        result.normalise();
-        result
     }
 }
 
@@ -329,12 +300,32 @@ impl IndexTrace for FiniteStochasticLanguage {
         self.traces.len()
     }
 
-    fn get_trace<'a>(
-        &'a self,
-        trace_index: usize,
-        _result_cache: &'a mut Vec<Activity>,
-    ) -> Option<&'a Vec<Activity>> {
-        self.traces.keys().nth(trace_index)
+    fn iter(&self) -> impl Iterator<Item = &Vec<Activity>> {
+        FiniteStochasticLanguageIterator {
+            iter: self.traces.keys(),
+        }
+    }
+}
+
+pub struct FiniteStochasticLanguageIterator<'a> {
+    iter: Keys<'a, Vec<Activity>, Fraction>,
+}
+
+impl<'a> Iterator for FiniteStochasticLanguageIterator<'a> {
+    type Item = &'a Vec<Activity>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+impl<'a> IntoIterator for &'a FiniteStochasticLanguage {
+    type Item = (&'a Vec<Activity>, &'a Fraction);
+
+    type IntoIter = Iter<'a, Vec<Activity>, Fraction>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.iter()
     }
 }
 

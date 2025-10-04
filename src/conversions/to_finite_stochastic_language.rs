@@ -3,7 +3,7 @@ use std::collections::{HashMap, hash_map::Entry};
 use ebi_arithmetic::{Fraction, One};
 
 use crate::{
-    CompressedEventLog, EventLogTraceAttributes,
+    Activity, ActivityKey, CompressedEventLog, EventLogTraceAttributes,
     ebi_objects::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage},
 };
 
@@ -32,6 +32,38 @@ impl From<EventLog> for FiniteStochasticLanguage {
         }
 
         (activity_key, map).into()
+    }
+}
+
+impl From<HashMap<Vec<String>, Fraction>> for FiniteStochasticLanguage {
+    /**
+     * Normalises the distribution. Use new_raw to avoid normalisation.
+     */
+    fn from(mut value: HashMap<Vec<String>, Fraction>) -> Self {
+        Self::normalise_before(&mut value);
+        let mut activity_key = ActivityKey::new();
+        let a_traces = value
+            .into_iter()
+            .map(|(trace, probability)| (activity_key.process_trace(&trace), probability))
+            .collect();
+        Self {
+            activity_key: activity_key,
+            traces: a_traces,
+        }
+    }
+}
+
+impl From<(ActivityKey, HashMap<Vec<Activity>, Fraction>)> for FiniteStochasticLanguage {
+    /**
+     * Normalises the distribution. Use new_raw to avoid normalisation.
+     */
+    fn from(value: (ActivityKey, HashMap<Vec<Activity>, Fraction>)) -> Self {
+        let mut result = Self {
+            activity_key: value.0,
+            traces: value.1,
+        };
+        result.normalise();
+        result
     }
 }
 

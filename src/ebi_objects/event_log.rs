@@ -4,6 +4,7 @@ use ebi_derive::ActivityKey;
 use process_mining::{XESImportOptions, event_log::event_log_struct::EventLogClassifier};
 use std::{
     io::{self, BufRead, Write},
+    slice::Iter,
     str::FromStr,
 };
 
@@ -160,12 +161,18 @@ impl IndexTrace for EventLog {
         self.traces.len()
     }
 
-    fn get_trace<'a>(
-        &'a self,
-        trace_index: usize,
-        _result_cache: &'a mut Vec<Activity>,
-    ) -> Option<&'a Vec<Activity>> {
-        self.traces.get(trace_index)
+    fn iter(&self) -> impl Iterator<Item = &Vec<Activity>> {
+        self.traces.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a EventLog {
+    type Item = &'a Vec<Activity>;
+
+    type IntoIter = Iter<'a, Vec<Activity>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.traces.iter()
     }
 }
 

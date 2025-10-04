@@ -1,7 +1,7 @@
 use crate::{
     Activity, ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    data_type::DataType, traits::index_trace_attributes::IndexTraceAttributes,
+    Infoable, TranslateActivityKey, constants::ebi_object::EbiObject, data_type::DataType,
+    traits::index_trace_attributes::IndexTraceAttributes,
 };
 use anyhow::{Error, Result, anyhow};
 use chrono::{DateTime, FixedOffset};
@@ -181,30 +181,38 @@ impl Infoable for EventLogTraceAttributes {
     }
 }
 
-impl IndexTrace for EventLogTraceAttributes {
-    fn number_of_traces(&self) -> usize {
-        self.rust4pm_log.traces.len()
-    }
+pub struct EventLogTraceAttributesIterator<'a> {
+    log: &'a EventLogTraceAttributes,
+    next: usize,
+}
 
-    fn get_trace<'a>(
-        &self,
-        trace_index: usize,
-        result_cache: &'a mut Vec<Activity>,
-    ) -> Option<&'a Vec<Activity>> {
-        result_cache.clear();
+impl<'a> Iterator for EventLogTraceAttributesIterator<'a> {
+    type Item = Vec<Activity>;
 
-        for event in self.rust4pm_log.traces.get(trace_index)?.events.iter() {
+    fn next(&mut self) -> Option<Self::Item> {
+        let trace = self.log.rust4pm_log.traces.get(self.next)?;
+        let mut result = Vec::with_capacity(trace.events.len());
+        for event in trace.events.iter() {
             let activity = self
+                .log
                 .activity_key
-                .process_activity_attempt(&self.classifier.get_class_identity(event))?;
-            result_cache.push(activity);
+                .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
+            result.push(activity);
         }
-
-        Some(result_cache)
+        self.next += 1;
+        Some(result)
     }
 }
 
 impl IndexTraceAttributes for EventLogTraceAttributes {
+    fn number_of_traces(&self) -> usize {
+        self.rust4pm_log.traces.len()
+    }
+
+    fn iter(&self) -> impl Iterator<Item = Vec<Activity>> {
+        EventLogTraceAttributesIterator { log: self, next: 0 }
+    }
+    
     fn get_trace_attribute_categorical(
         &self,
         trace_index: usize,
@@ -286,8 +294,9 @@ mod tests {
     use std::fs;
 
     use crate::{
-        ActivityKey, IndexTrace, TranslateActivityKey,
+        ActivityKey, TranslateActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
+        traits::index_trace_attributes::IndexTraceAttributes,
     };
 
     use super::EventLogTraceAttributes;

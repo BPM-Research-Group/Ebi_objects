@@ -74,15 +74,16 @@ pub use crate::activity_key::activity_key::ActivityKey;
 pub use crate::activity_key::activity_key_translator::ActivityKeyTranslator;
 pub use crate::activity_key::has_activity_key::HasActivityKey;
 pub use crate::activity_key::translate_activity_key::TranslateActivityKey;
+pub use crate::attribute::Attribute;
+pub use crate::attribute_key::AttributeKey;
 pub use crate::constants::ebi_object::EbiObject;
 pub use crate::constants::ebi_object_type::EbiObjectType;
 pub use crate::traits::exportable::Exportable;
 pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
 pub use crate::traits::index_trace::IndexTrace;
+pub use crate::traits::index_trace_attributes::IndexTraceAttributes;
 pub use crate::traits::infoable::Infoable;
-pub use crate::attribute::Attribute;
-pub use crate::attribute_key::AttributeKey;
 
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomaton;
