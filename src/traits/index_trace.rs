@@ -1,9 +1,42 @@
-use crate::Activity;
+use crate::{Activity, iterators::ParallelKeysIterator};
+use ebi_arithmetic::Fraction;
+use rayon::iter::ParallelIterator;
 
 pub trait IndexTrace: Sync {
     fn number_of_traces(&self) -> usize;
 
     fn iter_traces(&self) -> TraceIterator<'_>;
+
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_>;
+}
+
+pub enum ParallelTraceIterator<'a> {
+    Vec(rayon::slice::Iter<'a, Vec<Activity>>),
+    HashSet(rayon::collections::hash_set::Iter<'a, Vec<Activity>>),
+    HashMap(ParallelKeysIterator<'a, Vec<Activity>, Fraction>),
+}
+
+impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
+    type Item = &'a Vec<Activity>;
+
+    fn drive_unindexed<C>(self, consumer: C) -> C::Result
+    where
+        C: rayon::iter::plumbing::UnindexedConsumer<Self::Item>,
+    {
+        match self {
+            ParallelTraceIterator::Vec(iter) => iter.drive_unindexed(consumer),
+            ParallelTraceIterator::HashSet(iter) => iter.drive_unindexed(consumer),
+            ParallelTraceIterator::HashMap(iter) => iter.drive_unindexed(consumer),
+        }
+    }
+
+    fn opt_len(&self) -> Option<usize> {
+        match self {
+            ParallelTraceIterator::Vec(iter) => iter.opt_len(),
+            ParallelTraceIterator::HashSet(iter) => iter.opt_len(),
+            ParallelTraceIterator::HashMap(iter) => iter.opt_len(),
+        }
+    }
 }
 
 pub enum TraceIterator<'a> {

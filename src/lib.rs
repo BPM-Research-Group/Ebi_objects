@@ -64,6 +64,7 @@ pub mod traits {
 pub mod attribute;
 pub mod attribute_key;
 pub mod data_type;
+pub mod iterators;
 pub mod json;
 pub mod line_reader;
 pub mod marking;

@@ -1,6 +1,7 @@
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use fnv::FnvBuildHasher;
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
 use std::{
     collections::{
         HashSet,
@@ -13,8 +14,10 @@ use std::{
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader, traits::index_trace::TraceIterator,
+    IndexTrace, Infoable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    line_reader::LineReader,
+    traits::index_trace::{ParallelTraceIterator, TraceIterator},
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
@@ -213,6 +216,10 @@ impl IndexTrace for FiniteLanguage {
     fn iter_traces(&self) -> TraceIterator<'_> {
         TraceIterator::HashSet(self.traces.iter())
     }
+
+    fn par_iter_traces(&self) -> crate::traits::index_trace::ParallelTraceIterator<'_> {
+        ParallelTraceIterator::HashSet(self.traces.par_iter())
+    }
 }
 
 impl IntoIterator for FiniteLanguage {
@@ -230,5 +237,23 @@ impl<'a> IntoIterator for &'a FiniteLanguage {
 
     fn into_iter(self) -> Self::IntoIter {
         self.traces.iter()
+    }
+}
+
+impl IntoParallelIterator for FiniteLanguage {
+    type Iter = rayon::collections::hash_set::IntoIter<Vec<Activity>>;
+    type Item = Vec<Activity>;
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.into_par_iter()
+    }
+}
+
+impl<'a> IntoParallelIterator for &'a FiniteLanguage {
+    type Iter = rayon::collections::hash_set::Iter<'a, Vec<Activity>>;
+    type Item = &'a Vec<Activity>;
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.par_iter()
     }
 }

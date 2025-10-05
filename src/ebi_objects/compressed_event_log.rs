@@ -3,9 +3,13 @@ use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
 use std::io::{BufRead, BufReader, Write};
 
 use crate::{
-    ActivityKey, EventLog, HasActivityKey, TranslateActivityKey,
+    ActivityKey, EventLog, HasActivityKey, IndexTrace, TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    traits::{exportable::Exportable, importable::Importable},
+    traits::{
+        exportable::Exportable,
+        importable::Importable,
+        index_trace::{ParallelTraceIterator, TraceIterator},
+    },
 };
 
 pub const FORMAT_SPECIFICATION: &str = "A compressed event log is a gzipped event log file in the IEEE XES format~\\cite{DBLP:journals/cim/AcamporaVSAGV17}.
@@ -59,5 +63,19 @@ impl HasActivityKey for CompressedEventLog {
 impl TranslateActivityKey for CompressedEventLog {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         self.log.translate_using_activity_key(to_activity_key)
+    }
+}
+
+impl IndexTrace for CompressedEventLog {
+    fn number_of_traces(&self) -> usize {
+        self.log.number_of_traces()
+    }
+
+    fn iter_traces(&self) -> TraceIterator<'_> {
+        self.log.iter_traces()
+    }
+
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
+        self.log.par_iter_traces()
     }
 }

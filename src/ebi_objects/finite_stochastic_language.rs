@@ -1,6 +1,14 @@
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
+    IndexTrace, Infoable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    line_reader::LineReader,
+    traits::index_trace::{ParallelTraceIterator, TraceIterator},
+};
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
 use std::{
     collections::{
         HashMap,
@@ -9,12 +17,6 @@ use std::{
     fmt,
     io::{self, BufRead, Write},
     str::FromStr,
-};
-
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader, traits::index_trace::TraceIterator,
 };
 
 pub const HEADER: &str = "finite stochastic language";
@@ -303,6 +305,10 @@ impl IndexTrace for FiniteStochasticLanguage {
     fn iter_traces(&self) -> TraceIterator<'_> {
         TraceIterator::Keys(self.traces.keys())
     }
+
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
+        ParallelTraceIterator::HashMap((&self.traces).into())
+    }
 }
 
 impl IntoIterator for FiniteStochasticLanguage {
@@ -320,6 +326,24 @@ impl<'a> IntoIterator for &'a FiniteStochasticLanguage {
 
     fn into_iter(self) -> Self::IntoIter {
         self.traces.iter()
+    }
+}
+
+impl IntoParallelIterator for FiniteStochasticLanguage {
+    type Iter = rayon::collections::hash_map::IntoIter<Vec<Activity>, Fraction>;
+    type Item = (Vec<Activity>, Fraction);
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.into_par_iter()
+    }
+}
+
+impl<'a> IntoParallelIterator for &'a FiniteStochasticLanguage {
+    type Iter = rayon::collections::hash_map::Iter<'a, Vec<Activity>, Fraction>;
+    type Item = (&'a Vec<Activity>, &'a Fraction);
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.par_iter()
     }
 }
 

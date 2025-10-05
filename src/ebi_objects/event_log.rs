@@ -2,6 +2,7 @@ use anyhow::{Error, Result, anyhow};
 use core::fmt;
 use ebi_derive::ActivityKey;
 use process_mining::{XESImportOptions, event_log::event_log_struct::EventLogClassifier};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator};
 use std::{
     io::{self, BufRead, Write},
     slice::{Iter, IterMut},
@@ -11,8 +12,9 @@ use std::{
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    traits::index_trace::TraceIterator,
+    IndexTrace, Infoable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    traits::index_trace::{ParallelTraceIterator, TraceIterator},
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -166,6 +168,10 @@ impl IndexTrace for EventLog {
     fn iter_traces(&self) -> TraceIterator<'_> {
         TraceIterator::Vec(self.traces.iter())
     }
+
+    fn par_iter_traces(&self) -> crate::traits::index_trace::ParallelTraceIterator<'_> {
+        ParallelTraceIterator::Vec(self.traces.par_iter())
+    }
 }
 
 impl IntoIterator for EventLog {
@@ -192,6 +198,33 @@ impl<'a> IntoIterator for &'a mut EventLog {
 
     fn into_iter(self) -> Self::IntoIter {
         self.traces.iter_mut()
+    }
+}
+
+impl IntoParallelIterator for EventLog {
+    type Iter = rayon::vec::IntoIter<Vec<Activity>>;
+    type Item = Vec<Activity>;
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.into_par_iter()
+    }
+}
+
+impl<'a> IntoParallelIterator for &'a EventLog {
+    type Iter = rayon::slice::Iter<'a, Vec<Activity>>;
+    type Item = &'a Vec<Activity>;
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.par_iter()
+    }
+}
+
+impl<'a> IntoParallelIterator for &'a mut EventLog {
+    type Iter = rayon::slice::IterMut<'a, Vec<Activity>>;
+    type Item = &'a mut Vec<Activity>;
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.traces.par_iter_mut()
     }
 }
 
