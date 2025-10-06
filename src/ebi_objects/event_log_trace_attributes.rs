@@ -36,6 +36,15 @@ pub struct EventLogTraceAttributes {
 }
 
 impl EventLogTraceAttributes {
+    
+    pub fn attribute_key(&self) -> &AttributeKey {
+        &self.attribute_key
+    }
+
+    pub fn attribute_key_mut(&mut self) -> &mut AttributeKey {
+        &mut self.attribute_key
+    }
+
     pub fn create_activity_key(&mut self) {
         self.rust4pm_log.traces.iter().for_each(|trace| {
             trace.events.iter().for_each(|event| {
@@ -176,14 +185,6 @@ impl IndexTraceAttributes for EventLogTraceAttributes {
 
     fn par_iter_traces(&self) -> ParallelEventLogTraceAttributesIterator<'_> {
         self.into()
-    }
-
-    fn attribute_key(&self) -> &AttributeKey {
-        &self.attribute_key
-    }
-
-    fn attribute_key_mut(&mut self) -> &mut AttributeKey {
-        &mut self.attribute_key
     }
 
     fn get_trace_attribute_categorical(
