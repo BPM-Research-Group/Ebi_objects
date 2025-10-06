@@ -64,11 +64,12 @@ pub mod traits {
 pub mod attribute;
 pub mod attribute_key;
 pub mod data_type;
-pub mod iterators;
 pub mod json;
 pub mod line_reader;
 pub mod marking;
+pub mod parallel_trace_iterator;
 pub mod tests;
+pub mod trace_iterator;
 
 pub use crate::activity_key::activity::Activity;
 pub use crate::activity_key::activity_key::ActivityKey;

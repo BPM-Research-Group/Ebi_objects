@@ -11,10 +11,7 @@ use std::{
 };
 
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    traits::index_trace::{ParallelTraceIterator, TraceIterator},
+    constants::ebi_object::EbiObject, parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -169,7 +166,7 @@ impl IndexTrace for EventLog {
         TraceIterator::Vec(self.traces.iter())
     }
 
-    fn par_iter_traces(&self) -> crate::traits::index_trace::ParallelTraceIterator<'_> {
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
         ParallelTraceIterator::Vec(self.traces.par_iter())
     }
 }

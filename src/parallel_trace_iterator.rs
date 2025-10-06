@@ -1,8 +1,39 @@
+use crate::Activity;
+use ebi_arithmetic::Fraction;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
     plumbing::{Consumer, Producer, ProducerCallback, UnindexedConsumer, bridge},
 };
 use std::collections::HashMap;
+
+pub enum ParallelTraceIterator<'a> {
+    Vec(rayon::slice::Iter<'a, Vec<Activity>>),
+    HashSet(rayon::collections::hash_set::Iter<'a, Vec<Activity>>),
+    HashMap(ParallelKeysIterator<'a, Vec<Activity>, Fraction>),
+}
+
+impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
+    type Item = &'a Vec<Activity>;
+
+    fn drive_unindexed<C>(self, consumer: C) -> C::Result
+    where
+        C: rayon::iter::plumbing::UnindexedConsumer<Self::Item>,
+    {
+        match self {
+            ParallelTraceIterator::Vec(iter) => iter.drive_unindexed(consumer),
+            ParallelTraceIterator::HashSet(iter) => iter.drive_unindexed(consumer),
+            ParallelTraceIterator::HashMap(iter) => iter.drive_unindexed(consumer),
+        }
+    }
+
+    fn opt_len(&self) -> Option<usize> {
+        match self {
+            ParallelTraceIterator::Vec(iter) => iter.opt_len(),
+            ParallelTraceIterator::HashSet(iter) => iter.opt_len(),
+            ParallelTraceIterator::HashMap(iter) => iter.opt_len(),
+        }
+    }
+}
 
 /// In order to iterate over the keys of a hashmap in parallel,
 /// we first need a struct that is the parallel iterator.
@@ -157,11 +188,10 @@ impl<'a, K, V> From<ParallelKeysIterator<'a, K, V>> for KeysIteratorDataProducer
 
 #[cfg(test)]
 mod tests {
+    use rayon::iter::ParallelIterator;
     use std::collections::HashMap;
 
-    use rayon::iter::ParallelIterator;
-
-    use crate::iterators::{KeysIterator, ParallelKeysIterator};
+    use crate::parallel_trace_iterator::{KeysIterator, ParallelKeysIterator};
 
     #[test]
     fn keys_iterator() {

@@ -14,10 +14,9 @@ use std::{
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    line_reader::LineReader,
-    traits::index_trace::{ParallelTraceIterator, TraceIterator},
+    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    line_reader::LineReader, parallel_trace_iterator::ParallelTraceIterator,
+    trace_iterator::TraceIterator,
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
@@ -217,7 +216,7 @@ impl IndexTrace for FiniteLanguage {
         TraceIterator::HashSet(self.traces.iter())
     }
 
-    fn par_iter_traces(&self) -> crate::traits::index_trace::ParallelTraceIterator<'_> {
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
         ParallelTraceIterator::HashSet(self.traces.par_iter())
     }
 }

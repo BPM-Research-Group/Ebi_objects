@@ -1,9 +1,8 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    line_reader::LineReader,
-    traits::index_trace::{ParallelTraceIterator, TraceIterator},
+    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
+    line_reader::LineReader, parallel_trace_iterator::ParallelTraceIterator,
+    trace_iterator::TraceIterator, traits::index_trace::IndexTraceProbability,
 };
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
@@ -308,6 +307,24 @@ impl IndexTrace for FiniteStochasticLanguage {
 
     fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
         ParallelTraceIterator::HashMap((&self.traces).into())
+    }
+}
+
+impl IndexTraceProbability for FiniteStochasticLanguage {
+    fn get_trace_probability(&self, trace_index: usize) -> Option<(&Vec<Activity>, &Fraction)> {
+        self.traces.iter().nth(trace_index)
+    }
+
+    fn iter_traces_probabilities(
+        &'_ self,
+    ) -> std::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
+        self.traces.iter()
+    }
+
+    fn par_iter_traces_probabilities(
+        &self,
+    ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
+        self.traces.par_iter()
     }
 }
 
