@@ -1,6 +1,6 @@
 use crate::{
     ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject, data_type::DataType,
+    TranslateActivityKey, constants::ebi_object::EbiObject,
     parallel_trace_iterator::ParallelEventLogTraceAttributesIterator,
     trace_iterator::EventLogTraceAttributesIterator,
     traits::index_trace_attributes::IndexTraceAttributes,
@@ -16,10 +16,8 @@ use process_mining::{
     },
 };
 use std::{
-    collections::HashMap,
     fmt,
     io::{self, BufRead, Write},
-    mem,
     str::FromStr,
 };
 
@@ -31,22 +29,29 @@ For instance:
 
 #[derive(ActivityKey, Clone)]
 pub struct EventLogTraceAttributes {
-    pub classifier: EventLogClassifier,
-    pub activity_key: ActivityKey,
-    pub rust4pm_log: process_mining::EventLog,
-    pub attribute_key: AttributeKey,
+    pub(crate) classifier: EventLogClassifier,
+    pub(crate) activity_key: ActivityKey,
+    pub(crate) rust4pm_log: process_mining::EventLog,
+    pub(crate) attribute_key: AttributeKey,
 }
 
 impl EventLogTraceAttributes {
-    pub fn process_activity_key(&mut self) {
-        let mut activity_key = ActivityKey::new();
-        mem::swap(&mut activity_key, &mut self.activity_key);
+    pub fn create_activity_key(&mut self) {
         self.rust4pm_log.traces.iter().for_each(|trace| {
             trace.events.iter().for_each(|event| {
-                activity_key.process_activity(&self.classifier.get_class_identity(event));
+                self.activity_key
+                    .process_activity(&self.classifier.get_class_identity(event));
             })
         });
-        mem::swap(&mut activity_key, &mut self.activity_key);
+    }
+
+    pub fn create_attribute_key(&mut self) {
+        self.rust4pm_log.traces.iter().for_each(|trace| {
+            for attribute in &trace.attributes {
+                self.attribute_key
+                    .process_attribute(&attribute.key, &attribute.value);
+            }
+        })
     }
 
     pub fn retain_traces_mut<F>(&mut self, f: &mut F)
@@ -70,25 +75,6 @@ impl EventLogTraceAttributes {
 
         //swap the the traces back
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
-    }
-
-    pub fn get_trace_attributes(&self) -> HashMap<String, DataType> {
-        let mut map: HashMap<String, DataType> = HashMap::new();
-        for trace in &self.rust4pm_log.traces {
-            for attribute in &trace.attributes {
-                match map.entry(attribute.key.clone()) {
-                    std::collections::hash_map::Entry::Occupied(mut e) => {
-                        e.get_mut().update(&attribute.value);
-                        ()
-                    }
-                    std::collections::hash_map::Entry::Vacant(e) => {
-                        e.insert(DataType::init(&attribute.value));
-                        ()
-                    }
-                }
-            }
-        }
-        map
     }
 }
 
@@ -171,13 +157,9 @@ impl Infoable for EventLogTraceAttributes {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        let trace_atts = self.get_trace_attributes();
-        let t: Vec<String> = trace_atts
-            .iter()
-            .map(|(att, data_type)| format!("{}\t{}", att, data_type))
-            .collect();
+        writeln!(f, "")?;
         writeln!(f, "Trace attributes:")?;
-        writeln!(f, "\t{}", t.join("\n\t"))?;
+        self.attribute_key.info(f)?;
 
         Ok(write!(f, "")?)
     }
@@ -194,6 +176,14 @@ impl IndexTraceAttributes for EventLogTraceAttributes {
 
     fn par_iter_traces(&self) -> ParallelEventLogTraceAttributesIterator<'_> {
         self.into()
+    }
+
+    fn attribute_key(&self) -> &AttributeKey {
+        &self.attribute_key
+    }
+
+    fn attribute_key_mut(&mut self) -> &mut AttributeKey {
+        &mut self.attribute_key
     }
 
     fn get_trace_attribute_categorical(

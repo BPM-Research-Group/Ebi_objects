@@ -1,12 +1,14 @@
 use std::{borrow::Borrow, collections::HashMap};
 
-use crate::Attribute;
+use process_mining::event_log::AttributeValue;
+
+use crate::{Attribute, Infoable, data_type::DataType};
 
 #[derive(Clone, Debug)]
 pub struct AttributeKey {
-    pub name2attribute: HashMap<String, Attribute>,
-    pub attribute2name: Vec<String>,
-    pub next_index: usize,
+    pub(crate) name2attribute: HashMap<String, Attribute>,
+    pub(crate) attribute2name: Vec<String>,
+    pub(crate) attribute2type: Vec<DataType>,
 }
 
 impl<'a> AttributeKey {
@@ -14,34 +16,67 @@ impl<'a> AttributeKey {
         Self {
             name2attribute: HashMap::new(),
             attribute2name: vec![],
-            next_index: 0,
-        }
-    }
-
-    pub fn get_attribute_by_id(&self, attribute_id: usize) -> Attribute {
-        Attribute { id: attribute_id }
-    }
-
-    pub fn get_id_from_attribute(&self, attribute: impl Borrow<Attribute>) -> usize {
-        attribute.borrow().id
-    }
-
-    pub fn process_attribute(&mut self, attribute: &str) -> Attribute {
-        match self.name2attribute.get(attribute) {
-            Some(index) => return *index,
-            None => {
-                let result = Attribute {
-                    id: self.next_index,
-                };
-                self.attribute2name.push(attribute.to_string());
-                self.name2attribute.insert(attribute.to_string(), result);
-                self.next_index += 1;
-                return result;
-            }
+            attribute2type: vec![],
         }
     }
 
     pub fn attribute_to_label(&self, attribute: Attribute) -> Option<&String> {
         self.attribute2name.get(attribute.id)
+    }
+
+    pub fn label_to_attribute(&self, label: &str) -> Option<&Attribute> {
+        self.name2attribute.get(label)
+    }
+
+    pub fn id_to_attribute(&self, attribute_id: usize) -> Attribute {
+        Attribute { id: attribute_id }
+    }
+
+    pub fn attribute_to_id(&self, attribute: impl Borrow<Attribute>) -> usize {
+        attribute.borrow().id
+    }
+
+    pub fn process_attribute(
+        &mut self,
+        attribute_name: &str,
+        attribute_value: &AttributeValue,
+    ) -> Attribute {
+        let next_index = self.name2attribute.len();
+        match self.name2attribute.get(attribute_name) {
+            Some(index) => {
+                self.attribute2type[index.id].update(attribute_value);
+                return *index;
+            }
+            None => {
+                let result = Attribute { id: next_index };
+                self.attribute2name.push(attribute_name.to_string());
+                self.name2attribute
+                    .insert(attribute_name.to_string(), result);
+                self.attribute2type.push(DataType::init(&attribute_value));
+                return result;
+            }
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.attribute2name.len()
+    }
+}
+
+impl Infoable for AttributeKey {
+    fn info(&self, f: &mut impl std::io::Write) -> anyhow::Result<()> {
+        //make tuples
+        let mut tuples = self
+            .attribute2name
+            .iter()
+            .zip(self.attribute2type.iter())
+            .collect::<Vec<_>>();
+        tuples.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (label, typee) in tuples {
+            writeln!(f, "\t{}\t{}", label, typee)?;
+        }
+
+        Ok(write!(f, "")?)
     }
 }

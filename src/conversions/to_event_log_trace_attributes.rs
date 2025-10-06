@@ -19,7 +19,8 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogTraceAttri
             activity_key: ActivityKey::new(),
             attribute_key: AttributeKey::new(),
         };
-        result.process_activity_key();
+        result.create_activity_key();
+        result.create_attribute_key();
         result
     }
 }

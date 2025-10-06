@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::Fraction;
 use process_mining::event_log::AttributeValue;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DataType {
     Categorical,
     Numerical(Fraction, Fraction), //minimum, maximum
