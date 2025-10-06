@@ -84,6 +84,7 @@ pub use crate::traits::exportable::Exportable;
 pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
 pub use crate::traits::index_trace::IndexTrace;
+pub use crate::traits::index_trace::IndexTraceProbability;
 pub use crate::traits::index_trace_attributes::IndexTraceAttributes;
 pub use crate::traits::infoable::Infoable;
 

@@ -12,7 +12,8 @@ pub trait IndexTrace: Sync {
 }
 
 pub trait IndexTraceProbability: Sync {
-    fn get_trace_probability(&self, trace_index: usize) -> Option<(&Vec<Activity>, &Fraction)>;
+    fn iter_probabilities(&self)
+    -> std::collections::hash_map::Values<'_, Vec<Activity>, Fraction>;
 
     fn iter_traces_probabilities(
         &'_ self,
@@ -21,4 +22,8 @@ pub trait IndexTraceProbability: Sync {
     fn par_iter_traces_probabilities(
         &self,
     ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction>;
+
+    fn into_par_iter_traces_probabilities(
+        self,
+    ) -> rayon::collections::hash_map::IntoIter<Vec<Activity>, Fraction>;
 }

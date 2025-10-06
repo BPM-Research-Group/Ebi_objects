@@ -1,12 +1,17 @@
 use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::Fraction;
 
-use crate::{Attribute, ebi_objects::event_log_trace_attributes::EventLogTraceAttributesIterator};
+use crate::{
+    Attribute, parallel_trace_iterator::ParallelEventLogTraceAttributesIterator,
+    trace_iterator::EventLogTraceAttributesIterator,
+};
 
 pub trait IndexTraceAttributes {
     fn number_of_traces(&self) -> usize;
 
     fn iter_traces(&'_ self) -> EventLogTraceAttributesIterator<'_>;
+
+    fn par_iter_traces(&self) -> ParallelEventLogTraceAttributesIterator<'_>;
 
     fn get_trace_attribute_categorical(
         &self,

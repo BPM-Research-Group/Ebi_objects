@@ -311,8 +311,10 @@ impl IndexTrace for FiniteStochasticLanguage {
 }
 
 impl IndexTraceProbability for FiniteStochasticLanguage {
-    fn get_trace_probability(&self, trace_index: usize) -> Option<(&Vec<Activity>, &Fraction)> {
-        self.traces.iter().nth(trace_index)
+    fn iter_probabilities(
+        &self,
+    ) -> std::collections::hash_map::Values<'_, Vec<Activity>, Fraction> {
+        self.traces.values()
     }
 
     fn iter_traces_probabilities(
@@ -325,6 +327,12 @@ impl IndexTraceProbability for FiniteStochasticLanguage {
         &self,
     ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
         self.traces.par_iter()
+    }
+
+    fn into_par_iter_traces_probabilities(
+        self,
+    ) -> rayon::collections::hash_map::IntoIter<Vec<Activity>, Fraction> {
+        self.traces.into_par_iter()
     }
 }
 

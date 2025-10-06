@@ -1,6 +1,6 @@
 use ebi_arithmetic::Fraction;
 
-use crate::Activity;
+use crate::{Activity, EventLogTraceAttributes};
 
 pub enum TraceIterator<'a> {
     Vec(std::slice::Iter<'a, Vec<Activity>>),
@@ -57,18 +57,6 @@ impl<'a> Iterator for TraceIterator<'a> {
         }
     }
 
-    fn for_each<F>(self, f: F)
-    where
-        Self: Sized,
-        F: FnMut(Self::Item),
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.for_each(f),
-            TraceIterator::HashSet(iter) => iter.for_each(f),
-            TraceIterator::Keys(iter) => iter.for_each(f),
-        }
-    }
-
     fn collect<B: FromIterator<Self::Item>>(self) -> B
     where
         Self: Sized,
@@ -77,91 +65,6 @@ impl<'a> Iterator for TraceIterator<'a> {
             TraceIterator::Vec(iter) => iter.collect(),
             TraceIterator::HashSet(iter) => iter.collect(),
             TraceIterator::Keys(iter) => iter.collect(),
-        }
-    }
-
-    fn partition<B, F>(self, f: F) -> (B, B)
-    where
-        Self: Sized,
-        B: Default + Extend<Self::Item>,
-        F: FnMut(&Self::Item) -> bool,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.partition(f),
-            TraceIterator::HashSet(iter) => iter.partition(f),
-            TraceIterator::Keys(iter) => iter.partition(f),
-        }
-    }
-
-    fn fold<B, F>(self, init: B, f: F) -> B
-    where
-        Self: Sized,
-        F: FnMut(B, Self::Item) -> B,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.fold(init, f),
-            TraceIterator::HashSet(iter) => iter.fold(init, f),
-            TraceIterator::Keys(iter) => iter.fold(init, f),
-        }
-    }
-
-    fn reduce<F>(self, f: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnMut(Self::Item, Self::Item) -> Self::Item,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.reduce(f),
-            TraceIterator::HashSet(iter) => iter.reduce(f),
-            TraceIterator::Keys(iter) => iter.reduce(f),
-        }
-    }
-
-    fn all<F>(&mut self, f: F) -> bool
-    where
-        Self: Sized,
-        F: FnMut(Self::Item) -> bool,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.all(f),
-            TraceIterator::HashSet(iter) => iter.all(f),
-            TraceIterator::Keys(iter) => iter.all(f),
-        }
-    }
-
-    fn any<F>(&mut self, f: F) -> bool
-    where
-        Self: Sized,
-        F: FnMut(Self::Item) -> bool,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.any(f),
-            TraceIterator::HashSet(iter) => iter.any(f),
-            TraceIterator::Keys(iter) => iter.any(f),
-        }
-    }
-
-    fn find<P>(&mut self, predicate: P) -> Option<Self::Item>
-    where
-        Self: Sized,
-        P: FnMut(&Self::Item) -> bool,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.find(predicate),
-            TraceIterator::HashSet(iter) => iter.find(predicate),
-            TraceIterator::Keys(iter) => iter.find(predicate),
-        }
-    }
-
-    fn find_map<B, F>(&mut self, f: F) -> Option<B>
-    where
-        Self: Sized,
-        F: FnMut(Self::Item) -> Option<B>,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.find_map(f),
-            TraceIterator::HashSet(iter) => iter.find_map(f),
-            TraceIterator::Keys(iter) => iter.find_map(f),
         }
     }
 
@@ -174,78 +77,6 @@ impl<'a> Iterator for TraceIterator<'a> {
             TraceIterator::Vec(iter) => iter.position(predicate),
             TraceIterator::HashSet(iter) => iter.position(predicate),
             TraceIterator::Keys(iter) => iter.position(predicate),
-        }
-    }
-
-    fn max(self) -> Option<Self::Item>
-    where
-        Self: Sized,
-        Self::Item: Ord,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.max(),
-            TraceIterator::HashSet(iter) => iter.max(),
-            TraceIterator::Keys(iter) => iter.max(),
-        }
-    }
-
-    fn min(self) -> Option<Self::Item>
-    where
-        Self: Sized,
-        Self::Item: Ord,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.min(),
-            TraceIterator::HashSet(iter) => iter.min(),
-            TraceIterator::Keys(iter) => iter.min(),
-        }
-    }
-
-    fn max_by_key<B: Ord, F>(self, f: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnMut(&Self::Item) -> B,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.max_by_key(f),
-            TraceIterator::HashSet(iter) => iter.max_by_key(f),
-            TraceIterator::Keys(iter) => iter.max_by_key(f),
-        }
-    }
-
-    fn max_by<F>(self, compare: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnMut(&Self::Item, &Self::Item) -> std::cmp::Ordering,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.max_by(compare),
-            TraceIterator::HashSet(iter) => iter.max_by(compare),
-            TraceIterator::Keys(iter) => iter.max_by(compare),
-        }
-    }
-
-    fn min_by_key<B: Ord, F>(self, f: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnMut(&Self::Item) -> B,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.min_by_key(f),
-            TraceIterator::HashSet(iter) => iter.min_by_key(f),
-            TraceIterator::Keys(iter) => iter.min_by_key(f),
-        }
-    }
-
-    fn min_by<F>(self, compare: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnMut(&Self::Item, &Self::Item) -> std::cmp::Ordering,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.min_by(compare),
-            TraceIterator::HashSet(iter) => iter.min_by(compare),
-            TraceIterator::Keys(iter) => iter.min_by(compare),
         }
     }
 
@@ -272,30 +103,36 @@ impl<'a> Iterator for TraceIterator<'a> {
             TraceIterator::Keys(iter) => iter.product(),
         }
     }
+}
 
-    fn cmp<I>(self, other: I) -> std::cmp::Ordering
-    where
-        I: IntoIterator<Item = Self::Item>,
-        Self::Item: Ord,
-        Self: Sized,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.cmp(other),
-            TraceIterator::HashSet(iter) => iter.cmp(other),
-            TraceIterator::Keys(iter) => iter.cmp(other),
+pub struct EventLogTraceAttributesIterator<'a> {
+    log: &'a EventLogTraceAttributes,
+    next: usize,
+}
+
+impl<'a> Iterator for EventLogTraceAttributesIterator<'a> {
+    type Item = Vec<Activity>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let trace = self.log.rust4pm_log.traces.get(self.next)?;
+        let mut result = Vec::with_capacity(trace.events.len());
+        for event in trace.events.iter() {
+            let activity = self
+                .log
+                .activity_key
+                .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
+            result.push(activity);
         }
+        self.next += 1;
+        Some(result)
     }
+}
 
-    fn partial_cmp<I>(self, other: I) -> Option<std::cmp::Ordering>
-    where
-        I: IntoIterator,
-        Self::Item: PartialOrd<I::Item>,
-        Self: Sized,
-    {
-        match self {
-            TraceIterator::Vec(iter) => iter.partial_cmp(other),
-            TraceIterator::HashSet(iter) => iter.partial_cmp(other),
-            TraceIterator::Keys(iter) => iter.partial_cmp(other),
+impl<'a> From<&'a EventLogTraceAttributes> for EventLogTraceAttributesIterator<'a> {
+    fn from(value: &'a EventLogTraceAttributes) -> Self {
+        Self {
+            log: value,
+            next: 0,
         }
     }
 }

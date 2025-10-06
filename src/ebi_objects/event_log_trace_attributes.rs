@@ -1,11 +1,12 @@
 use crate::{
-    Activity, ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable,
-    Infoable, TranslateActivityKey, constants::ebi_object::EbiObject, data_type::DataType,
+    ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable, Infoable,
+    TranslateActivityKey, constants::ebi_object::EbiObject, data_type::DataType,
+    parallel_trace_iterator::ParallelEventLogTraceAttributesIterator,
+    trace_iterator::EventLogTraceAttributesIterator,
     traits::index_trace_attributes::IndexTraceAttributes,
 };
 use anyhow::{Error, Result, anyhow};
 use chrono::{DateTime, FixedOffset};
-use core::fmt;
 use ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
 use process_mining::{
@@ -16,6 +17,7 @@ use process_mining::{
 };
 use std::{
     collections::HashMap,
+    fmt,
     io::{self, BufRead, Write},
     mem,
     str::FromStr,
@@ -181,36 +183,17 @@ impl Infoable for EventLogTraceAttributes {
     }
 }
 
-pub struct EventLogTraceAttributesIterator<'a> {
-    log: &'a EventLogTraceAttributes,
-    next: usize,
-}
-
-impl<'a> Iterator for EventLogTraceAttributesIterator<'a> {
-    type Item = Vec<Activity>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let trace = self.log.rust4pm_log.traces.get(self.next)?;
-        let mut result = Vec::with_capacity(trace.events.len());
-        for event in trace.events.iter() {
-            let activity = self
-                .log
-                .activity_key
-                .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
-            result.push(activity);
-        }
-        self.next += 1;
-        Some(result)
-    }
-}
-
 impl IndexTraceAttributes for EventLogTraceAttributes {
     fn number_of_traces(&self) -> usize {
         self.rust4pm_log.traces.len()
     }
 
     fn iter_traces(&'_ self) -> EventLogTraceAttributesIterator<'_> {
-        EventLogTraceAttributesIterator { log: self, next: 0 }
+        self.into()
+    }
+
+    fn par_iter_traces(&self) -> ParallelEventLogTraceAttributesIterator<'_> {
+        self.into()
     }
 
     fn get_trace_attribute_categorical(
