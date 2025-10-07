@@ -1,4 +1,3 @@
-use crate::{Activity, EventLogTraceAttributes, IndexTraceAttributes};
 use ebi_arithmetic::Fraction;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
@@ -6,13 +5,20 @@ use rayon::iter::{
 };
 use std::collections::HashMap;
 
-pub enum ParallelTraceIterator<'a> {
+use crate::Activity;
+
+/**
+ * A parallel iterator over references to traces.
+ *
+ * As Rust doesn't allow generic types in traits, this is an enum.
+ */
+pub enum ParallelRefTraceIterator<'a> {
     Vec(rayon::slice::Iter<'a, Vec<Activity>>),
     HashSet(rayon::collections::hash_set::Iter<'a, Vec<Activity>>),
-    HashMap(ParallelKeysIterator<'a, Vec<Activity>, Fraction>),
+    HashMap(ParallelRefTraceIteratorKeys<'a, Vec<Activity>, Fraction>),
 }
 
-impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
+impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
     type Item = &'a Vec<Activity>;
 
     fn drive_unindexed<C>(self, consumer: C) -> C::Result
@@ -20,36 +26,36 @@ impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
         C: rayon::iter::plumbing::UnindexedConsumer<Self::Item>,
     {
         match self {
-            ParallelTraceIterator::Vec(iter) => iter.drive_unindexed(consumer),
-            ParallelTraceIterator::HashSet(iter) => iter.drive_unindexed(consumer),
-            ParallelTraceIterator::HashMap(iter) => iter.drive_unindexed(consumer),
+            ParallelRefTraceIterator::Vec(iter) => iter.drive_unindexed(consumer),
+            ParallelRefTraceIterator::HashSet(iter) => iter.drive_unindexed(consumer),
+            ParallelRefTraceIterator::HashMap(iter) => iter.drive_unindexed(consumer),
         }
     }
 
     fn opt_len(&self) -> Option<usize> {
         match self {
-            ParallelTraceIterator::Vec(iter) => iter.opt_len(),
-            ParallelTraceIterator::HashSet(iter) => iter.opt_len(),
-            ParallelTraceIterator::HashMap(iter) => iter.opt_len(),
+            ParallelRefTraceIterator::Vec(iter) => iter.opt_len(),
+            ParallelRefTraceIterator::HashSet(iter) => iter.opt_len(),
+            ParallelRefTraceIterator::HashMap(iter) => iter.opt_len(),
         }
     }
 }
 
 /// In order to iterate over the keys of a hashmap in parallel,
 /// we first need a struct that is the parallel iterator.
-pub struct ParallelKeysIterator<'a, K, V> {
+pub struct ParallelRefTraceIteratorKeys<'a, K, V> {
     keys: std::collections::hash_map::Keys<'a, K, V>,
 }
 
 /// The parallel iterator can be created from a reference to a hashmap.
-impl<'a, K, V> From<&'a HashMap<K, V>> for ParallelKeysIterator<'a, K, V> {
+impl<'a, K, V> From<&'a HashMap<K, V>> for ParallelRefTraceIteratorKeys<'a, K, V> {
     fn from(value: &'a HashMap<K, V>) -> Self {
         Self { keys: value.keys() }
     }
 }
 
 /// We implement the ParallelIterator trait for our parallel keys iterator.
-impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelKeysIterator<'a, K, V> {
+impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelRefTraceIteratorKeys<'a, K, V> {
     type Item = &'a K;
 
     fn drive_unindexed<C>(self, consumer: C) -> C::Result
@@ -66,7 +72,7 @@ impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelKeysIterator<'a, K, V> {
 
 /// In order for the bridge function to work,
 /// we need to implement IndexedParallelIterator for our parallel keys iterator.
-impl<'a, K: Sync, V: Sync> IndexedParallelIterator for ParallelKeysIterator<'a, K, V> {
+impl<'a, K: Sync, V: Sync> IndexedParallelIterator for ParallelRefTraceIteratorKeys<'a, K, V> {
     fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
         let producer = KeysIteratorDataProducer::from(self);
         callback.callback(producer)
@@ -175,8 +181,8 @@ impl<'a, K: Sync, V: Sync> Producer for KeysIteratorDataProducer<'a, K, V> {
     }
 }
 
-impl<'a, K, V> From<ParallelKeysIterator<'a, K, V>> for KeysIteratorDataProducer<'a, K, V> {
-    fn from(iterator: ParallelKeysIterator<'a, K, V>) -> Self {
+impl<'a, K, V> From<ParallelRefTraceIteratorKeys<'a, K, V>> for KeysIteratorDataProducer<'a, K, V> {
+    fn from(iterator: ParallelRefTraceIteratorKeys<'a, K, V>) -> Self {
         let len = iterator.keys.len();
         Self {
             keys: iterator.keys,
@@ -186,157 +192,12 @@ impl<'a, K, V> From<ParallelKeysIterator<'a, K, V>> for KeysIteratorDataProducer
     }
 }
 
-pub struct ParallelEventLogTraceAttributesIterator<'a> {
-    log: &'a EventLogTraceAttributes,
-}
-
-impl<'a> ParallelIterator for ParallelEventLogTraceAttributesIterator<'a> {
-    type Item = Vec<Activity>;
-
-    fn drive_unindexed<C>(self, consumer: C) -> C::Result
-    where
-        C: UnindexedConsumer<Self::Item>,
-    {
-        bridge(self, consumer)
-    }
-
-    fn opt_len(&self) -> Option<usize> {
-        Some(self.len())
-    }
-}
-
-impl<'a> From<&'a EventLogTraceAttributes> for ParallelEventLogTraceAttributesIterator<'a> {
-    fn from(value: &'a EventLogTraceAttributes) -> Self {
-        Self { log: value }
-    }
-}
-
-impl<'a> IndexedParallelIterator for ParallelEventLogTraceAttributesIterator<'a> {
-    fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
-        let producer = ParallelTraceAttributesIteratorDataProducer::from(self);
-        callback.callback(producer)
-    }
-
-    fn drive<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
-        bridge(self, consumer)
-    }
-
-    fn len(&self) -> usize {
-        self.log.number_of_traces()
-    }
-}
-
-struct ParallelTraceAttributesIteratorDataProducer<'a> {
-    log: &'a EventLogTraceAttributes,
-    traces: &'a [process_mining::event_log::Trace],
-}
-
-impl<'a> From<ParallelEventLogTraceAttributesIterator<'a>>
-    for ParallelTraceAttributesIteratorDataProducer<'a>
-{
-    fn from(iterator: ParallelEventLogTraceAttributesIterator<'a>) -> Self {
-        Self {
-            log: iterator.log,
-            traces: &iterator.log.rust4pm_log.traces,
-        }
-    }
-}
-
-impl<'a> Producer for ParallelTraceAttributesIteratorDataProducer<'a> {
-    type Item = Vec<Activity>;
-    type IntoIter = Rust4PMIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        Rust4PMIterator {
-            log: self.log,
-            traces: self.traces,
-        }
-    }
-
-    fn split_at(self, index: usize) -> (Self, Self) {
-        let (left, right) = self.traces.split_at(index);
-        (
-            ParallelTraceAttributesIteratorDataProducer {
-                log: self.log,
-                traces: left,
-            },
-            ParallelTraceAttributesIteratorDataProducer {
-                log: self.log,
-                traces: right,
-            },
-        )
-    }
-}
-
-struct Rust4PMIterator<'a> {
-    log: &'a EventLogTraceAttributes,
-    traces: &'a [process_mining::event_log::Trace],
-}
-
-impl<'a> Iterator for Rust4PMIterator<'a> {
-    type Item = Vec<Activity>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let trace = self.traces.get(0)?;
-        let mut result = Vec::with_capacity(trace.events.len());
-        for event in trace.events.iter() {
-            let activity = self
-                .log
-                .activity_key
-                .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
-            result.push(activity);
-        }
-
-        self.traces = &self.traces[1..];
-        Some(result)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.traces.len(), Some(self.traces.len()))
-    }
-}
-
-impl<'a> DoubleEndedIterator for Rust4PMIterator<'a> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let len = self.traces.len();
-        if len > 0 {
-            let trace = &self.traces[len - 1];
-
-            let mut result = Vec::with_capacity(trace.events.len());
-            for event in trace.events.iter() {
-                let activity = self
-                    .log
-                    .activity_key
-                    .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
-                result.push(activity);
-            }
-
-            self.traces = &self.traces[0..(len - 1)];
-            Some(result)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a> ExactSizeIterator for Rust4PMIterator<'a> {
-    fn len(&self) -> usize {
-        let (lower, upper) = self.size_hint();
-        // Note: This assertion is overly defensive, but it checks the invariant
-        // guaranteed by the trait. If this trait were rust-internal,
-        // we could use debug_assert!; assert_eq! will check all Rust user
-        // implementations too.
-        std::assert_eq!(upper, Some(lower));
-        lower
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use rayon::iter::ParallelIterator;
     use std::collections::HashMap;
 
-    use crate::parallel_trace_iterator::{KeysIterator, ParallelKeysIterator};
+    use crate::iterators::parallel_ref_trace_iterator::{KeysIterator, ParallelRefTraceIteratorKeys};
 
     #[test]
     fn keys_iterator() {
@@ -368,7 +229,7 @@ mod tests {
 
         assert_eq!(umap.len(), 90);
 
-        let it = ParallelKeysIterator::from(&umap);
+        let it = ParallelRefTraceIteratorKeys::from(&umap);
         let result = it.map(|x| x + 1).collect::<Vec<_>>();
 
         assert_eq!(result.len(), 90);

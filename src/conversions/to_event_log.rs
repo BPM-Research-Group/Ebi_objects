@@ -1,13 +1,12 @@
 use process_mining::event_log::event_log_struct::EventLogClassifier;
 
 use crate::{
-    Activity, ActivityKey, EventLogTraceAttributes,
+    Activity, ActivityKey, EventLogTraceAttributes, NumberOfTraces,
     ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
         event_log::EventLog,
     },
-    traits::index_trace_attributes::IndexTraceAttributes,
 };
 
 impl From<CompressedEventLog> for EventLog {

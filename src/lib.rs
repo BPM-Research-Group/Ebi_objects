@@ -59,20 +59,26 @@ pub mod ebi_objects {
     pub mod stochastic_language_of_alignments;
     pub mod stochastic_process_tree;
 }
+pub mod iterators {
+    pub mod parallel_ref_trace_iterator;
+    pub mod parallel_trace_iterator;
+    pub mod ref_trace_iterator;
+    pub mod trace_iterator;
+}
 pub mod traits {
     pub mod exportable;
     pub mod graphable;
     pub mod importable;
-    pub mod index_trace;
     pub mod index_trace_attributes;
     pub mod infoable;
+    pub mod number_of_traces;
+    pub mod trace_attributes;
+    pub mod trace_iterators;
 }
 pub mod json;
 pub mod line_reader;
 pub mod marking;
-pub mod parallel_trace_iterator;
 pub mod tests;
-pub mod trace_iterator;
 
 pub use crate::activity_key::activity::Activity;
 pub use crate::activity_key::activity_key::ActivityKey;
@@ -87,10 +93,11 @@ pub use crate::constants::ebi_object_type::EbiObjectType;
 pub use crate::traits::exportable::Exportable;
 pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
-pub use crate::traits::index_trace::IndexTrace;
-pub use crate::traits::index_trace::IndexTraceProbability;
 pub use crate::traits::index_trace_attributes::IndexTraceAttributes;
 pub use crate::traits::infoable::Infoable;
+pub use crate::traits::number_of_traces::NumberOfTraces;
+pub use crate::traits::trace_attributes::*;
+pub use crate::traits::trace_iterators::*;
 
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomaton;

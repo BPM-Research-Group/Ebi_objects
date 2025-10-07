@@ -1,3 +1,12 @@
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
+    TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    iterators::{
+        parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
+    },
+    traits::{number_of_traces::NumberOfTraces, trace_iterators::IntoRefTraceIterator},
+};
 use anyhow::{Error, Result, anyhow};
 use core::fmt;
 use ebi_derive::ActivityKey;
@@ -8,10 +17,6 @@ use std::{
     slice::{Iter, IterMut},
     str::FromStr,
     vec::IntoIter,
-};
-
-use crate::{
-    constants::ebi_object::EbiObject, parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, IndexTrace, Infoable, TranslateActivityKey
 };
 
 pub const FORMAT_SPECIFICATION: &str =
@@ -157,17 +162,19 @@ impl Infoable for EventLog {
     }
 }
 
-impl IndexTrace for EventLog {
+impl NumberOfTraces for EventLog {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
+}
 
-    fn iter_traces(&self) -> TraceIterator<'_> {
-        TraceIterator::Vec(self.traces.iter())
+impl IntoRefTraceIterator for EventLog {
+    fn iter_traces(&self) -> RefTraceIterator<'_> {
+        RefTraceIterator::Vec(self.traces.iter())
     }
 
-    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
-        ParallelTraceIterator::Vec(self.traces.par_iter())
+    fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
+        ParallelRefTraceIterator::Vec(self.traces.par_iter())
     }
 }
 

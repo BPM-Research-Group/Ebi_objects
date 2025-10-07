@@ -1,7 +1,5 @@
-use ebi_arithmetic::ebi_number::{Signed, Zero};
-
 use crate::{
-    IndexTrace,
+    NumberOfTraces,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog,
@@ -9,6 +7,7 @@ use crate::{
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
 };
+use ebi_arithmetic::ebi_number::{Signed, Zero};
 
 impl From<FiniteLanguage> for DeterministicFiniteAutomaton {
     fn from(value: FiniteLanguage) -> Self {

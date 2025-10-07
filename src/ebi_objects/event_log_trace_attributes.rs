@@ -2,12 +2,17 @@ use crate::{
     ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable, Infoable,
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    parallel_trace_iterator::ParallelEventLogTraceAttributesIterator,
-    trace_iterator::{
-        EventLogTraceAttributeCategoricalIterator, EventLogTraceAttributeTraceCategoricalIterator,
-        EventLogTraceAttributesIterator,
+    iterators::{
+        parallel_trace_iterator::ParallelTraceIterator,
+        trace_iterator::{
+            EventLogTraceAttributeCategoricalIterator,
+            EventLogTraceAttributeTraceCategoricalIterator, TraceIterator,
+        },
     },
-    traits::index_trace_attributes::IndexTraceAttributes,
+    traits::{
+        index_trace_attributes::IndexTraceAttributes, number_of_traces::NumberOfTraces,
+        trace_attributes::TraceAttributes, trace_iterators::IntoTraceIterator,
+    },
 };
 use anyhow::{Error, Result, anyhow};
 use chrono::{DateTime, FixedOffset};
@@ -169,24 +174,28 @@ impl Infoable for EventLogTraceAttributes {
     }
 }
 
-impl IndexTraceAttributes for EventLogTraceAttributes {
+impl NumberOfTraces for EventLogTraceAttributes {
     fn number_of_traces(&self) -> usize {
         self.rust4pm_log.traces.len()
     }
+}
 
-    fn iter_traces(&'_ self) -> EventLogTraceAttributesIterator<'_> {
+impl IntoTraceIterator for EventLogTraceAttributes {
+    fn iter_traces(&'_ self) -> TraceIterator<'_> {
         self.into()
     }
 
-    fn par_iter_traces(&self) -> ParallelEventLogTraceAttributesIterator<'_> {
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
         self.into()
     }
+}
 
+impl IndexTraceAttributes for EventLogTraceAttributes {
     fn iter_traces_categorical(
         &self,
         attribute: Attribute,
     ) -> EventLogTraceAttributeTraceCategoricalIterator<'_> {
-        let x: EventLogTraceAttributesIterator = self.into();
+        let x: TraceIterator = self.into();
         let y: EventLogTraceAttributeCategoricalIterator = (self, attribute).into();
         x.zip(y)
     }
@@ -197,7 +206,9 @@ impl IndexTraceAttributes for EventLogTraceAttributes {
     ) -> EventLogTraceAttributeCategoricalIterator<'_> {
         (self, attribute).into()
     }
+}
 
+impl TraceAttributes for EventLogTraceAttributes {
     fn get_trace_attribute_categorical(
         &self,
         trace_index: usize,
@@ -279,9 +290,8 @@ mod tests {
     use std::fs;
 
     use crate::{
-        ActivityKey, TranslateActivityKey,
+        ActivityKey, NumberOfTraces, TranslateActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
-        traits::index_trace_attributes::IndexTraceAttributes,
     };
 
     use super::EventLogTraceAttributes;

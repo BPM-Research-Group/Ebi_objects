@@ -1,3 +1,12 @@
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
+    IntoRefTraceIterator, NumberOfTraces, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    iterators::{
+        parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
+    },
+    line_reader::LineReader,
+};
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use fnv::FnvBuildHasher;
@@ -10,13 +19,6 @@ use std::{
     fmt::Display,
     io::{self, BufRead},
     str::FromStr,
-};
-
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader, parallel_trace_iterator::ParallelTraceIterator,
-    trace_iterator::TraceIterator,
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
@@ -207,17 +209,19 @@ impl Importable for FiniteLanguage {
     }
 }
 
-impl IndexTrace for FiniteLanguage {
+impl NumberOfTraces for FiniteLanguage {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
+}
 
-    fn iter_traces(&self) -> TraceIterator<'_> {
-        TraceIterator::HashSet(self.traces.iter())
+impl IntoRefTraceIterator for FiniteLanguage {
+    fn iter_traces(&self) -> RefTraceIterator<'_> {
+        RefTraceIterator::HashSet(self.traces.iter())
     }
 
-    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
-        ParallelTraceIterator::HashSet(self.traces.par_iter())
+    fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
+        ParallelRefTraceIterator::HashSet(self.traces.par_iter())
     }
 }
 

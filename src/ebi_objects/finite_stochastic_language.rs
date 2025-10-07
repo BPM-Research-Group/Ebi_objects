@@ -1,8 +1,10 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable,
-    IndexTrace, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader, parallel_trace_iterator::ParallelTraceIterator,
-    trace_iterator::TraceIterator, traits::index_trace::IndexTraceProbability,
+    constants::ebi_object::EbiObject, iterators::{
+        parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
+    }, line_reader::LineReader, traits::{
+        number_of_traces::NumberOfTraces,
+        trace_iterators::{IntoRefProbabilityIterator, IntoRefTraceIterator, IntoRefTraceProbabilityIterator},
+    }, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable, TranslateActivityKey
 };
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
@@ -18,7 +20,8 @@ use std::{
     str::FromStr,
 };
 
-pub const HEADER: &str = "finite stochastic language";
+pub const HEADER: &str = "finite 
+    fn iter_probabilities(&self) -> std::collections::hash_map::Values<'_, Vec<Activity>, Fraction>;stochastic language";
 
 pub const FORMAT_SPECIFICATION: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `finite stochastic language'.
@@ -104,6 +107,12 @@ impl TranslateActivityKey for FiniteStochasticLanguage {
         self.traces = translated_traces;
 
         self.activity_key = to_activity_key.clone();
+    }
+}
+
+impl NumberOfTraces for FiniteStochasticLanguage {
+    fn number_of_traces(&self) -> usize {
+        self.traces.len()
     }
 }
 
@@ -296,27 +305,25 @@ impl fmt::Display for FiniteStochasticLanguage {
     }
 }
 
-impl IndexTrace for FiniteStochasticLanguage {
-    fn number_of_traces(&self) -> usize {
-        self.traces.len()
+impl IntoRefTraceIterator for FiniteStochasticLanguage {
+    fn iter_traces(&self) -> RefTraceIterator<'_> {
+        RefTraceIterator::Keys(self.traces.keys())
     }
 
-    fn iter_traces(&self) -> TraceIterator<'_> {
-        TraceIterator::Keys(self.traces.keys())
-    }
-
-    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
-        ParallelTraceIterator::HashMap((&self.traces).into())
+    fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
+        ParallelRefTraceIterator::HashMap((&self.traces).into())
     }
 }
 
-impl IndexTraceProbability for FiniteStochasticLanguage {
+impl IntoRefProbabilityIterator for FiniteStochasticLanguage {
     fn iter_probabilities(
         &self,
     ) -> std::collections::hash_map::Values<'_, Vec<Activity>, Fraction> {
         self.traces.values()
     }
+}
 
+impl IntoRefTraceProbabilityIterator for FiniteStochasticLanguage {
     fn iter_traces_probabilities(
         &'_ self,
     ) -> std::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
@@ -324,12 +331,18 @@ impl IndexTraceProbability for FiniteStochasticLanguage {
     }
 
     fn par_iter_traces_probabilities(
-        &self,
+        &'_ self,
     ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
         self.traces.par_iter()
     }
 
-    fn into_par_iter_traces_probabilities(
+    fn into_iter_trace_probabilities(
+        self,
+    ) -> std::collections::hash_map::IntoIter<Vec<Activity>, Fraction> {
+        self.traces.into_iter()
+    }
+
+    fn into_par_iter_trace_probabilities(
         self,
     ) -> rayon::collections::hash_map::IntoIter<Vec<Activity>, Fraction> {
         self.traces.into_par_iter()
@@ -378,7 +391,10 @@ mod tests {
 
     use ebi_arithmetic::{Fraction, Zero};
 
-    use crate::{IndexTrace, ebi_objects::finite_stochastic_language::FiniteStochasticLanguage};
+    use crate::{
+        ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
+        traits::number_of_traces::NumberOfTraces,
+    };
 
     #[test]
     fn empty_slang() {

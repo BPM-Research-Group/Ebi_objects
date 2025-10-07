@@ -3,7 +3,8 @@ use std::collections::{HashMap, hash_map::Entry};
 use ebi_arithmetic::{Fraction, One, Zero};
 
 use crate::{
-    EventLogTraceAttributes, HasActivityKey, IndexTrace, IndexTraceAttributes,
+    EventLogTraceAttributes, HasActivityKey, IntoRefTraceIterator, IntoTraceIterator,
+    NumberOfTraces,
     ebi_objects::{
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
