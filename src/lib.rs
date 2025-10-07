@@ -5,6 +5,12 @@ pub mod activity_key {
     pub mod has_activity_key;
     pub mod translate_activity_key;
 }
+pub mod attribute_key {
+    pub mod attribute;
+    pub mod attribute_key;
+    pub mod data_type;
+    pub mod has_attribute_key;
+}
 pub mod constants {
     pub mod ebi_object;
     pub mod ebi_object_type;
@@ -61,9 +67,6 @@ pub mod traits {
     pub mod index_trace_attributes;
     pub mod infoable;
 }
-pub mod attribute;
-pub mod attribute_key;
-pub mod data_type;
 pub mod json;
 pub mod line_reader;
 pub mod marking;
@@ -76,8 +79,9 @@ pub use crate::activity_key::activity_key::ActivityKey;
 pub use crate::activity_key::activity_key_translator::ActivityKeyTranslator;
 pub use crate::activity_key::has_activity_key::HasActivityKey;
 pub use crate::activity_key::translate_activity_key::TranslateActivityKey;
-pub use crate::attribute::Attribute;
-pub use crate::attribute_key::AttributeKey;
+pub use crate::attribute_key::attribute::Attribute;
+pub use crate::attribute_key::attribute_key::AttributeKey;
+pub use crate::attribute_key::data_type::DataType;
 pub use crate::constants::ebi_object::EbiObject;
 pub use crate::constants::ebi_object_type::EbiObjectType;
 pub use crate::traits::exportable::Exportable;

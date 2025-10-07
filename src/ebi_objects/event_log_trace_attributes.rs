@@ -27,24 +27,15 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
 
-#[derive(ActivityKey, Clone)]
+#[derive(ActivityKey, AttributeKey, Clone)]
 pub struct EventLogTraceAttributes {
     pub(crate) classifier: EventLogClassifier,
     pub(crate) activity_key: ActivityKey,
-    pub(crate) rust4pm_log: process_mining::EventLog,
+    pub rust4pm_log: process_mining::EventLog,
     pub(crate) attribute_key: AttributeKey,
 }
 
 impl EventLogTraceAttributes {
-    
-    pub fn attribute_key(&self) -> &AttributeKey {
-        &self.attribute_key
-    }
-
-    pub fn attribute_key_mut(&mut self) -> &mut AttributeKey {
-        &mut self.attribute_key
-    }
-
     pub fn create_activity_key(&mut self) {
         self.rust4pm_log.traces.iter().for_each(|trace| {
             trace.events.iter().for_each(|event| {

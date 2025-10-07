@@ -1,8 +1,7 @@
-use std::{borrow::Borrow, collections::HashMap};
-
+use crate::{Attribute, DataType, Infoable};
 use process_mining::event_log::AttributeValue;
-
-use crate::{Attribute, Infoable, data_type::DataType};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator};
+use std::{borrow::Borrow, collections::HashMap};
 
 #[derive(Clone, Debug)]
 pub struct AttributeKey {
@@ -20,8 +19,8 @@ impl<'a> AttributeKey {
         }
     }
 
-    pub fn attribute_to_label(&self, attribute: Attribute) -> Option<&String> {
-        self.attribute2name.get(attribute.id)
+    pub fn attribute_to_label(&self, attribute: impl Borrow<Attribute>) -> Option<&String> {
+        self.attribute2name.get(attribute.borrow().id)
     }
 
     pub fn label_to_attribute(&self, label: &str) -> Option<&Attribute> {
@@ -34,6 +33,10 @@ impl<'a> AttributeKey {
 
     pub fn attribute_to_id(&self, attribute: impl Borrow<Attribute>) -> usize {
         attribute.borrow().id
+    }
+
+    pub fn attribute_to_data_type(&self, attribute: impl Borrow<Attribute>) -> Option<&DataType> {
+        self.attribute2type.get(attribute.borrow().id)
     }
 
     pub fn process_attribute(
@@ -78,5 +81,18 @@ impl Infoable for AttributeKey {
         }
 
         Ok(write!(f, "")?)
+    }
+}
+
+impl<'a> IntoParallelIterator for &'a AttributeKey {
+    type Iter = rayon::iter::Zip<rayon::vec::IntoIter<Attribute>, rayon::slice::Iter<'a, DataType>>;
+    type Item = (Attribute, &'a DataType);
+
+    fn into_par_iter(self) -> Self::Iter {
+        let x = (0..self.len())
+            .map(|id| self.id_to_attribute(id))
+            .collect::<Vec<_>>();
+
+        x.into_par_iter().zip(self.attribute2type.par_iter())
     }
 }
