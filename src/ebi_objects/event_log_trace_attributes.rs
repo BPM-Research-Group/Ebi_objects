@@ -1,14 +1,18 @@
 use crate::{
     ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject,
+    TranslateActivityKey,
+    constants::ebi_object::EbiObject,
     parallel_trace_iterator::ParallelEventLogTraceAttributesIterator,
-    trace_iterator::EventLogTraceAttributesIterator,
+    trace_iterator::{
+        EventLogTraceAttributeCategoricalIterator, EventLogTraceAttributeTraceCategoricalIterator,
+        EventLogTraceAttributesIterator,
+    },
     traits::index_trace_attributes::IndexTraceAttributes,
 };
 use anyhow::{Error, Result, anyhow};
 use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::Fraction;
-use ebi_derive::ActivityKey;
+use ebi_derive::{ActivityKey, AttributeKey};
 use process_mining::{
     XESImportOptions,
     event_log::{
@@ -176,6 +180,22 @@ impl IndexTraceAttributes for EventLogTraceAttributes {
 
     fn par_iter_traces(&self) -> ParallelEventLogTraceAttributesIterator<'_> {
         self.into()
+    }
+
+    fn iter_traces_categorical(
+        &self,
+        attribute: Attribute,
+    ) -> EventLogTraceAttributeTraceCategoricalIterator<'_> {
+        let x: EventLogTraceAttributesIterator = self.into();
+        let y: EventLogTraceAttributeCategoricalIterator = (self, attribute).into();
+        x.zip(y)
+    }
+
+    fn iter_categorical(
+        &self,
+        attribute: Attribute,
+    ) -> EventLogTraceAttributeCategoricalIterator<'_> {
+        (self, attribute).into()
     }
 
     fn get_trace_attribute_categorical(
