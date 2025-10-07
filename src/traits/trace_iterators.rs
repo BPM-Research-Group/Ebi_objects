@@ -25,6 +25,16 @@ pub trait IntoRefProbabilityIterator {
     -> std::collections::hash_map::Values<'_, Vec<Activity>, Fraction>;
 }
 
+pub trait IntoTraceProbabilityIterator {
+    fn into_iter_trace_probabilities(
+        self,
+    ) -> std::collections::hash_map::IntoIter<Vec<Activity>, Fraction>;
+
+    fn into_par_iter_trace_probabilities(
+        self,
+    ) -> rayon::collections::hash_map::IntoIter<Vec<Activity>, Fraction>;
+}
+
 pub trait IntoRefTraceProbabilityIterator {
     fn iter_traces_probabilities(
         &'_ self,
@@ -33,12 +43,4 @@ pub trait IntoRefTraceProbabilityIterator {
     fn par_iter_traces_probabilities(
         &'_ self,
     ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction>;
-
-    fn into_iter_trace_probabilities(
-        self,
-    ) -> std::collections::hash_map::IntoIter<Vec<Activity>, Fraction>;
-
-    fn into_par_iter_trace_probabilities(
-        self,
-    ) -> rayon::collections::hash_map::IntoIter<Vec<Activity>, Fraction>;
 }

@@ -1,7 +1,6 @@
+use crate::Attribute;
 use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::Fraction;
-
-use crate::Attribute;
 
 pub trait TraceAttributes {
     fn get_trace_attribute_categorical(

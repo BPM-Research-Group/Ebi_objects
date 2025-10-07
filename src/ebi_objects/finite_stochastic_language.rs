@@ -1,10 +1,17 @@
 use crate::{
-    constants::ebi_object::EbiObject, iterators::{
+    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
+    IntoTraceProbabilityIterator, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    iterators::{
         parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
-    }, line_reader::LineReader, traits::{
+    },
+    line_reader::LineReader,
+    traits::{
         number_of_traces::NumberOfTraces,
-        trace_iterators::{IntoRefProbabilityIterator, IntoRefTraceIterator, IntoRefTraceProbabilityIterator},
-    }, Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable, TranslateActivityKey
+        trace_iterators::{
+            IntoRefProbabilityIterator, IntoRefTraceIterator, IntoRefTraceProbabilityIterator,
+        },
+    },
 };
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
@@ -20,8 +27,7 @@ use std::{
     str::FromStr,
 };
 
-pub const HEADER: &str = "finite 
-    fn iter_probabilities(&self) -> std::collections::hash_map::Values<'_, Vec<Activity>, Fraction>;stochastic language";
+pub const HEADER: &str = "finite stochastic language";
 
 pub const FORMAT_SPECIFICATION: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `finite stochastic language'.
@@ -335,7 +341,9 @@ impl IntoRefTraceProbabilityIterator for FiniteStochasticLanguage {
     ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
         self.traces.par_iter()
     }
+}
 
+impl IntoTraceProbabilityIterator for FiniteStochasticLanguage {
     fn into_iter_trace_probabilities(
         self,
     ) -> std::collections::hash_map::IntoIter<Vec<Activity>, Fraction> {

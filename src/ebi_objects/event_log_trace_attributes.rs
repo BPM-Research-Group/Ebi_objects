@@ -1,17 +1,17 @@
 use crate::{
     ActivityKey, Attribute, AttributeKey, Exportable, HasActivityKey, Importable, Infoable,
-    TranslateActivityKey,
+    IntoAttributeIterator, IntoAttributeTraceIterator, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     iterators::{
-        parallel_trace_iterator::ParallelTraceIterator,
-        trace_iterator::{
-            EventLogTraceAttributeCategoricalIterator,
-            EventLogTraceAttributeTraceCategoricalIterator, TraceIterator,
+        attribute_iterator::{
+            CategoricalAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
+        parallel_trace_iterator::ParallelTraceIterator,
+        trace_iterator::TraceIterator,
     },
     traits::{
-        index_trace_attributes::IndexTraceAttributes, number_of_traces::NumberOfTraces,
-        trace_attributes::TraceAttributes, trace_iterators::IntoTraceIterator,
+        number_of_traces::NumberOfTraces, trace_attributes::TraceAttributes,
+        trace_iterators::IntoTraceIterator,
     },
 };
 use anyhow::{Error, Result, anyhow};
@@ -190,20 +190,45 @@ impl IntoTraceIterator for EventLogTraceAttributes {
     }
 }
 
-impl IndexTraceAttributes for EventLogTraceAttributes {
-    fn iter_traces_categorical(
+impl IntoAttributeTraceIterator for EventLogTraceAttributes {
+    fn iter_categorical_and_traces(
         &self,
         attribute: Attribute,
-    ) -> EventLogTraceAttributeTraceCategoricalIterator<'_> {
+    ) -> std::iter::Zip<TraceIterator<'_>, CategoricalAttributeIterator<'_>> {
         let x: TraceIterator = self.into();
-        let y: EventLogTraceAttributeCategoricalIterator = (self, attribute).into();
+        let y: CategoricalAttributeIterator = (self, attribute).into();
         x.zip(y)
     }
 
-    fn iter_categorical(
+    fn iter_numeric_and_traces(
         &self,
         attribute: Attribute,
-    ) -> EventLogTraceAttributeCategoricalIterator<'_> {
+    ) -> std::iter::Zip<TraceIterator<'_>, NumericAttributeIterator<'_>> {
+        let x: TraceIterator = self.into();
+        let y: NumericAttributeIterator = (self, attribute).into();
+        x.zip(y)
+    }
+
+    fn iter_time_and_traces(
+        &self,
+        attribute: Attribute,
+    ) -> std::iter::Zip<TraceIterator<'_>, TimeAttributeIterator<'_>> {
+        let x: TraceIterator = self.into();
+        let y: TimeAttributeIterator = (self, attribute).into();
+        x.zip(y)
+    }
+}
+
+impl IntoAttributeIterator for EventLogTraceAttributes {
+    fn iter_categorical(&self, attribute: Attribute) -> CategoricalAttributeIterator<'_> {
+        (self, attribute).into()
+    }
+
+    fn iter_numeric(&self, attribute: Attribute) -> NumericAttributeIterator<'_> {
+        (self, attribute).into()
+    }
+
+    fn iter_time(&self, attribute: Attribute) -> TimeAttributeIterator<'_> {
         (self, attribute).into()
     }
 }
