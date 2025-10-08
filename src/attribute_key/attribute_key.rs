@@ -23,8 +23,8 @@ impl<'a> AttributeKey {
         self.attribute2name.get(attribute.borrow().id)
     }
 
-    pub fn label_to_attribute(&self, label: &str) -> Option<&Attribute> {
-        self.name2attribute.get(label)
+    pub fn label_to_attribute(&self, label: &str) -> Option<Attribute> {
+        self.name2attribute.get(label).copied()
     }
 
     pub fn id_to_attribute(&self, attribute_id: usize) -> Attribute {
