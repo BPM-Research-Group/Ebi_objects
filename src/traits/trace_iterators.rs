@@ -58,10 +58,7 @@ impl IntoRefTraceIterator for Vec<(Vec<Activity>, HashMap<String, u64>)> {
 
 #[cfg(test)]
 mod tests {
-    use malachite::base::strings::ToDebugString;
-    use rayon::iter::{
-        IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-    };
+    use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
     use std::fs;
 
     use crate::{
@@ -145,15 +142,6 @@ mod tests {
 
     #[test]
     fn collect_iters() {
-        let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
-        let slang = fin.parse::<EventLog>().unwrap();
-        collect!(slang.iter_traces(), slang.par_iter_traces());
-        collect!(slang.clone().into_iter(), slang.clone().into_par_iter());
-
-        let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
-        let slang = fin.parse::<EventLogTraceAttributes>().unwrap();
-        collect!(slang.iter_traces(), slang.par_iter_traces());
-
         let fin = fs::read_to_string("testfiles/a-b.slang").unwrap();
         let slang = fin.parse::<FiniteStochasticLanguage>().unwrap();
         collect!(slang.iter_traces(), slang.par_iter_traces());
@@ -171,5 +159,24 @@ mod tests {
         let slang: FiniteLanguage = fin.parse::<FiniteStochasticLanguage>().unwrap().into();
         collect!(slang.iter_traces(), slang.par_iter_traces());
         collect!(slang.clone().into_iter(), slang.clone().into_par_iter());
+    }
+
+    macro_rules! test_log {
+        ($l: expr) => {
+            let fin = fs::read_to_string($l).unwrap();
+            let slang = fin.parse::<EventLog>().unwrap();
+            collect!(slang.iter_traces(), slang.par_iter_traces());
+            collect!(slang.clone().into_iter(), slang.clone().into_par_iter());
+
+            let fin = fs::read_to_string($l).unwrap();
+            let slang = fin.parse::<EventLogTraceAttributes>().unwrap();
+            collect!(slang.iter_traces(), slang.par_iter_traces());
+        };
+    }
+
+    #[test]
+    fn test_logs_iters() {
+        test_log!("testfiles/a-b.xes");
+        test_log!("testfiles/publishing.xes");
     }
 }
