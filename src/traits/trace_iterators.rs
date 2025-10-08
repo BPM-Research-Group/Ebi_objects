@@ -1,6 +1,7 @@
 use crate::{
     Activity,
     iterators::{
+        parallel_ref_probability_trace_iterator::ParallelRefProbabilityTraceIterator,
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
         parallel_trace_iterator::ParallelTraceIterator, ref_trace_iterator::RefTraceIterator,
         trace_iterator::TraceIterator,
@@ -40,7 +41,5 @@ pub trait IntoRefTraceProbabilityIterator {
         &'_ self,
     ) -> std::collections::hash_map::Iter<'_, Vec<Activity>, Fraction>;
 
-    fn par_iter_traces_probabilities(
-        &'_ self,
-    ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction>;
+    fn par_iter_traces_probabilities(&'_ self) -> ParallelRefProbabilityTraceIterator<'_>;
 }

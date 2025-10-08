@@ -61,6 +61,7 @@ pub mod ebi_objects {
 }
 pub mod iterators {
     pub mod attribute_iterator;
+    pub mod parallel_ref_probability_trace_iterator;
     pub mod parallel_ref_trace_iterator;
     pub mod parallel_trace_iterator;
     pub mod ref_trace_iterator;

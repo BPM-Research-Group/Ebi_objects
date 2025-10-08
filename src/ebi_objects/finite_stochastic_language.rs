@@ -3,7 +3,9 @@ use crate::{
     IntoTraceProbabilityIterator, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     iterators::{
-        parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
+        parallel_ref_probability_trace_iterator::ParallelRefProbabilityTraceIterator,
+        parallel_ref_trace_iterator::ParallelRefTraceIterator,
+        ref_trace_iterator::RefTraceIterator,
     },
     line_reader::LineReader,
     traits::{
@@ -336,10 +338,8 @@ impl IntoRefTraceProbabilityIterator for FiniteStochasticLanguage {
         self.traces.iter()
     }
 
-    fn par_iter_traces_probabilities(
-        &'_ self,
-    ) -> rayon::collections::hash_map::Iter<'_, Vec<Activity>, Fraction> {
-        self.traces.par_iter()
+    fn par_iter_traces_probabilities(&'_ self) -> ParallelRefProbabilityTraceIterator<'_> {
+        self.into()
     }
 }
 
