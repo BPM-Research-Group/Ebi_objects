@@ -14,8 +14,9 @@ use crate::Activity;
  */
 pub enum ParallelRefTraceIterator<'a> {
     Vec(rayon::slice::Iter<'a, Vec<Activity>>),
+    VecTuple(ParallelVecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>),
     HashSet(rayon::collections::hash_set::Iter<'a, Vec<Activity>>),
-    HashMap(ParallelRefTraceIteratorKeys<'a, Vec<Activity>, Fraction>),
+    HashMap(ParallelHashMapKeysIterator<'a, Vec<Activity>, Fraction>),
 }
 
 impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
@@ -27,6 +28,7 @@ impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
     {
         match self {
             ParallelRefTraceIterator::Vec(iter) => iter.drive_unindexed(consumer),
+            ParallelRefTraceIterator::VecTuple(iter) => iter.drive_unindexed(consumer),
             ParallelRefTraceIterator::HashSet(iter) => iter.drive_unindexed(consumer),
             ParallelRefTraceIterator::HashMap(iter) => iter.drive_unindexed(consumer),
         }
@@ -35,6 +37,7 @@ impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
     fn opt_len(&self) -> Option<usize> {
         match self {
             ParallelRefTraceIterator::Vec(iter) => iter.opt_len(),
+            ParallelRefTraceIterator::VecTuple(iter) => iter.opt_len(),
             ParallelRefTraceIterator::HashSet(iter) => iter.opt_len(),
             ParallelRefTraceIterator::HashMap(iter) => iter.opt_len(),
         }
@@ -43,19 +46,19 @@ impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
 
 /// In order to iterate over the keys of a hashmap in parallel,
 /// we first need a struct that is the parallel iterator.
-pub struct ParallelRefTraceIteratorKeys<'a, K, V> {
+pub struct ParallelHashMapKeysIterator<'a, K, V> {
     keys: std::collections::hash_map::Keys<'a, K, V>,
 }
 
 /// The parallel iterator can be created from a reference to a hashmap.
-impl<'a, K, V> From<&'a HashMap<K, V>> for ParallelRefTraceIteratorKeys<'a, K, V> {
+impl<'a, K, V> From<&'a HashMap<K, V>> for ParallelHashMapKeysIterator<'a, K, V> {
     fn from(value: &'a HashMap<K, V>) -> Self {
         Self { keys: value.keys() }
     }
 }
 
 /// We implement the ParallelIterator trait for our parallel keys iterator.
-impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelRefTraceIteratorKeys<'a, K, V> {
+impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelHashMapKeysIterator<'a, K, V> {
     type Item = &'a K;
 
     fn drive_unindexed<C>(self, consumer: C) -> C::Result
@@ -72,7 +75,7 @@ impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelRefTraceIteratorKeys<'a,
 
 /// In order for the bridge function to work,
 /// we need to implement IndexedParallelIterator for our parallel keys iterator.
-impl<'a, K: Sync, V: Sync> IndexedParallelIterator for ParallelRefTraceIteratorKeys<'a, K, V> {
+impl<'a, K: Sync, V: Sync> IndexedParallelIterator for ParallelHashMapKeysIterator<'a, K, V> {
     fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
         let producer = KeysIteratorDataProducer::from(self);
         callback.callback(producer)
@@ -181,8 +184,8 @@ impl<'a, K: Sync, V: Sync> Producer for KeysIteratorDataProducer<'a, K, V> {
     }
 }
 
-impl<'a, K, V> From<ParallelRefTraceIteratorKeys<'a, K, V>> for KeysIteratorDataProducer<'a, K, V> {
-    fn from(iterator: ParallelRefTraceIteratorKeys<'a, K, V>) -> Self {
+impl<'a, K, V> From<ParallelHashMapKeysIterator<'a, K, V>> for KeysIteratorDataProducer<'a, K, V> {
+    fn from(iterator: ParallelHashMapKeysIterator<'a, K, V>) -> Self {
         let len = iterator.keys.len();
         Self {
             keys: iterator.keys,
@@ -192,12 +195,160 @@ impl<'a, K, V> From<ParallelRefTraceIteratorKeys<'a, K, V>> for KeysIteratorData
     }
 }
 
+pub struct ParallelVecTupleIterator<'a, K, V> {
+    iter: std::slice::Iter<'a, (K, V)>,
+}
+
+impl<'a, K, V> From<&'a Vec<(K, V)>> for ParallelVecTupleIterator<'a, K, V> {
+    fn from(value: &'a Vec<(K, V)>) -> Self {
+        Self { iter: value.iter() }
+    }
+}
+
+impl<'a, K: Sync, V: Sync> ParallelIterator for ParallelVecTupleIterator<'a, K, V> {
+    type Item = &'a K;
+
+    fn drive_unindexed<C>(self, consumer: C) -> C::Result
+    where
+        C: UnindexedConsumer<Self::Item>,
+    {
+        bridge(self, consumer)
+    }
+
+    fn opt_len(&self) -> Option<usize> {
+        Some(self.len())
+    }
+}
+
+impl<'a, K: Sync, V: Sync> IndexedParallelIterator for ParallelVecTupleIterator<'a, K, V> {
+    fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
+        let producer = ParallelVecTupleIteratorProducer::from(self);
+        callback.callback(producer)
+    }
+
+    fn drive<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
+        bridge(self, consumer)
+    }
+
+    fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
+
+struct ParallelVecTupleIteratorProducer<'a, K, V> {
+    iter: std::slice::Iter<'a, (K, V)>,
+    min: usize,
+    max: usize,
+}
+
+/// We need to implement the Producer trait for our data producer.
+impl<'a, K: Sync + 'a, V: Sync> Producer for ParallelVecTupleIteratorProducer<'a, K, V> {
+    type Item = &'a K;
+    type IntoIter = ParallelVecTupleIteratorIterator<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ParallelVecTupleIteratorIterator::new(self.iter, self.min, self.max)
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self) {
+        let split = self.min + index;
+        (
+            ParallelVecTupleIteratorProducer {
+                iter: self.iter.clone(),
+                min: self.min,
+                max: split,
+            },
+            ParallelVecTupleIteratorProducer {
+                iter: self.iter,
+                min: split,
+                max: self.max,
+            },
+        )
+    }
+}
+
+impl<'a, K, V> From<ParallelVecTupleIterator<'a, K, V>>
+    for ParallelVecTupleIteratorProducer<'a, K, V>
+{
+    fn from(iterator: ParallelVecTupleIterator<'a, K, V>) -> Self {
+        let len = iterator.iter.len();
+        Self {
+            iter: iterator.iter,
+            min: 0,
+            max: len,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct ParallelVecTupleIteratorIterator<'a, K, V> {
+    keys: std::slice::Iter<'a, (K, V)>,
+    left: usize,
+}
+
+impl<'a, K, V> ParallelVecTupleIteratorIterator<'a, K, V> {
+    fn new(mut keys: std::slice::Iter<'a, (K, V)>, min: usize, max: usize) -> Self {
+        if min > 0 {
+            keys.nth(min - 1);
+        }
+        Self {
+            keys,
+            left: max - min,
+        }
+    }
+}
+
+impl<'a, K, V> Iterator for ParallelVecTupleIteratorIterator<'a, K, V> {
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.left == 0 {
+            None
+        } else {
+            let result = &self.keys.next()?.0;
+            self.left -= 1;
+            Some(&result)
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.left, Some(self.left))
+    }
+}
+
+impl<'a, K, V> ExactSizeIterator for ParallelVecTupleIteratorIterator<'a, K, V> {
+    fn len(&self) -> usize {
+        let (lower, upper) = self.size_hint();
+        // Note: This assertion is overly defensive, but it checks the invariant
+        // guaranteed by the trait. If this trait were rust-internal,
+        // we could use debug_assert!; assert_eq! will check all Rust user
+        // implementations too.
+        std::assert_eq!(upper, Some(lower));
+        lower
+    }
+}
+
+impl<'a, K, V> DoubleEndedIterator for ParallelVecTupleIteratorIterator<'a, K, V> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.left == 0 {
+            None
+        } else {
+            let mut keys = self.keys.clone();
+            let result = &keys.nth(self.left)?.0;
+            self.left -= 1;
+            Some(result)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rayon::iter::ParallelIterator;
     use std::collections::HashMap;
 
-    use crate::iterators::parallel_ref_trace_iterator::{KeysIterator, ParallelRefTraceIteratorKeys};
+    use crate::iterators::parallel_ref_trace_iterator::{
+        KeysIterator, ParallelHashMapKeysIterator,
+    };
 
     #[test]
     fn keys_iterator() {
@@ -229,7 +380,7 @@ mod tests {
 
         assert_eq!(umap.len(), 90);
 
-        let it = ParallelRefTraceIteratorKeys::from(&umap);
+        let it = ParallelHashMapKeysIterator::from(&umap);
         let result = it.map(|x| x + 1).collect::<Vec<_>>();
 
         assert_eq!(result.len(), 90);

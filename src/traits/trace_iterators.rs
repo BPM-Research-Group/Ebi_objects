@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     Activity,
     iterators::{
@@ -42,4 +44,14 @@ pub trait IntoRefTraceProbabilityIterator {
     ) -> std::collections::hash_map::Iter<'_, Vec<Activity>, Fraction>;
 
     fn par_iter_traces_probabilities(&'_ self) -> ParallelRefProbabilityTraceIterator<'_>;
+}
+
+impl IntoRefTraceIterator for Vec<(Vec<Activity>, HashMap<String, u64>)> {
+    fn iter_traces(&self) -> RefTraceIterator<'_> {
+        RefTraceIterator::VecTuple(self.into())
+    }
+
+    fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
+        ParallelRefTraceIterator::VecTuple(self.into())
+    }
 }

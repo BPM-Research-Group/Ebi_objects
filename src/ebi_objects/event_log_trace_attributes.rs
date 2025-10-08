@@ -45,6 +45,10 @@ pub struct EventLogTraceAttributes {
 }
 
 impl EventLogTraceAttributes {
+    pub fn event_classifier(&self) -> &EventLogClassifier {
+        &self.classifier
+    }
+
     pub fn create_activity_key(&mut self) {
         self.rust4pm_log.traces.iter().for_each(|trace| {
             trace.events.iter().for_each(|event| {
