@@ -39,6 +39,21 @@ impl<'a> AttributeKey {
         self.attribute2type.get(attribute.borrow().id)
     }
 
+    #[cfg(test)]
+    pub fn add_categorical_attribute(&mut self, label: &str) -> Attribute {
+        let next_index = self.name2attribute.len();
+        match self.name2attribute.get(label) {
+            Some(attribute) => *attribute,
+            None => {
+                let result = Attribute { id: next_index };
+                self.attribute2name.push(label.to_string());
+                self.name2attribute.insert(label.to_string(), result);
+                self.attribute2type.push(DataType::Categorical);
+                return result;
+            }
+        }
+    }
+
     pub fn process_attribute(
         &mut self,
         attribute_name: &str,
