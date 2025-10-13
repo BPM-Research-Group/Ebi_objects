@@ -3,7 +3,7 @@ use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
     plumbing::{Consumer, Producer, ProducerCallback, UnindexedConsumer, bridge},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::Activity;
 
@@ -15,7 +15,7 @@ use crate::Activity;
 pub enum ParallelRefTraceIterator<'a> {
     Vec(rayon::slice::Iter<'a, Vec<Activity>>),
     VecTuple(ParallelVecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>),
-    HashSet(rayon::collections::hash_set::Iter<'a, Vec<Activity>>),
+    HashSet(ParallelHashSetIterator<'a, Vec<Activity>>),
     HashMap(ParallelHashMapKeysIterator<'a, Vec<Activity>, Fraction>),
 }
 
@@ -40,6 +40,172 @@ impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
             ParallelRefTraceIterator::VecTuple(iter) => iter.opt_len(),
             ParallelRefTraceIterator::HashSet(iter) => iter.opt_len(),
             ParallelRefTraceIterator::HashMap(iter) => iter.opt_len(),
+        }
+    }
+}
+
+impl<'a> IndexedParallelIterator for ParallelRefTraceIterator<'a> {
+    fn len(&self) -> usize {
+        match self {
+            ParallelRefTraceIterator::Vec(iter) => iter.len(),
+            ParallelRefTraceIterator::VecTuple(iter) => iter.len(),
+            ParallelRefTraceIterator::HashSet(iter) => iter.len(),
+            ParallelRefTraceIterator::HashMap(iter) => iter.len(),
+        }
+    }
+
+    fn drive<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
+        bridge(self, consumer)
+    }
+
+    fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
+        match self {
+            ParallelRefTraceIterator::Vec(iter) => iter.with_producer(callback),
+            ParallelRefTraceIterator::VecTuple(iter) => iter.with_producer(callback),
+            ParallelRefTraceIterator::HashSet(iter) => iter.with_producer(callback),
+            ParallelRefTraceIterator::HashMap(iter) => iter.with_producer(callback),
+        }
+    }
+}
+
+pub struct ParallelHashSetIterator<'a, K> {
+    iter: std::collections::hash_set::Iter<'a, K>,
+}
+
+impl<'a, K, T> From<&'a HashSet<K, T>> for ParallelHashSetIterator<'a, K> {
+    fn from(value: &'a HashSet<K, T>) -> Self {
+        Self { iter: value.iter() }
+    }
+}
+
+impl<'a, K: Sync> ParallelIterator for ParallelHashSetIterator<'a, K> {
+    type Item = &'a K;
+
+    fn drive_unindexed<C>(self, consumer: C) -> C::Result
+    where
+        C: UnindexedConsumer<Self::Item>,
+    {
+        bridge(self, consumer)
+    }
+
+    fn opt_len(&self) -> Option<usize> {
+        Some(self.len())
+    }
+}
+
+impl<'a, K: Sync> IndexedParallelIterator for ParallelHashSetIterator<'a, K> {
+    fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
+        let producer = ParallelHashSetIteratorProducer::from(self);
+        callback.callback(producer)
+    }
+
+    fn drive<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
+        bridge(self, consumer)
+    }
+
+    fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
+
+struct ParallelHashSetIteratorProducer<'a, K> {
+    iter: std::collections::hash_set::Iter<'a, K>,
+    min: usize,
+    max: usize,
+}
+
+impl<'a, K> From<ParallelHashSetIterator<'a, K>> for ParallelHashSetIteratorProducer<'a, K> {
+    fn from(iterator: ParallelHashSetIterator<'a, K>) -> Self {
+        let len = iterator.iter.len();
+        Self {
+            iter: iterator.iter,
+            min: 0,
+            max: len,
+        }
+    }
+}
+
+impl<'a, K: Sync> Producer for ParallelHashSetIteratorProducer<'a, K> {
+    type Item = &'a K;
+    type IntoIter = ParallelHashSetIteratorIterator<'a, K>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ParallelHashSetIteratorIterator::new(self.iter, self.min, self.max)
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self) {
+        let split = self.min + index;
+        (
+            ParallelHashSetIteratorProducer {
+                iter: self.iter.clone(),
+                min: self.min,
+                max: split,
+            },
+            ParallelHashSetIteratorProducer {
+                iter: self.iter,
+                min: split,
+                max: self.max,
+            },
+        )
+    }
+}
+
+struct ParallelHashSetIteratorIterator<'a, K> {
+    keys: std::collections::hash_set::Iter<'a, K>,
+    left: usize,
+}
+
+impl<'a, K> ParallelHashSetIteratorIterator<'a, K> {
+    fn new(mut keys: std::collections::hash_set::Iter<'a, K>, min: usize, max: usize) -> Self {
+        if min > 0 {
+            keys.nth(min - 1);
+        }
+        Self {
+            keys,
+            left: max - min,
+        }
+    }
+}
+
+impl<'a, K> Iterator for ParallelHashSetIteratorIterator<'a, K> {
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.left == 0 {
+            None
+        } else {
+            let result = self.keys.next();
+            self.left -= 1;
+            result
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.left, Some(self.left))
+    }
+}
+
+impl<'a, K> ExactSizeIterator for ParallelHashSetIteratorIterator<'a, K> {
+    fn len(&self) -> usize {
+        let (lower, upper) = self.size_hint();
+        // Note: This assertion is overly defensive, but it checks the invariant
+        // guaranteed by the trait. If this trait were rust-internal,
+        // we could use debug_assert!; assert_eq! will check all Rust user
+        // implementations too.
+        std::assert_eq!(upper, Some(lower));
+        lower
+    }
+}
+
+impl<'a, K> DoubleEndedIterator for ParallelHashSetIteratorIterator<'a, K> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.left == 0 {
+            None
+        } else {
+            let mut keys = self.keys.clone();
+            let result = keys.nth(self.left);
+            self.left -= 1;
+            result
         }
     }
 }

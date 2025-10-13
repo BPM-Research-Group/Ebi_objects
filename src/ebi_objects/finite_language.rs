@@ -221,7 +221,7 @@ impl IntoRefTraceIterator for FiniteLanguage {
     }
 
     fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
-        ParallelRefTraceIterator::HashSet(self.traces.par_iter())
+        ParallelRefTraceIterator::HashSet((&self.traces).into())
     }
 }
 
