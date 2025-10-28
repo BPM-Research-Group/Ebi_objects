@@ -1,4 +1,4 @@
-use crate::{Activity, EventLogTraceAttributes, FiniteStochasticLanguage, NumberOfTraces};
+use crate::{Activity, EventLogXes, FiniteStochasticLanguage, NumberOfTraces};
 use ebi_arithmetic::Fraction;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
@@ -7,7 +7,7 @@ use rayon::iter::{
 
 /// A parallel iterator over traces. Note that the traces are created on iteration.
 pub struct ParallelTraceIterator<'a> {
-    log: &'a EventLogTraceAttributes,
+    log: &'a EventLogXes,
 }
 
 impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
@@ -25,8 +25,8 @@ impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
     }
 }
 
-impl<'a> From<&'a EventLogTraceAttributes> for ParallelTraceIterator<'a> {
-    fn from(value: &'a EventLogTraceAttributes) -> Self {
+impl<'a> From<&'a EventLogXes> for ParallelTraceIterator<'a> {
+    fn from(value: &'a EventLogXes) -> Self {
         Self { log: value }
     }
 }
@@ -47,7 +47,7 @@ impl<'a> IndexedParallelIterator for ParallelTraceIterator<'a> {
 }
 
 struct ParallelTraceAttributesIteratorDataProducer<'a> {
-    log: &'a EventLogTraceAttributes,
+    log: &'a EventLogXes,
     traces: &'a [process_mining::event_log::Trace],
 }
 
@@ -87,7 +87,7 @@ impl<'a> Producer for ParallelTraceAttributesIteratorDataProducer<'a> {
 }
 
 struct Rust4PMIterator<'a> {
-    log: &'a EventLogTraceAttributes,
+    log: &'a EventLogXes,
     traces: &'a [process_mining::event_log::Trace],
 }
 

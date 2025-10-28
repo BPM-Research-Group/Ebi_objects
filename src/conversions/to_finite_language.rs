@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use fnv::FnvBuildHasher;
 
 use crate::{
-    Activity, ActivityKey, CompressedEventLog, EventLogTraceAttributes,
+    Activity, ActivityKey, CompressedEventLog, EventLogXes,
     ebi_objects::{
         event_log::EventLog, finite_language::FiniteLanguage,
         finite_stochastic_language::FiniteStochasticLanguage,
@@ -25,8 +25,8 @@ impl From<EventLog> for FiniteLanguage {
     }
 }
 
-impl From<EventLogTraceAttributes> for FiniteLanguage {
-    fn from(value: EventLogTraceAttributes) -> Self {
+impl From<EventLogXes> for FiniteLanguage {
+    fn from(value: EventLogXes) -> Self {
         let log: EventLog = value.into();
         log.into()
     }

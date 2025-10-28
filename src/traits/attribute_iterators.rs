@@ -4,7 +4,7 @@ use crate::{
         attribute_iterator::{
             CategoricalAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
-        trace_iterator::TraceIterator,
+        ref_trace_iterator::RefTraceIterator,
     },
 };
 
@@ -32,7 +32,7 @@ pub trait IntoAttributeTraceIterator {
     fn iter_categorical_and_traces(
         &self,
         attribute: Attribute,
-    ) -> std::iter::Zip<TraceIterator<'_>, CategoricalAttributeIterator<'_>>;
+    ) -> std::iter::Zip<RefTraceIterator<'_>, CategoricalAttributeIterator<'_>>;
 
     /// Iterator over traces and their numeric attribute values,
     /// i.e. for traces that do not have the attribute set, a None is included.
@@ -40,7 +40,7 @@ pub trait IntoAttributeTraceIterator {
     fn iter_numeric_and_traces(
         &self,
         attribute: Attribute,
-    ) -> std::iter::Zip<TraceIterator<'_>, NumericAttributeIterator<'_>>;
+    ) -> std::iter::Zip<RefTraceIterator<'_>, NumericAttributeIterator<'_>>;
 
     /// Iterator over traces and their time attribute values,
     /// i.e. for traces that do not have the attribute set, a None is included.
@@ -48,5 +48,5 @@ pub trait IntoAttributeTraceIterator {
     fn iter_time_and_traces(
         &self,
         attribute: Attribute,
-    ) -> std::iter::Zip<TraceIterator<'_>, TimeAttributeIterator<'_>>;
+    ) -> std::iter::Zip<RefTraceIterator<'_>, TimeAttributeIterator<'_>>;
 }

@@ -1,8 +1,8 @@
-use crate::{Activity, EventLogTraceAttributes};
+use crate::{Activity, ebi_objects::event_log_xes::EventLogXes};
 
 /// An iterator over traces.
 pub struct TraceIterator<'a> {
-    log: &'a EventLogTraceAttributes,
+    log: &'a EventLogXes,
     next: usize,
 }
 
@@ -24,8 +24,8 @@ impl<'a> Iterator for TraceIterator<'a> {
     }
 }
 
-impl<'a> From<&'a EventLogTraceAttributes> for TraceIterator<'a> {
-    fn from(value: &'a EventLogTraceAttributes) -> Self {
+impl<'a> From<&'a EventLogXes> for TraceIterator<'a> {
+    fn from(value: &'a EventLogXes) -> Self {
         Self {
             log: value,
             next: 0,

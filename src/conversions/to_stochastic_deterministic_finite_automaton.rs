@@ -1,15 +1,13 @@
-use std::collections::{HashMap, hash_map::Entry};
-
-use ebi_arithmetic::{Fraction, One, Zero};
-
 use crate::{
-    EventLogTraceAttributes, HasActivityKey, IntoRefTraceIterator, IntoTraceIterator,
-    NumberOfTraces,
+    EventLogTraceAttributes, HasActivityKey, NumberOfTraces,
     ebi_objects::{
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
+    traits::trace_iterators::IntoRefTraceIterator,
 };
+use ebi_arithmetic::{Fraction, One, Zero};
+use std::collections::{HashMap, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
     fn from(value: FiniteStochasticLanguage) -> Self {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    Activity,
+    Activity, Attribute,
     iterators::{
         parallel_ref_probability_trace_iterator::ParallelRefProbabilityTraceIterator,
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
@@ -10,6 +10,8 @@ use crate::{
     },
 };
 use ebi_arithmetic::Fraction;
+use intmap::IntMap;
+use process_mining::event_log::AttributeValue;
 
 pub trait IntoRefTraceIterator: Sync {
     fn iter_traces(&self) -> RefTraceIterator<'_>;
@@ -48,11 +50,21 @@ pub trait IntoRefTraceProbabilityIterator {
 
 impl IntoRefTraceIterator for Vec<(Vec<Activity>, HashMap<String, u64>)> {
     fn iter_traces(&self) -> RefTraceIterator<'_> {
-        RefTraceIterator::VecTuple(self.into())
+        RefTraceIterator::VecTupleHashMap(self.into())
     }
 
     fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
-        ParallelRefTraceIterator::VecTuple(self.into())
+        ParallelRefTraceIterator::VecTupleHashMap(self.into())
+    }
+}
+
+impl IntoRefTraceIterator for Vec<(Vec<Activity>, IntMap<Attribute, AttributeValue>)> {
+    fn iter_traces(&self) -> RefTraceIterator<'_> {
+        RefTraceIterator::VecTupleIntMap(self.into())
+    }
+
+    fn par_iter_traces(&self) -> ParallelRefTraceIterator<'_> {
+        ParallelRefTraceIterator::VecTupleIntMap(self.into())
     }
 }
 
@@ -64,9 +76,8 @@ mod tests {
     use crate::{
         EventLog, EventLogTraceAttributes, FiniteLanguage, FiniteStochasticLanguage,
         IntoAttributeIterator, IntoAttributeTraceIterator, IntoRefProbabilityIterator,
-        IntoRefTraceIterator, IntoRefTraceProbabilityIterator, IntoTraceIterator,
-        IntoTraceProbabilityIterator, NumberOfTraces,
-        attribute_key::has_attribute_key::HasAttributeKey,
+        IntoRefTraceIterator, IntoRefTraceProbabilityIterator, IntoTraceProbabilityIterator,
+        NumberOfTraces, attribute_key::has_attribute_key::HasAttributeKey,
     };
 
     #[test]

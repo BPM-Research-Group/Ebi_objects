@@ -3,6 +3,8 @@ use std::{
     hash::Hash,
 };
 
+use intmap::IntKey;
+
 #[derive(Clone, Copy)]
 pub struct Attribute {
     pub(crate) id: usize,
@@ -49,5 +51,15 @@ impl PartialOrd for Attribute {
 impl PartialOrd<usize> for Attribute {
     fn partial_cmp(&self, other: &usize) -> Option<std::cmp::Ordering> {
         self.id.partial_cmp(other)
+    }
+}
+
+impl IntKey for Attribute {
+    type Int = usize;
+
+    const PRIME: Self::Int = usize::PRIME;
+
+    fn into_int(self) -> Self::Int {
+        self.id
     }
 }

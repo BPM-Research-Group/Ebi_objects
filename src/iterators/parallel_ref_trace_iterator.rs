@@ -1,11 +1,13 @@
 use ebi_arithmetic::Fraction;
+use intmap::IntMap;
+use process_mining::event_log::AttributeValue;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
     plumbing::{Consumer, Producer, ProducerCallback, UnindexedConsumer, bridge},
 };
 use std::collections::{HashMap, HashSet};
 
-use crate::Activity;
+use crate::{Activity, Attribute};
 
 /**
  * A parallel iterator over references to traces.
@@ -14,7 +16,8 @@ use crate::Activity;
  */
 pub enum ParallelRefTraceIterator<'a> {
     Vec(rayon::slice::Iter<'a, Vec<Activity>>),
-    VecTuple(ParallelVecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>),
+    VecTupleHashMap(ParallelVecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>),
+    VecTupleIntMap(ParallelVecTupleIterator<'a, Vec<Activity>, IntMap<Attribute, AttributeValue>>),
     HashSet(ParallelHashSetIterator<'a, Vec<Activity>>),
     HashMap(ParallelHashMapKeysIterator<'a, Vec<Activity>, Fraction>),
 }
@@ -28,7 +31,8 @@ impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
     {
         match self {
             ParallelRefTraceIterator::Vec(iter) => iter.drive_unindexed(consumer),
-            ParallelRefTraceIterator::VecTuple(iter) => iter.drive_unindexed(consumer),
+            ParallelRefTraceIterator::VecTupleHashMap(iter) => iter.drive_unindexed(consumer),
+            ParallelRefTraceIterator::VecTupleIntMap(iter) => iter.drive_unindexed(consumer),
             ParallelRefTraceIterator::HashSet(iter) => iter.drive_unindexed(consumer),
             ParallelRefTraceIterator::HashMap(iter) => iter.drive_unindexed(consumer),
         }
@@ -37,7 +41,8 @@ impl<'a> ParallelIterator for ParallelRefTraceIterator<'a> {
     fn opt_len(&self) -> Option<usize> {
         match self {
             ParallelRefTraceIterator::Vec(iter) => iter.opt_len(),
-            ParallelRefTraceIterator::VecTuple(iter) => iter.opt_len(),
+            ParallelRefTraceIterator::VecTupleHashMap(iter) => iter.opt_len(),
+            ParallelRefTraceIterator::VecTupleIntMap(iter) => iter.opt_len(),
             ParallelRefTraceIterator::HashSet(iter) => iter.opt_len(),
             ParallelRefTraceIterator::HashMap(iter) => iter.opt_len(),
         }
@@ -48,7 +53,8 @@ impl<'a> IndexedParallelIterator for ParallelRefTraceIterator<'a> {
     fn len(&self) -> usize {
         match self {
             ParallelRefTraceIterator::Vec(iter) => iter.len(),
-            ParallelRefTraceIterator::VecTuple(iter) => iter.len(),
+            ParallelRefTraceIterator::VecTupleHashMap(iter) => iter.len(),
+            ParallelRefTraceIterator::VecTupleIntMap(iter) => iter.len(),
             ParallelRefTraceIterator::HashSet(iter) => iter.len(),
             ParallelRefTraceIterator::HashMap(iter) => iter.len(),
         }
@@ -61,7 +67,8 @@ impl<'a> IndexedParallelIterator for ParallelRefTraceIterator<'a> {
     fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
         match self {
             ParallelRefTraceIterator::Vec(iter) => iter.with_producer(callback),
-            ParallelRefTraceIterator::VecTuple(iter) => iter.with_producer(callback),
+            ParallelRefTraceIterator::VecTupleHashMap(iter) => iter.with_producer(callback),
+            ParallelRefTraceIterator::VecTupleIntMap(iter) => iter.with_producer(callback),
             ParallelRefTraceIterator::HashSet(iter) => iter.with_producer(callback),
             ParallelRefTraceIterator::HashMap(iter) => iter.with_producer(callback),
         }

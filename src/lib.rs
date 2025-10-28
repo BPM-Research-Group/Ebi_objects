@@ -18,10 +18,12 @@ pub mod constants {
 pub mod conversions {
     pub mod to_compressed_event_log;
     pub mod to_compressed_event_log_trace_attributes;
+    pub mod to_compressed_event_log_xes;
     pub mod to_deterministic_finite_automaton;
     pub mod to_directly_follows_model;
     pub mod to_event_log;
     pub mod to_event_log_trace_attributes;
+    pub mod to_event_log_xes;
     pub mod to_finite_language;
     pub mod to_finite_stochastic_language;
     pub mod to_labelled_petri_net;
@@ -37,11 +39,13 @@ pub mod conversions {
 pub mod ebi_objects {
     pub mod compressed_event_log;
     pub mod compressed_event_log_trace_attributes;
+    pub mod compressed_event_log_xes;
     pub mod deterministic_finite_automaton;
     pub mod directly_follows_graph;
     pub mod directly_follows_model;
     pub mod event_log;
     pub mod event_log_trace_attributes;
+    pub mod event_log_xes;
     pub mod executions;
     pub mod finite_language;
     pub mod finite_stochastic_language;
@@ -102,11 +106,13 @@ pub use crate::traits::trace_attributes::*;
 pub use crate::traits::trace_iterators::*;
 
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
+pub use ebi_objects::compressed_event_log_xes::CompressedEventLogXes;
 pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomaton;
 pub use ebi_objects::directly_follows_graph::DirectlyFollowsGraph;
 pub use ebi_objects::directly_follows_model::DirectlyFollowsModel;
 pub use ebi_objects::event_log::EventLog;
 pub use ebi_objects::event_log_trace_attributes::EventLogTraceAttributes;
+pub use ebi_objects::event_log_xes::EventLogXes;
 pub use ebi_objects::executions::Executions;
 pub use ebi_objects::finite_language::FiniteLanguage;
 pub use ebi_objects::finite_stochastic_language::FiniteStochasticLanguage;

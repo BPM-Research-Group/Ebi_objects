@@ -32,6 +32,7 @@ impl Exportable for PortableDocumentFormat {
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_pdf()?.export(f),
             EbiObject::EventLog(_) => Err(anyhow!("cannot export event log as PDF")),
             EbiObject::EventLogTraceAttributes(_) => Err(anyhow!("cannot export event log as PDF")),
+            EbiObject::EventLogXes(_) => Err(anyhow!("cannot export event log as PDF")),
             EbiObject::Executions(_) => Err(anyhow!("cannot export executions as PDF")),
             EbiObject::FiniteLanguage(_) => Err(anyhow!("cannot export finite language as PDF")),
             EbiObject::FiniteStochasticLanguage(_) => {

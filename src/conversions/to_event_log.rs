@@ -1,7 +1,7 @@
 use process_mining::event_log::event_log_struct::EventLogClassifier;
 
 use crate::{
-    Activity, ActivityKey, EventLogTraceAttributes, NumberOfTraces,
+    Activity, ActivityKey, EventLogTraceAttributes, EventLogXes, NumberOfTraces,
     ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
@@ -24,7 +24,16 @@ impl From<CompressedEventLogTraceAttributes> for EventLog {
 }
 
 impl From<EventLogTraceAttributes> for EventLog {
-    fn from(mut value: EventLogTraceAttributes) -> Self {
+    fn from(value: EventLogTraceAttributes) -> Self {
+        Self {
+            activity_key: value.activity_key,
+            traces: value.traces.into_iter().map(|(trace, _)| trace).collect(),
+        }
+    }
+}
+
+impl From<EventLogXes> for EventLog {
+    fn from(mut value: EventLogXes) -> Self {
         log::info!("Convert event log with trace attributes into event log.");
         let mut traces = vec![];
 

@@ -111,6 +111,7 @@ impl Exportable for LolaNet {
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as Lolanet."))
             }
+            EbiObject::EventLogXes(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::Executions(_) => Err(anyhow!("Cannot export executions as Lolanet.")),
             EbiObject::FiniteLanguage(_) => {
                 Err(anyhow!("Cannot export finite language as Lolanet."))
