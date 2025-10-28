@@ -29,9 +29,9 @@ use std::{
 
 #[derive(ActivityKey, AttributeKey, Clone)]
 pub struct EventLogTraceAttributes {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) attribute_key: AttributeKey,
-    pub(crate) traces: Vec<(Vec<Activity>, IntMap<Attribute, AttributeValue>)>,
+    pub activity_key: ActivityKey,
+    pub attribute_key: AttributeKey,
+    pub traces: Vec<(Vec<Activity>, IntMap<Attribute, AttributeValue>)>,
 }
 
 impl EventLogTraceAttributes {
@@ -45,6 +45,29 @@ impl EventLogTraceAttributes {
     }
 
     pub fn retain_traces_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&Vec<Activity>) -> bool,
+    {
+        //get our hands free to change the traces without cloning
+        let mut traces = vec![];
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        traces = traces
+            .into_iter()
+            .filter_map(|(mut trace, atts)| {
+                if f(&mut trace) {
+                    Some((trace, atts))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        //swap the the traces back
+        std::mem::swap(&mut self.traces, &mut traces);
+    }
+
+    pub fn retain_traces_attributes_mut<F>(&mut self, f: &mut F)
     where
         F: FnMut(&(Vec<Activity>, IntMap<Attribute, AttributeValue>)) -> bool,
     {
@@ -378,7 +401,7 @@ mod tests {
 
         assert_eq!(log.number_of_traces(), 2);
 
-        log.retain_traces_mut(&mut |_| false);
+        log.retain_traces_attributes_mut(&mut |_| false);
 
         assert_eq!(log.number_of_traces(), 0);
     }
