@@ -105,7 +105,7 @@ For instance:
         name: "event_classifier",
         explanation: "the attribute that defines, for each event, what its activity is",
         allowed_values: None,
-        default_value: Some("concept:name"),
+        default_value: "concept:name",
     }];
 
     fn import_as_object(

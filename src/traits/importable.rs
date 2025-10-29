@@ -23,20 +23,12 @@ pub trait Importable {
     where
         Self: Sized;
 
-    fn default_importer_parameters() -> Result<ImporterParameterValues> {
+    fn default_importer_parameters() -> ImporterParameterValues {
         let mut result = HashMap::new();
         for parameter in Self::IMPORTER_PARAMETERS {
-            result.insert(
-                *parameter,
-                parameter.default().ok_or_else(|| {
-                    anyhow!(
-                        "the input parameter {} has no default value",
-                        parameter.name()
-                    )
-                })?,
-            );
+            result.insert(*parameter, parameter.default());
         }
-        Ok(result)
+        result
     }
 }
 
@@ -47,13 +39,7 @@ macro_rules! from_string {
 
             fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
                 let mut reader = std::io::Cursor::new(s);
-                let default_parameter_values =
-                    anyhow::Context::with_context(
-                    $t::default_importer_parameters(), || {
-                        anyhow::anyhow!(
-                            "cannot import from string as not all import parameters have default values"
-                        )
-                    })?;
+                let default_parameter_values = $t::default_importer_parameters();
                 Self::import(&mut reader, default_parameter_values)
             }
         }
@@ -63,6 +49,9 @@ pub(crate) use from_string;
 
 pub type ImporterParameterValues = HashMap<ImporterParameter, ImporterParameterValue>;
 
+/// Parameters that can be given to an importer.
+/// It is a design decision that every parameter must have a default, 
+/// to ensure every importer (also) works without user interaction.
 #[derive(Copy, Clone, Debug, Display)]
 pub enum ImporterParameter {
     Flag {
@@ -73,21 +62,21 @@ pub enum ImporterParameter {
         name: &'static str,
         explanation: &'static str,
         allowed_values: Option<&'static [&'static str]>,
-        default_value: Option<&'static str>,
+        default_value: &'static str,
     },
     Usize {
         name: &'static str,
         explanation: &'static str,
         minimum_value: Option<usize>,
         maximum_value: Option<usize>,
-        default_value: Option<usize>,
+        default_value: usize,
     },
     Fraction {
         name: &'static str,
         explanation: &'static str,
         minimum_value: Option<ConstFraction>,
         maximum_value: Option<ConstFraction>,
-        default_value: Option<ConstFraction>,
+        default_value: ConstFraction,
     },
 }
 
@@ -110,18 +99,18 @@ impl ImporterParameter {
         }
     }
 
-    pub fn default(&self) -> Option<ImporterParameterValue> {
+    pub fn default(&self) -> ImporterParameterValue {
         match self {
-            ImporterParameter::Flag { .. } => Some(ImporterParameterValue::Boolean(false)),
-            ImporterParameter::String { default_value, .. } => Some(
-                ImporterParameterValue::String((*default_value)?.to_string()),
-            ),
-            ImporterParameter::Usize { default_value, .. } => Some(ImporterParameterValue::String(
-                (*default_value)?.to_string(),
-            )),
-            ImporterParameter::Fraction { default_value, .. } => Some(
-                ImporterParameterValue::String((*default_value)?.to_string()),
-            ),
+            ImporterParameter::Flag { .. } => ImporterParameterValue::Boolean(false),
+            ImporterParameter::String { default_value, .. } => {
+                ImporterParameterValue::String(default_value.to_string())
+            }
+            ImporterParameter::Usize { default_value, .. } => {
+                ImporterParameterValue::Usize(*default_value)
+            }
+            ImporterParameter::Fraction { default_value, .. } => {
+                ImporterParameterValue::Fraction(default_value.to_fraction())
+            }
         }
     }
 }
