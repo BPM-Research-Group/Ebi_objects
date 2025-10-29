@@ -189,7 +189,7 @@ impl Importable for DirectlyFollowsGraph {
 
     fn import_as_object(
         reader: &mut dyn std::io::BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> anyhow::Result<EbiObject> {
         Ok(EbiObject::DirectlyFollowsGraph(Self::import(
             reader,
@@ -197,7 +197,10 @@ impl Importable for DirectlyFollowsGraph {
         )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn std::io::BufRead,
+        _: &ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

@@ -24,7 +24,7 @@ impl Importable for CompressedEventLog {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         let log = Self::import(reader, parameter_values)?;
         Ok(EbiObject::EventLog(log.log))
@@ -32,7 +32,7 @@ impl Importable for CompressedEventLog {
 
     fn import(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> anyhow::Result<Self>
     where
         Self: Sized,

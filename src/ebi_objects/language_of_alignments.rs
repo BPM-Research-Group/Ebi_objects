@@ -156,7 +156,7 @@ impl Importable for LanguageOfAlignments {
 
     fn import_as_object(
         reader: &mut dyn std::io::BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::LanguageOfAlignments(Self::import(
             reader,
@@ -164,7 +164,10 @@ impl Importable for LanguageOfAlignments {
         )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn std::io::BufRead,
+        _: &ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

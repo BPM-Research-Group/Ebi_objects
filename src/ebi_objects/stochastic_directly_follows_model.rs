@@ -176,7 +176,7 @@ impl Importable for StochasticDirectlyFollowsModel {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::StochasticDirectlyFollowsModel(Self::import(
             reader,
@@ -184,7 +184,7 @@ impl Importable for StochasticDirectlyFollowsModel {
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

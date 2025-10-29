@@ -271,14 +271,14 @@ impl Importable for StochasticDeterministicFiniteAutomaton {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::StochasticDeterministicFiniteAutomaton(
             Self::import(reader, parameter_values)?,
         ))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

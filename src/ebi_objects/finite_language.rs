@@ -124,7 +124,8 @@ impl Display for FiniteLanguage {
 }
 
 impl Importable for FiniteLanguage {
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str =
+        "A finite language is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `finite language'.
     The second line is the number of traces in the language.
     For each trace, the first line contains the number of events in the trace.
@@ -137,7 +138,7 @@ impl Importable for FiniteLanguage {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::FiniteLanguage(Self::import(
             reader,
@@ -145,7 +146,7 @@ impl Importable for FiniteLanguage {
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader

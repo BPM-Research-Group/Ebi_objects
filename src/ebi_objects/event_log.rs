@@ -63,14 +63,14 @@ impl Importable for EventLog {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::EventLog(Self::import(reader, parameter_values)?))
     }
 
     fn import(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> anyhow::Result<Self>
     where
         Self: Sized,

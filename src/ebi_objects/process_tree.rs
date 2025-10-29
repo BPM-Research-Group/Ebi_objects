@@ -548,7 +548,7 @@ impl Importable for ProcessTree {
 
     fn import_as_object(
         reader: &mut dyn std::io::BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::ProcessTree(Self::import(
             reader,
@@ -556,7 +556,7 @@ impl Importable for ProcessTree {
         )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

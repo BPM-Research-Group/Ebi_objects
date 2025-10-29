@@ -212,7 +212,7 @@ impl Importable for DeterministicFiniteAutomaton {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::DeterministicFiniteAutomaton(Self::import(
             reader,
@@ -220,7 +220,7 @@ impl Importable for DeterministicFiniteAutomaton {
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

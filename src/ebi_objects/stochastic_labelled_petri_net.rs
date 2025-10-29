@@ -335,7 +335,7 @@ impl Importable for StochasticLabelledPetriNet {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::StochasticLabelledPetriNet(Self::import(
             reader,
@@ -343,7 +343,7 @@ impl Importable for StochasticLabelledPetriNet {
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader

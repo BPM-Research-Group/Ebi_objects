@@ -18,7 +18,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         let log = Self::import(reader, parameter_values)?;
         Ok(EbiObject::EventLogXes(log.log))
@@ -26,7 +26,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
 
     fn import(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> anyhow::Result<Self>
     where
         Self: Sized,

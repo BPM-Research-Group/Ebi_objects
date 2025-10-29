@@ -14,16 +14,16 @@ pub trait Importable {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject>;
 
     ///Attempts to import from the reader.
     ///The parameter_values must match the order given in `IMPORTER_PARAMETERS`.
-    fn import(reader: &mut dyn BufRead, parameter_values: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, parameter_values: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized;
 
-    fn default_importer_parameters() -> ImporterParameterValues {
+    fn default_importer_parameter_values() -> ImporterParameterValues {
         let mut result = HashMap::new();
         for parameter in Self::IMPORTER_PARAMETERS {
             result.insert(*parameter, parameter.default());
@@ -39,8 +39,8 @@ macro_rules! from_string {
 
             fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
                 let mut reader = std::io::Cursor::new(s);
-                let default_parameter_values = $t::default_importer_parameters();
-                Self::import(&mut reader, default_parameter_values)
+                let default_parameter_values = $t::default_importer_parameter_values();
+                Self::import(&mut reader, &default_parameter_values)
             }
         }
     };
@@ -50,7 +50,7 @@ pub(crate) use from_string;
 pub type ImporterParameterValues = HashMap<ImporterParameter, ImporterParameterValue>;
 
 /// Parameters that can be given to an importer.
-/// It is a design decision that every parameter must have a default, 
+/// It is a design decision that every parameter must have a default,
 /// to ensure every importer (also) works without user interaction.
 #[derive(Copy, Clone, Debug, Display)]
 pub enum ImporterParameter {

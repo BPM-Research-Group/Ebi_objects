@@ -372,10 +372,10 @@ impl Importable for LabelledPetriNet {
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lpn}";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
-    
+
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::LabelledPetriNet(Self::import(
             reader,
@@ -383,7 +383,7 @@ impl Importable for LabelledPetriNet {
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader

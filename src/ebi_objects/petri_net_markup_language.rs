@@ -33,17 +33,17 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/a.pnml}";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
-    
+
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::LabelledPetriNet(
             Self::import(reader, parameter_values)?.try_into()?,
         ))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

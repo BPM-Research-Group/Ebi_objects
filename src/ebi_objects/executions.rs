@@ -31,7 +31,7 @@ impl Importable for Executions {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::Executions(Self::import(
             reader,
@@ -39,7 +39,7 @@ impl Importable for Executions {
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

@@ -1,7 +1,3 @@
-use anyhow::Result;
-use flate2::{Compression, write::GzEncoder};
-use std::io::{BufRead, Write};
-
 use crate::{
     CompressedEventLogXes, EventLogTraceAttributes, EventLogXes, HasActivityKey,
     TranslateActivityKey,
@@ -11,6 +7,9 @@ use crate::{
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
     },
 };
+use anyhow::Result;
+use flate2::{Compression, write::GzEncoder};
+use std::io::{BufRead, Write};
 
 pub struct CompressedEventLogTraceAttributes {
     pub log: EventLogTraceAttributes,
@@ -24,7 +23,7 @@ impl Importable for CompressedEventLogTraceAttributes {
 
     fn import_as_object(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         let log = Self::import(reader, parameter_values)?;
         Ok(EbiObject::EventLogTraceAttributes(log.log))
@@ -32,7 +31,7 @@ impl Importable for CompressedEventLogTraceAttributes {
 
     fn import(
         reader: &mut dyn BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> anyhow::Result<Self>
     where
         Self: Sized,

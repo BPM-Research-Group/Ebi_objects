@@ -197,7 +197,7 @@ impl Importable for DirectlyFollowsModel {
 
     fn import_as_object(
         reader: &mut dyn std::io::prelude::BufRead,
-        parameter_values: ImporterParameterValues,
+        parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::DirectlyFollowsModel(Self::import(
             reader,
@@ -207,7 +207,7 @@ impl Importable for DirectlyFollowsModel {
 
     fn import(
         reader: &mut dyn std::io::prelude::BufRead,
-        _: ImporterParameterValues,
+        _: &ImporterParameterValues,
     ) -> anyhow::Result<Self>
     where
         Self: Sized,
