@@ -110,7 +110,7 @@ impl FromStr for EventLogXes {
 impl Exportable for EventLogXes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::EventLog(log) => log.export(f),
+            EbiObject::EventLogXes(log) => log.export(f),
             _ => Err(anyhow!("Cannot export as event log.")),
         }
     }
