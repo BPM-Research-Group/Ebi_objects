@@ -23,12 +23,20 @@ pub trait Importable {
     where
         Self: Sized;
 
-    fn default_importer_parameters() -> Option<ImporterParameterValues> {
+    fn default_importer_parameters() -> Result<ImporterParameterValues> {
         let mut result = HashMap::new();
         for parameter in Self::IMPORTER_PARAMETERS {
-            result.insert(*parameter, parameter.default()?);
+            result.insert(
+                *parameter,
+                parameter.default().ok_or_else(|| {
+                    anyhow!(
+                        "the input parameter {} has no default value",
+                        parameter.name()
+                    )
+                })?,
+            );
         }
-        Some(result)
+        Ok(result)
     }
 }
 
@@ -40,7 +48,8 @@ macro_rules! from_string {
             fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
                 let mut reader = std::io::Cursor::new(s);
                 let default_parameter_values =
-                    $t::default_importer_parameters().ok_or_else(|| {
+                    anyhow::Context::with_context(
+                    $t::default_importer_parameters(), || {
                         anyhow::anyhow!(
                             "cannot import from string as not all import parameters have default values"
                         )
