@@ -1,6 +1,9 @@
 use crate::{
-    EventLog, EventLogTraceAttributes, EventLogXes,
-    ebi_objects::compressed_event_log::CompressedEventLog,
+    CompressedEventLogXes, EventLog, EventLogTraceAttributes, EventLogXes,
+    ebi_objects::{
+        compressed_event_log::CompressedEventLog,
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+    },
 };
 
 impl From<EventLog> for CompressedEventLog {
@@ -19,5 +22,21 @@ impl From<EventLogTraceAttributes> for CompressedEventLog {
 impl From<EventLogXes> for CompressedEventLog {
     fn from(value: EventLogXes) -> Self {
         Self { log: value.into() }
+    }
+}
+
+impl From<CompressedEventLogTraceAttributes> for CompressedEventLog {
+    fn from(value: CompressedEventLogTraceAttributes) -> Self {
+        Self {
+            log: value.log.into(),
+        }
+    }
+}
+
+impl From<CompressedEventLogXes> for CompressedEventLog {
+    fn from(value: CompressedEventLogXes) -> Self {
+        Self {
+            log: value.log.into(),
+        }
     }
 }

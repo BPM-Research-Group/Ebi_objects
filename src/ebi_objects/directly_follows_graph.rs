@@ -15,16 +15,12 @@ use crate::{
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
     format_comparison, json,
-    traits::{exportable::Exportable, graphable, importable::Importable},
+    traits::{
+        exportable::Exportable,
+        graphable,
+        importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-
-pub const FORMAT_SPECIFICATION: &str = concat!(
-    "A directly follows graph is a JSON structure.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.dfg}",
-    format_comparison!()
-);
 
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
@@ -181,11 +177,27 @@ impl DirectlyFollowsGraph {
 }
 
 impl Importable for DirectlyFollowsGraph {
-    fn import_as_object(reader: &mut dyn std::io::BufRead) -> anyhow::Result<EbiObject> {
-        Ok(EbiObject::DirectlyFollowsGraph(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!(
+        "A directly follows graph is a JSON structure.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.dfg}",
+        format_comparison!()
+    );
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn std::io::BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> anyhow::Result<EbiObject> {
+        Ok(EbiObject::DirectlyFollowsGraph(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
@@ -350,6 +362,7 @@ impl Importable for DirectlyFollowsGraph {
         return Ok(result);
     }
 }
+from_string!(DirectlyFollowsGraph);
 
 impl Exportable for DirectlyFollowsGraph {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {

@@ -1,27 +1,21 @@
-use std::{
-    collections::{HashMap, hash_map::Entry},
-    fmt::Display,
-    io::{self, BufRead, Write},
-    str::FromStr,
-};
-
-use anyhow::{Context, Error, Result, anyhow};
-use quick_xml::{
-    Reader,
-    events::{BytesEnd, BytesStart, Event},
-};
-
+use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
 use crate::{
     Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable,
     constants::ebi_object::EbiObject,
     ebi_objects::process_tree::{Node, Operator},
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-
-use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
-
-pub const FORMAT_SPECIFICATION: &str = "A process tree markup language file.
-For instance:
-    \\lstinputlisting[language=xml, style=boxed]{../testfiles/aa-ab-ba.ptml}";
+use anyhow::{Context, Result, anyhow};
+use quick_xml::{
+    Reader,
+    events::{BytesEnd, BytesStart, Event},
+};
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    fmt::Display,
+    io::{BufRead, Write},
+    str::FromStr,
+};
 
 #[derive(Clone)]
 pub struct ProcessTreeMarkupLanguage {
@@ -319,11 +313,22 @@ impl State {
 }
 
 impl Importable for ProcessTreeMarkupLanguage {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::ProcessTree(Self::import(reader)?.into()))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A process tree markup language file.
+For instance:
+    \\lstinputlisting[language=xml, style=boxed]{../testfiles/aa-ab-ba.ptml}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::ProcessTree(
+            Self::import(reader, parameter_values)?.into(),
+        ))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -367,15 +372,7 @@ impl Importable for ProcessTreeMarkupLanguage {
         }
     }
 }
-
-impl FromStr for ProcessTreeMarkupLanguage {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
+from_string!(ProcessTreeMarkupLanguage);
 
 impl Exportable for ProcessTreeMarkupLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

@@ -1,6 +1,6 @@
 [package]
 name = "ebi_objects"
-version = "0.3.27"
+version = "0.3.28"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 keywords = ["stochastic-processes", "process-mining", "business-processes"]
@@ -28,7 +28,7 @@ eapproximatearithmetic = []
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ebi_arithmetic = "0.3.0"
+ebi_arithmetic = "0.3.2"
 ebi_derive = "0.2.7"
 anyhow = "1.0.100"
 process_mining = "0.3.25"

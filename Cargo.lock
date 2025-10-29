@@ -294,9 +294,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "ebi_arithmetic"
-version = "0.3.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d4672e5c1bdfa4e2fe5c308d462c26bd4d940be319335befca05ffa33436b76"
+checksum = "2251a6a7ef11abffd2303311a538e7293b48a174057cc7190550ad7999da6d81"
 dependencies = [
  "anyhow",
  "itertools",
@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "anyhow",
  "chrono",

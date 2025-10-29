@@ -8,6 +8,7 @@ use std::{
 use crate::{
     Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 
 use super::{
@@ -19,12 +20,6 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-
-pub const FORMAT_SPECIFICATION: &str =
-    "A LoLA Petri net language file adheres to the grammar described in~\\cite{DBLP:conf/apn/Wolf18a}.
-    Note that Ebi does not support place bounds or fairness, and that LoLA nets do not support silent transitions, and has some restrictions on labeling.
-For instance:
-    \\lstinputlisting[language=xml, style=boxed]{../testfiles/mutex.lola}";
 
 pub struct LolaNet(pub LabelledPetriNet);
 
@@ -46,11 +41,23 @@ impl LolaNet {
 }
 
 impl Importable for LolaNet {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::LabelledPetriNet(Self::import(reader)?.into()))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A LoLA Petri net language file adheres to the grammar described in~\\cite{DBLP:conf/apn/Wolf18a}.
+    Note that Ebi does not support place bounds or fairness, and that LoLA nets do not support silent transitions, and has some restrictions on labeling.
+For instance:
+    \\lstinputlisting[language=xml, style=boxed]{../testfiles/mutex.lola}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+    
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::LabelledPetriNet(
+            Self::import(reader, parameter_values)?.into(),
+        ))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -79,6 +86,7 @@ impl Importable for LolaNet {
         Ok(Self(lpn))
     }
 }
+from_string!(LolaNet);
 
 impl Exportable for LolaNet {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

@@ -1,18 +1,18 @@
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
 use layout::topo::layout::VisualGraph;
-use std::{
-    cmp::Ordering,
-    fmt::Display,
-    io::{self, Write},
-    str::FromStr,
-};
+use std::{cmp::Ordering, fmt::Display, io::Write};
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader, traits::graphable,
+    Importable, Infoable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    line_reader::LineReader,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
 
 use super::stochastic_directly_follows_model::NodeIndex;
@@ -36,18 +36,6 @@ macro_rules! format_comparison {
     \\end{tabularx}
     \\end{center}"}
 }
-
-pub const FORMAT_SPECIFICATION: &str = concat!("A directly follows model is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `directly follows model'.\\
-    The second line is a boolean indicating whether the model supports empty traces.\\
-    The third line is the number of activities in the model.\\
-    The following lines each contain an activity. Duplicated labels are accepted.\\
-    The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity.\\
-    The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity.\\
-    The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/a-b_star.dfm}", format_comparison!());
 
 #[derive(ActivityKey, Debug, Clone)]
 pub struct DirectlyFollowsModel {
@@ -193,11 +181,34 @@ impl TranslateActivityKey for DirectlyFollowsModel {
 }
 
 impl Importable for DirectlyFollowsModel {
-    fn import_as_object(reader: &mut dyn std::io::prelude::BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::DirectlyFollowsModel(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A directly follows model is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `directly follows model'.\\
+    The second line is a boolean indicating whether the model supports empty traces.\\
+    The third line is the number of activities in the model.\\
+    The following lines each contain an activity. Duplicated labels are accepted.\\
+    The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity.\\
+    The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity.\\
+    The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/a-b_star.dfm}", format_comparison!());
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn std::io::prelude::BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::DirectlyFollowsModel(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn std::io::prelude::BufRead) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn std::io::prelude::BufRead,
+        _: ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
@@ -295,15 +306,7 @@ impl Importable for DirectlyFollowsModel {
         Ok(result)
     }
 }
-
-impl FromStr for DirectlyFollowsModel {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
+from_string!(DirectlyFollowsModel);
 
 impl Display for DirectlyFollowsModel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

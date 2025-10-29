@@ -1,34 +1,19 @@
-use std::fmt::Display;
-
+use super::process_tree::{Node, Operator};
 use crate::{
-    ActivityKey, EbiObject, Exportable, Importable, line_reader::LineReader, traits::graphable,
+    ActivityKey, EbiObject, Exportable, Importable,
+    line_reader::LineReader,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-
 use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, Signed};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
-
-use super::process_tree::{Node, Operator};
+use std::fmt::Display;
 
 pub const HEADER: &str = "stochastic process tree";
-
-pub const FORMAT_SPECIFICATION: &str = "A stochastic process tree is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `stochastic process tree'.
-    The subsequent lines contain the nodes:
-    Each node is either:
-    \\begin{itemize}
-        \\item A line with the word `activity' followed on the same line by a space and the label of the activity leaf. The next line contains the weight of the activity;
-        \\item The word `tau', followed on the next line by the weight of the leaf;
-        \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
-        The line thereafter contains the number of children of the node, after which the nodes are given.
-        An operator node must have at least one child.
-    \\end{itemize}
-    Indentation of nodes is allowed, but not mandatory.\\
-    The last line of the file contains the weight of termination.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/all_operators.sptree}";
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticProcessTree {
@@ -43,7 +28,7 @@ impl StochasticProcessTree {
     pub fn number_of_leaves(&self) -> usize {
         self.tree.iter().filter(|node| node.is_leaf()).count() + 1
     }
-    
+
     pub fn node_to_string(
         &self,
         indent: usize,
@@ -342,11 +327,36 @@ impl Display for StochasticProcessTree {
 }
 
 impl Importable for StochasticProcessTree {
-    fn import_as_object(reader: &mut dyn std::io::BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::StochasticProcessTree(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A stochastic process tree is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `stochastic process tree'.
+    The subsequent lines contain the nodes:
+    Each node is either:
+    \\begin{itemize}
+        \\item A line with the word `activity' followed on the same line by a space and the label of the activity leaf. The next line contains the weight of the activity;
+        \\item The word `tau', followed on the next line by the weight of the leaf;
+        \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
+        The line thereafter contains the number of children of the node, after which the nodes are given.
+        An operator node must have at least one child.
+    \\end{itemize}
+    Indentation of nodes is allowed, but not mandatory.\\
+    The last line of the file contains the weight of termination.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/all_operators.sptree}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn std::io::BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::StochasticProcessTree(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead) -> Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -393,6 +403,7 @@ impl Importable for StochasticProcessTree {
         )))
     }
 }
+from_string!(StochasticProcessTree);
 
 impl Exportable for StochasticProcessTree {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {

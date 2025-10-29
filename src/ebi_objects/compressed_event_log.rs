@@ -1,36 +1,47 @@
 use anyhow::Result;
-use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
-use std::io::{BufRead, BufReader, Write};
+use flate2::{Compression, write::GzEncoder};
+use std::io::{BufRead, Write};
 
 use crate::{
-    ActivityKey, EventLog, HasActivityKey, TranslateActivityKey,
+    ActivityKey, CompressedEventLogXes, EventLog, EventLogXes, HasActivityKey,
+    TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    traits::{exportable::Exportable, importable::Importable},
+    traits::{
+        exportable::Exportable,
+        importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-
-pub const FORMAT_SPECIFICATION: &str = "A compressed event log is a gzipped event log file in the IEEE XES format~\\cite{DBLP:journals/cim/AcamporaVSAGV17}.
-Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
 
 pub struct CompressedEventLog {
     pub log: EventLog,
 }
 
 impl Importable for CompressedEventLog {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let log = Self::import(reader)?;
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str =
+        CompressedEventLogXes::FILE_FORMAT_SPECIFICATION_LATEX;
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = EventLogXes::IMPORTER_PARAMETERS;
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        let log = Self::import(reader, parameter_values)?;
         Ok(EbiObject::EventLog(log.log))
     }
 
-    fn import(reader: &mut dyn BufRead) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        let dec = GzDecoder::new(reader);
-        let mut reader2 = BufReader::new(dec);
-        let log = EventLog::import(&mut reader2)?;
-        Ok(Self { log })
+        let log = CompressedEventLogXes::import(reader, parameter_values)?;
+        Ok(log.into())
     }
 }
+from_string!(CompressedEventLog);
 
 impl Exportable for CompressedEventLog {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

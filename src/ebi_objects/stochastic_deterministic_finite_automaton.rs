@@ -1,7 +1,12 @@
 use crate::{
-    json, traits::graphable, Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, json,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
@@ -10,34 +15,17 @@ use std::{
     cmp::{Ordering, max},
     collections::HashMap,
     fmt,
-    io::{self, BufRead},
-    str::FromStr,
+    io::BufRead,
 };
-
-pub const FORMAT_SPECIFICATION: &str = "A stochastic deterministic finite automaton is a JSON structure with the top level being an object.
-    This object contains the following key-value pairs:
-    \\begin{itemize}
-    \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the SDFA has an empty stochastic language.
-    \\item \\texttt{transitions} being a list of transitions. 
-    Each transition is an object with \\texttt{from} being the source state index of the transition, 
-    \\texttt{to} being the target state index of the transition, 
-    \\texttt{label} being the activity of the transition, and
-    \\texttt{prob} being the probability of the transition (may be given as a fraction in a string or a float value. Must be $\\leq 1$). 
-    Silent transitions are not supported.
-    The file format supports deadlocks and livelocks.
-    The probability that a trace terminates in a state is 1 - the sum probability of the outgoing transitions of the state.
-    \\end{itemize}
-    For instance:
-    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.sdfa}";
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticDeterministicFiniteAutomaton {
     pub activity_key: ActivityKey,
     pub initial_state: Option<usize>,
     pub max_state: usize,
-    pub sources: Vec<usize>,       //transition -> source of arc
-    pub targets: Vec<usize>,       //transition -> target of arc
-    pub activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
+    pub sources: Vec<usize>,          //transition -> source of arc
+    pub targets: Vec<usize>,          //transition -> target of arc
+    pub activities: Vec<Activity>,    //transition -> activity of arc (every transition is labelled)
     pub probabilities: Vec<Fraction>, //transition -> probability of arc
     pub terminating_probabilities: Vec<Fraction>, //state -> termination probability
 }
@@ -262,23 +250,35 @@ impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
     }
 }
 
-impl FromStr for StochasticDeterministicFiniteAutomaton {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
-
 impl Importable for StochasticDeterministicFiniteAutomaton {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A stochastic deterministic finite automaton is a JSON structure with the top level being an object.
+    This object contains the following key-value pairs:
+    \\begin{itemize}
+    \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the SDFA has an empty stochastic language.
+    \\item \\texttt{transitions} being a list of transitions. 
+    Each transition is an object with \\texttt{from} being the source state index of the transition, 
+    \\texttt{to} being the target state index of the transition, 
+    \\texttt{label} being the activity of the transition, and
+    \\texttt{prob} being the probability of the transition (may be given as a fraction in a string or a float value. Must be $\\leq 1$). 
+    Silent transitions are not supported.
+    The file format supports deadlocks and livelocks.
+    The probability that a trace terminates in a state is 1 - the sum probability of the outgoing transitions of the state.
+    \\end{itemize}
+    For instance:
+    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.sdfa}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
         Ok(EbiObject::StochasticDeterministicFiniteAutomaton(
-            Self::import(reader)?,
+            Self::import(reader, parameter_values)?,
         ))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -306,6 +306,7 @@ impl Importable for StochasticDeterministicFiniteAutomaton {
         return Ok(result);
     }
 }
+from_string!(StochasticDeterministicFiniteAutomaton);
 
 impl Exportable for StochasticDeterministicFiniteAutomaton {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {

@@ -1,40 +1,22 @@
-use std::{
-    fmt::Display,
-    io::{self},
-    str::FromStr,
+use super::stochastic_process_tree::StochasticProcessTree;
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+    line_reader::LineReader,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-
 use anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
+use std::{fmt::Display, str::FromStr};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, ebi_objects::labelled_petri_net::TransitionIndex,
-    line_reader::LineReader, traits::graphable,
-};
-
-use super::stochastic_process_tree::StochasticProcessTree;
-
 pub const HEADER: &str = "process tree";
-
-pub const FORMAT_SPECIFICATION: &str = "A process tree is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `process tree'.
-    The subsequent lines contain the nodes:
-    Each node is either:
-    \\begin{itemize}
-        \\item A line with the word `activity' followed on the same line by a space and the label of the activity leaf;
-        \\item The word `tau';
-        \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
-        The line thereafter contains the number of children of the node, after which the nodes are given.
-        An operator node must have at least one child.
-    \\end{itemize}
-    Indentation of nodes is allowed, but not mandatory.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/all_operators.ptree}";
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct ProcessTree {
@@ -442,15 +424,6 @@ macro_rules! tree {
             }
         }
 
-        impl FromStr for $t {
-            type Err = Error;
-
-            fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-                let mut reader = io::Cursor::new(s);
-                Self::import(&mut reader)
-            }
-        }
-
         pub struct $u<'a> {
             //children iterator
             tree: &'a $t,
@@ -555,11 +528,35 @@ impl Display for ProcessTree {
 }
 
 impl Importable for ProcessTree {
-    fn import_as_object(reader: &mut dyn std::io::BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::ProcessTree(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A process tree is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `process tree'.
+    The subsequent lines contain the nodes:
+    Each node is either:
+    \\begin{itemize}
+        \\item A line with the word `activity' followed on the same line by a space and the label of the activity leaf;
+        \\item The word `tau';
+        \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
+        The line thereafter contains the number of children of the node, after which the nodes are given.
+        An operator node must have at least one child.
+    \\end{itemize}
+    Indentation of nodes is allowed, but not mandatory.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/all_operators.ptree}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn std::io::BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::ProcessTree(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead) -> Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -584,6 +581,7 @@ impl Importable for ProcessTree {
         Ok((activity_key, tree).into())
     }
 }
+from_string!(ProcessTree);
 
 impl Exportable for ProcessTree {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {

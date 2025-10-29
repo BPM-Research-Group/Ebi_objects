@@ -1,29 +1,25 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
-    TranslateActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, EventLogXes, Exportable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     iterators::{
         parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
     },
-    traits::{number_of_traces::NumberOfTraces, trace_iterators::IntoRefTraceIterator},
+    traits::{
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+        number_of_traces::NumberOfTraces,
+        trace_iterators::IntoRefTraceIterator,
+    },
 };
-use anyhow::{Error, Result, anyhow};
+use anyhow::{Result, anyhow};
 use core::fmt;
 use ebi_derive::ActivityKey;
-use process_mining::{XESImportOptions, event_log::event_log_struct::EventLogClassifier};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator};
 use std::{
-    io::{self, BufRead, Write},
+    io::{BufRead, Write},
     slice::{Iter, IterMut},
-    str::FromStr,
     vec::IntoIter,
 };
-
-pub const FORMAT_SPECIFICATION: &str =
-    "An event log file follows the IEEE XES format~\\cite{DBLP:journals/cim/AcamporaVSAGV17}. 
-Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
-For instance:
-    \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
 
 #[derive(ActivityKey, Clone)]
 pub struct EventLog {
@@ -61,36 +57,29 @@ impl TranslateActivityKey for EventLog {
 }
 
 impl Importable for EventLog {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::EventLog(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = EventLogXes::FILE_FORMAT_SPECIFICATION_LATEX;
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = EventLogXes::IMPORTER_PARAMETERS;
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::EventLog(Self::import(reader, parameter_values)?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        let log =
-            process_mining::event_log::import_xes::import_xes(reader, XESImportOptions::default());
-        if log.is_err() {
-            return Err(anyhow!("{}", log.err().unwrap()));
-        }
-        let log = log.unwrap();
-        let classifier = EventLogClassifier {
-            name: "concept:name".to_string(),
-            keys: vec!["concept:name".to_string()],
-        };
-        Ok((log, classifier).into())
+        let log = EventLogXes::import(reader, parameter_values)?;
+        Ok(log.into())
     }
 }
-
-impl FromStr for EventLog {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
+from_string!(EventLog);
 
 impl Exportable for EventLog {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

@@ -9,13 +9,14 @@ use crate::{
     },
     line_reader::LineReader,
     traits::{
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
         number_of_traces::NumberOfTraces,
         trace_iterators::{
             IntoRefProbabilityIterator, IntoRefTraceIterator, IntoRefTraceProbabilityIterator,
         },
     },
 };
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
@@ -25,23 +26,10 @@ use std::{
         hash_map::{IntoIter, Iter},
     },
     fmt,
-    io::{self, BufRead, Write},
-    str::FromStr,
+    io::{BufRead, Write},
 };
 
 pub const HEADER: &str = "finite stochastic language";
-
-pub const FORMAT_SPECIFICATION: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `finite stochastic language'.
-    The second line is the number of traces in the language.
-    For each trace, the first line is the probability of the trace as a positive fraction or a decimal value.
-    The second line contains the number of events in the trace.
-    Then, each subsequent line contains the activity name of one event.
-
-    The sum of the probabilities of the traces in the language needs to be $\\leq$ 1.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.slang}";
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct FiniteStochasticLanguage {
@@ -142,21 +130,32 @@ impl PartialEq for FiniteStochasticLanguage {
     }
 }
 
-impl FromStr for FiniteStochasticLanguage {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
-
 impl Importable for FiniteStochasticLanguage {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::FiniteStochasticLanguage(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `finite stochastic language'.
+    The second line is the number of traces in the language.
+    For each trace, the first line is the probability of the trace as a positive fraction or a decimal value.
+    The second line contains the number of events in the trace.
+    Then, each subsequent line contains the activity name of one event.
+
+    The sum of the probabilities of the traces in the language needs to be $\\leq$ 1.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.slang}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::FiniteStochasticLanguage(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader
@@ -249,6 +248,7 @@ impl Importable for FiniteStochasticLanguage {
         })
     }
 }
+from_string!(FiniteStochasticLanguage);
 
 impl Exportable for FiniteStochasticLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

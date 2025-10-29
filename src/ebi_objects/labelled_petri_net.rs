@@ -1,16 +1,21 @@
-use anyhow::{Context, Error, Ok, Result, anyhow};
+use anyhow::{Context, Ok, Result, anyhow};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{
     fmt::{self, Debug},
-    io::{self, BufRead},
-    str::FromStr,
+    io::BufRead,
 };
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject,
-    line_reader::LineReader, marking::Marking, traits::graphable,
+    Importable, Infoable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    line_reader::LineReader,
+    marking::Marking,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
 
 use super::{
@@ -26,19 +31,6 @@ use super::{
 pub type TransitionIndex = usize;
 
 pub const HEADER: &str = "labelled Petri net";
-
-pub const FORMAT_SPECIFICATION: &str = "A labelled Petri net is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `labelled Petri net'.
-    The second line is the number of places in the net.
-    The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
-    The next line is the number of transitions in the net.
-    Then, for each transition, the following lines are next: 
-    (i) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled;
-    (ii) the number of input places, followed by a line for each input place with the index of the place;
-    (iii) the number of output places, followed by a line for each output place with the index of the place.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lpn}";
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct LabelledPetriNet {
@@ -365,21 +357,33 @@ impl fmt::Display for LabelledPetriNet {
     }
 }
 
-impl FromStr for LabelledPetriNet {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
-
 impl Importable for LabelledPetriNet {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::LabelledPetriNet(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A labelled Petri net is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `labelled Petri net'.
+    The second line is the number of places in the net.
+    The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
+    The next line is the number of transitions in the net.
+    Then, for each transition, the following lines are next: 
+    (i) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled;
+    (ii) the number of input places, followed by a line for each input place with the index of the place;
+    (iii) the number of output places, followed by a line for each output place with the index of the place.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lpn}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+    
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::LabelledPetriNet(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader
@@ -529,6 +533,7 @@ impl Importable for LabelledPetriNet {
         })
     }
 }
+from_string!(LabelledPetriNet);
 
 impl Graphable for LabelledPetriNet {
     fn to_dot(&self) -> Result<VisualGraph> {

@@ -1,11 +1,15 @@
 use anyhow::Result;
-use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
-use std::io::{BufRead, BufReader, Write};
+use flate2::{Compression, write::GzEncoder};
+use std::io::{BufRead, Write};
 
 use crate::{
-    EventLogTraceAttributes, HasActivityKey, TranslateActivityKey,
+    CompressedEventLogXes, EventLogTraceAttributes, EventLogXes, HasActivityKey,
+    TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    traits::{exportable::Exportable, importable::Importable},
+    traits::{
+        exportable::Exportable,
+        importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
 
 pub struct CompressedEventLogTraceAttributes {
@@ -13,21 +17,31 @@ pub struct CompressedEventLogTraceAttributes {
 }
 
 impl Importable for CompressedEventLogTraceAttributes {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let log = Self::import(reader)?;
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str =
+        CompressedEventLogXes::FILE_FORMAT_SPECIFICATION_LATEX;
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = EventLogXes::IMPORTER_PARAMETERS;
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        let log = Self::import(reader, parameter_values)?;
         Ok(EbiObject::EventLogTraceAttributes(log.log))
     }
 
-    fn import(reader: &mut dyn BufRead) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        let dec = GzDecoder::new(reader);
-        let mut reader2 = BufReader::new(dec);
-        let log = EventLogTraceAttributes::import(&mut reader2)?;
-        Ok(Self { log })
+        let log = CompressedEventLogXes::import(reader, parameter_values)?;
+        Ok(log.into())
     }
 }
+from_string!(CompressedEventLogTraceAttributes);
 
 impl Exportable for CompressedEventLogTraceAttributes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

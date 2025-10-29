@@ -1,31 +1,16 @@
-use anyhow::{Context, Error, Result, anyhow};
+use super::language_of_alignments::Move;
+use crate::{
+    ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable,
+    Infoable, TranslateActivityKey,
+    line_reader::LineReader,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed};
 use ebi_derive::ActivityKey;
-use std::{fmt::Display, str::FromStr};
-
-use crate::{
-    line_reader::LineReader, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable, Infoable, TranslateActivityKey
-};
-
-use super::language_of_alignments::Move;
+use std::fmt::Display;
 
 pub const HEADER: &str = "stochastic language of alignments";
-
-pub const FORMAT_SPECIFICATION: &str = "A stochastic language of alignments is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `stochastic language of alignments'.
-    The second line is the number of alignments in the language.
-    For each alignment, the first line contains the probability of the alignment in the language, which is either a positive fraction or a decimal value.
-    The second line contains the number of moves in the alignment.
-    Then, each move is given as either 
-    \\begin{itemize}
-        \\item `synchronous move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved transition.
-        \\item `silent move', followed by a line with the index of the silent transition.
-        \\item `log move', followed by a line with the word `label', then a space, and then the activity label.
-        \\item `model move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved ransition.
-    \\end{itemize}
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.sali}";
 
 #[derive(ActivityKey, Clone)]
 pub struct StochasticLanguageOfAlignments {
@@ -155,13 +140,35 @@ impl Display for StochasticLanguageOfAlignments {
 }
 
 impl Importable for StochasticLanguageOfAlignments {
-    fn import_as_object(reader: &mut dyn std::io::BufRead) -> Result<EbiObject> {
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A stochastic language of alignments is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `stochastic language of alignments'.
+    The second line is the number of alignments in the language.
+    For each alignment, the first line contains the probability of the alignment in the language, which is either a positive fraction or a decimal value.
+    The second line contains the number of moves in the alignment.
+    Then, each move is given as either 
+    \\begin{itemize}
+        \\item `synchronous move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved transition.
+        \\item `silent move', followed by a line with the index of the silent transition.
+        \\item `log move', followed by a line with the word `label', then a space, and then the activity label.
+        \\item `model move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved ransition.
+    \\end{itemize}
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.sali}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn std::io::BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
         Ok(EbiObject::StochasticLanguageOfAlignments(Self::import(
             reader,
+            parameter_values,
         )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
@@ -314,15 +321,7 @@ impl Importable for StochasticLanguageOfAlignments {
         })
     }
 }
-
-impl FromStr for StochasticLanguageOfAlignments {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut reader = std::io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
+from_string!(StochasticLanguageOfAlignments);
 
 impl Infoable for StochasticLanguageOfAlignments {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {

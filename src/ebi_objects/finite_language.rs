@@ -6,8 +6,9 @@ use crate::{
         parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
     },
     line_reader::LineReader,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_derive::ActivityKey;
 use fnv::FnvBuildHasher;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
@@ -17,23 +18,12 @@ use std::{
         hash_set::{IntoIter, Iter},
     },
     fmt::Display,
-    io::{self, BufRead},
-    str::FromStr,
+    io::BufRead,
 };
 
 use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
 
 pub const HEADER: &str = "finite language";
-
-pub const FORMAT_SPECIFICATION: &str =
-    "A finite language is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `finite language'.
-    The second line is the number of traces in the language.
-    For each trace, the first line contains the number of events in the trace.
-    Then, each subsequent line contains the activity name of one event.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lang}";
 
 #[derive(ActivityKey, Clone)]
 pub struct FiniteLanguage {
@@ -133,21 +123,29 @@ impl Display for FiniteLanguage {
     }
 }
 
-impl FromStr for FiniteLanguage {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
-
 impl Importable for FiniteLanguage {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::FiniteLanguage(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `finite language'.
+    The second line is the number of traces in the language.
+    For each trace, the first line contains the number of events in the trace.
+    Then, each subsequent line contains the activity name of one event.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lang}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::FiniteLanguage(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader
@@ -208,6 +206,7 @@ impl Importable for FiniteLanguage {
         })
     }
 }
+from_string!(FiniteLanguage);
 
 impl NumberOfTraces for FiniteLanguage {
     fn number_of_traces(&self) -> usize {

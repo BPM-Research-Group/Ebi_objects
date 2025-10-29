@@ -5,6 +5,7 @@ use anyhow::{Result, anyhow};
 use crate::{
     Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 
 use super::{
@@ -17,8 +18,12 @@ use super::{
     stochastic_process_tree::StochasticProcessTree,
 };
 
-pub const FORMAT_SPECIFICATION: &str =
-    "A Petri net markup language file follows the ISO 15909-2:2011 format~\\cite{pnml}. 
+#[derive(Clone)]
+pub struct PetriNetMarkupLanguage(pub LabelledPetriNet);
+
+impl Importable for PetriNetMarkupLanguage {
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str =
+        "A Petri net markup language file follows the ISO 15909-2:2011 format~\\cite{pnml}. 
 Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 
     Please note that Ebi ignores any final markings.
@@ -27,17 +32,18 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
     For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/a.pnml}";
 
-#[derive(Clone)]
-pub struct PetriNetMarkupLanguage(pub LabelledPetriNet);
-
-impl Importable for PetriNetMarkupLanguage {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+    
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
         Ok(EbiObject::LabelledPetriNet(
-            Self::import(reader)?.try_into()?,
+            Self::import(reader, parameter_values)?.try_into()?,
         ))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -47,6 +53,7 @@ impl Importable for PetriNetMarkupLanguage {
         }
     }
 }
+from_string!(PetriNetMarkupLanguage);
 
 impl Exportable for PetriNetMarkupLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

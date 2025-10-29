@@ -1,13 +1,16 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},
     io::BufRead,
-    str::FromStr,
 };
 
-use crate::{Exportable, Importable, Infoable, constants::ebi_object::EbiObject};
+use crate::{
+    Exportable, Importable, Infoable,
+    constants::ebi_object::EbiObject,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+};
 
 pub const HEADER: &str = "executions";
 
@@ -19,17 +22,31 @@ pub struct Executions {
 }
 
 impl Importable for Executions {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::Executions(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A JSON-formatted list of executions.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/a-b.exs}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::Executions(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
         Ok(serde_json::from_reader(reader)?)
     }
 }
+from_string!(Executions);
 
 impl Infoable for Executions {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
@@ -43,15 +60,6 @@ impl Display for Executions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let x = serde_json::to_string(self).unwrap();
         write!(f, "{}", x)
-    }
-}
-
-impl FromStr for Executions {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut reader = std::io::Cursor::new(s);
-        Self::import(&mut reader)
     }
 }
 

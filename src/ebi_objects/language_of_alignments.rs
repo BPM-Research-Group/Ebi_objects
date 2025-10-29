@@ -1,31 +1,16 @@
-use anyhow::{Context, Error, Result, anyhow};
-use ebi_derive::ActivityKey;
-use std::{fmt::Display, str::FromStr};
-
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
-    TranslateActivityKey, constants::ebi_object::EbiObject,
-    ebi_objects::labelled_petri_net::TransitionIndex, line_reader::LineReader,
+    TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+    line_reader::LineReader,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
+use anyhow::{Context, Result, anyhow};
+use ebi_derive::ActivityKey;
+use std::fmt::Display;
 
 pub const HEADER: &str = "language of alignments";
-
-pub const FORMAT_SPECIFICATION: &str = "A language of alignments is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `language of alignments'.
-    The second line is the number of alignments in the language.
-    For each alignment, the first line contains the number of moves in the alignment.
-    Then, each move is given as either 
-    \\begin{itemize}
-        \\item `synchronous move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved transition.
-        \\item `silent move', followed by a line with the index of the silent transition.
-        \\item `log move', followed by a line with the word `label', then a space, and then the activity label.
-        \\item `model move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved ransition.
-    \\end{itemize}
-    Note that the Semantics trait of Ebi, which is what most alignment computations use, requires that every final marking is a deadlock.
-    Consequently, an implicit silent transition may be added by the Semantics trait that is not in the model.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.ali}";
 
 #[derive(ActivityKey, Clone)]
 pub struct LanguageOfAlignments {
@@ -150,11 +135,36 @@ impl Display for LanguageOfAlignments {
 }
 
 impl Importable for LanguageOfAlignments {
-    fn import_as_object(reader: &mut dyn std::io::BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::LanguageOfAlignments(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A language of alignments is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `language of alignments'.
+    The second line is the number of alignments in the language.
+    For each alignment, the first line contains the number of moves in the alignment.
+    Then, each move is given as either 
+    \\begin{itemize}
+        \\item `synchronous move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved transition.
+        \\item `silent move', followed by a line with the index of the silent transition.
+        \\item `log move', followed by a line with the word `label', then a space, and then the activity label.
+        \\item `model move', followed by a line with the word `label' followed by a space and the activity label, which is followed with a line with the index of the involved ransition.
+    \\end{itemize}
+    Note that the Semantics trait of Ebi, which is what most alignment computations use, requires that every final marking is a deadlock.
+    Consequently, an implicit silent transition may be added by the Semantics trait that is not in the model.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.ali}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn std::io::BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::LanguageOfAlignments(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn std::io::BufRead) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: ImporterParameterValues) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
@@ -287,15 +297,7 @@ impl Importable for LanguageOfAlignments {
         })
     }
 }
-
-impl FromStr for LanguageOfAlignments {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut reader = std::io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
+from_string!(LanguageOfAlignments);
 
 impl Infoable for LanguageOfAlignments {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {

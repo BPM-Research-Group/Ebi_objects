@@ -1,36 +1,23 @@
-use anyhow::{Context, Error, Result, anyhow};
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+    line_reader::LineReader,
+    marking::Marking,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
+};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
-use std::io;
-use std::str::FromStr;
 use std::{fmt, io::BufRead};
-
-use crate::traits::graphable;
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Importable, Infoable,
-    TranslateActivityKey, ebi_objects::labelled_petri_net::TransitionIndex,
-    line_reader::LineReader, marking::Marking,
-};
-use crate::{Graphable, HasActivityKey};
 
 use super::labelled_petri_net::LabelledPetriNet;
 
 pub const HEADER: &str = "stochastic labelled Petri net";
-
-pub const FORMAT_SPECIFICATION: &str = "A stochastic labelled Petri net is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `stochastic labelled Petri net'.
-    The second line is the number of places in the net.
-    The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
-    The next line is the number of transitions in the net.
-    Then, for each transition, the following lines are next: 
-    (i) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled;
-    (ii) the weight of the transition, which may be any fraction or decimal number, even 0 or negative;
-    (iii) the number of input places, followed by a line for each input place with the index of the place;
-    (iiii) the number of output places, followed by a line for each output place with the index of the place.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba_ali.slpn}";
 
 #[derive(Clone, Debug, ActivityKey)]
 pub struct StochasticLabelledPetriNet {
@@ -329,21 +316,34 @@ impl fmt::Display for StochasticLabelledPetriNet {
     }
 }
 
-impl FromStr for StochasticLabelledPetriNet {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
-
 impl Importable for StochasticLabelledPetriNet {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        Ok(EbiObject::StochasticLabelledPetriNet(Self::import(reader)?))
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A stochastic labelled Petri net is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `stochastic labelled Petri net'.
+    The second line is the number of places in the net.
+    The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
+    The next line is the number of transitions in the net.
+    Then, for each transition, the following lines are next: 
+    (i) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled;
+    (ii) the weight of the transition, which may be any fraction or decimal number, even 0 or negative;
+    (iii) the number of input places, followed by a line for each input place with the index of the place;
+    (iiii) the number of output places, followed by a line for each output place with the index of the place.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba_ali.slpn}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::StochasticLabelledPetriNet(Self::import(
+            reader,
+            parameter_values,
+        )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self> {
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self> {
         let mut lreader = LineReader::new(reader);
 
         let head = lreader
@@ -503,6 +503,7 @@ impl Importable for StochasticLabelledPetriNet {
         })
     }
 }
+from_string!(StochasticLabelledPetriNet);
 
 impl From<(LabelledPetriNet, Vec<Fraction>)> for StochasticLabelledPetriNet {
     fn from(value: (LabelledPetriNet, Vec<Fraction>)) -> Self {

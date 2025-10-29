@@ -1,4 +1,7 @@
-use crate::{EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, TranslateActivityKey};
+use crate::{
+    EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, TranslateActivityKey,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+};
 use anyhow::Result;
 use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
 use std::io::{BufRead, BufReader, Write};
@@ -8,21 +11,33 @@ pub struct CompressedEventLogXes {
 }
 
 impl Importable for CompressedEventLogXes {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
-        let log = Self::import(reader)?;
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A compressed event log is a gzipped event log file in the IEEE XES format~\\cite{DBLP:journals/cim/AcamporaVSAGV17}.
+Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = EventLogXes::IMPORTER_PARAMETERS;
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        let log = Self::import(reader, parameter_values)?;
         Ok(EbiObject::EventLogXes(log.log))
     }
 
-    fn import(reader: &mut dyn BufRead) -> anyhow::Result<Self>
+    fn import(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
         let dec = GzDecoder::new(reader);
         let mut reader2 = BufReader::new(dec);
-        let log = EventLogXes::import(&mut reader2)?;
+        let log = EventLogXes::import(&mut reader2, parameter_values)?;
         Ok(Self { log })
     }
 }
+from_string!(CompressedEventLogXes);
 
 impl Exportable for CompressedEventLogXes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {

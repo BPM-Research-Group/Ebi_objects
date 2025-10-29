@@ -1,32 +1,20 @@
-use anyhow::{Context, Error, Result, anyhow};
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, json,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
+};
+use anyhow::{Context, Result, anyhow};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 use std::{
     cmp::{Ordering, max},
     fmt::{Display, Formatter},
-    io::{self, BufRead},
-    str::FromStr,
+    io::BufRead,
 };
-
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, json, traits::graphable,
-};
-
-pub const FORMAT_SPECIFICATION: &str = "A deterministic finite automaton is a JSON structure with the top level being an object.
-    This object contains the following key-value pairs:
-    \\begin{itemize}
-    \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the DFA has an empty language.
-    \\item \\texttt{finalStates} being a list of indices of the final states.
-    A final state is not necessarily a deadlock state.
-    \\item \\texttt{transitions} being a list of transitions. 
-    Each transition is an object with \\texttt{from} being the source state index of the transition, \\texttt{to} being the target state index of the transition, and \texttt{{label}} being the activity of the transition. 
-    Silent transitions are not supported.
-    The file format supports deadlocks and livelocks.
-    \\end{itemize}
-    For instance:
-    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.dfa}";
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct DeterministicFiniteAutomaton {
@@ -205,23 +193,34 @@ impl TranslateActivityKey for DeterministicFiniteAutomaton {
     }
 }
 
-impl FromStr for DeterministicFiniteAutomaton {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
-
 impl Importable for DeterministicFiniteAutomaton {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A deterministic finite automaton is a JSON structure with the top level being an object.
+    This object contains the following key-value pairs:
+    \\begin{itemize}
+    \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the DFA has an empty language.
+    \\item \\texttt{finalStates} being a list of indices of the final states.
+    A final state is not necessarily a deadlock state.
+    \\item \\texttt{transitions} being a list of transitions. 
+    Each transition is an object with \\texttt{from} being the source state index of the transition, \\texttt{to} being the target state index of the transition, and \texttt{{label}} being the activity of the transition. 
+    Silent transitions are not supported.
+    The file format supports deadlocks and livelocks.
+    \\end{itemize}
+    For instance:
+    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.dfa}";
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
         Ok(EbiObject::DeterministicFiniteAutomaton(Self::import(
             reader,
+            parameter_values,
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -264,6 +263,7 @@ impl Importable for DeterministicFiniteAutomaton {
         return Ok(result);
     }
 }
+from_string!(DeterministicFiniteAutomaton);
 
 impl Exportable for DeterministicFiniteAutomaton {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {

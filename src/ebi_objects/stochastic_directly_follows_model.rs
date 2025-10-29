@@ -1,46 +1,35 @@
-use std::{
-    cmp::Ordering,
-    fmt::Display,
-    io::{self, BufRead, Write},
-    str::FromStr,
+use crate::{
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, format_comparison,
+    line_reader::LineReader,
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
 use layout::topo::layout::VisualGraph;
-
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, format_comparison, line_reader::LineReader,
-    traits::graphable,
+use std::{
+    cmp::Ordering,
+    fmt::Display,
+    io::{BufRead, Write},
 };
 
 pub const HEADER: &str = "stochastic directly follows model";
-
-pub const FORMAT_SPECIFICATION: &str = concat!("A stochstic directly follows model is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `directly follows model'.\\
-    The second line is a boolean indicating whether the model supports empty traces.\\
-    The third line is the number of activities in the model.\\
-    The following lines each contain an activity. Duplicated labels are accepted.\\
-    The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity, followed by a `w` and the weight of the start activity.\\
-    The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity, followed by a `w` and the weight of the end activity.\\
-    The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity, then a `w`, and then the weight of the transition.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.sdfm}", format_comparison!());
 
 #[derive(ActivityKey, Debug, Clone)]
 pub struct StochasticDirectlyFollowsModel {
     pub activity_key: ActivityKey,
     pub node_2_activity: Vec<Activity>,
     pub empty_traces_weight: Fraction,
-    pub sources: Vec<NodeIndex>, //edge -> source of edge
-    pub targets: Vec<NodeIndex>, //edge -> target of edge
-    pub weights: Vec<Fraction>,  //edge -> how often observed
+    pub sources: Vec<NodeIndex>,           //edge -> source of edge
+    pub targets: Vec<NodeIndex>,           //edge -> target of edge
+    pub weights: Vec<Fraction>,            //edge -> how often observed
     pub start_node_weights: Vec<Fraction>, //node -> how often observed
-    pub end_node_weights: Vec<Fraction>, //node -> how often observed
+    pub end_node_weights: Vec<Fraction>,   //node -> how often observed
 }
 
 pub type NodeIndex = usize;
@@ -171,13 +160,31 @@ impl StochasticDirectlyFollowsModel {
 }
 
 impl Importable for StochasticDirectlyFollowsModel {
-    fn import_as_object(reader: &mut dyn BufRead) -> Result<EbiObject> {
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A stochstic directly follows model is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `directly follows model'.\\
+    The second line is a boolean indicating whether the model supports empty traces.\\
+    The third line is the number of activities in the model.\\
+    The following lines each contain an activity. Duplicated labels are accepted.\\
+    The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity, followed by a `w` and the weight of the start activity.\\
+    The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity, followed by a `w` and the weight of the end activity.\\
+    The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity, then a `w`, and then the weight of the transition.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.sdfm}", format_comparison!());
+
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    fn import_as_object(
+        reader: &mut dyn BufRead,
+        parameter_values: ImporterParameterValues,
+    ) -> Result<EbiObject> {
         Ok(EbiObject::StochasticDirectlyFollowsModel(Self::import(
             reader,
+            parameter_values,
         )?))
     }
 
-    fn import(reader: &mut dyn BufRead) -> Result<Self>
+    fn import(reader: &mut dyn BufRead, _: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -311,15 +318,7 @@ impl Importable for StochasticDirectlyFollowsModel {
         Ok(result)
     }
 }
-
-impl FromStr for StochasticDirectlyFollowsModel {
-    type Err = Error;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let mut reader = io::Cursor::new(s);
-        Self::import(&mut reader)
-    }
-}
+from_string!(StochasticDirectlyFollowsModel);
 
 impl Exportable for StochasticDirectlyFollowsModel {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
