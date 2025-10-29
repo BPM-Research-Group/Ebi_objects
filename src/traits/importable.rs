@@ -1,5 +1,6 @@
 use anyhow::{Result, anyhow};
 use ebi_arithmetic::{ConstFraction, Fraction};
+use strum_macros::Display;
 use std::{collections::HashMap, hash::Hash, io::BufRead};
 
 use crate::constants::ebi_object::EbiObject;
@@ -47,7 +48,7 @@ pub(crate) use from_string;
 
 pub type ImporterParameterValues = HashMap<ImporterParameter, ImporterParameterValue>;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Display)]
 pub enum ImporterParameter {
     Flag {
         name: &'static str,
