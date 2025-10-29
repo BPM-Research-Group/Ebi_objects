@@ -8,7 +8,7 @@ use ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
 use process_mining::{
     XESImportOptions,
-    event_log::{Trace, event_log_struct::EventLogClassifier},
+    event_log::{Event, Trace, event_log_struct::EventLogClassifier},
 };
 use std::{
     fmt,
@@ -58,6 +58,14 @@ impl EventLogXes {
 
         //swap the the traces back
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
+    }
+
+    pub fn get_event(&self, trace_index: usize, event_index: usize) -> Option<&Event> {
+        self.rust4pm_log
+            .traces
+            .get(trace_index)?
+            .events
+            .get(event_index)
     }
 }
 
