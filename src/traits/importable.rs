@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use ebi_arithmetic::{ConstFraction, Fraction};
-use strum_macros::Display;
 use std::{collections::HashMap, hash::Hash, io::BufRead};
+use strum_macros::Display;
 
 use crate::constants::ebi_object::EbiObject;
 
@@ -22,6 +22,14 @@ pub trait Importable {
     fn import(reader: &mut dyn BufRead, parameter_values: ImporterParameterValues) -> Result<Self>
     where
         Self: Sized;
+
+    fn default_importer_parameters() -> Option<ImporterParameterValues> {
+        let mut result = HashMap::new();
+        for parameter in Self::IMPORTER_PARAMETERS {
+            result.insert(*parameter, parameter.default()?);
+        }
+        Some(result)
+    }
 }
 
 macro_rules! from_string {
@@ -31,14 +39,12 @@ macro_rules! from_string {
 
             fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
                 let mut reader = std::io::Cursor::new(s);
-                let default_parameter_values = crate::traits::importable::Defaulter::default(
-                    Self::IMPORTER_PARAMETERS,
-                )
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "cannot import from string as not all parameters have default values"
-                    )
-                })?;
+                let default_parameter_values =
+                    $t::default_importer_parameters().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "cannot import from string as not all import parameters have default values"
+                        )
+                    })?;
                 Self::import(&mut reader, default_parameter_values)
             }
         }
@@ -108,20 +114,6 @@ impl ImporterParameter {
                 ImporterParameterValue::String((*default_value)?.to_string()),
             ),
         }
-    }
-}
-
-pub trait Defaulter {
-    fn default(self) -> Option<ImporterParameterValues>;
-}
-
-impl Defaulter for &[ImporterParameter] {
-    fn default(self) -> Option<ImporterParameterValues> {
-        let mut result = HashMap::new();
-        for parameter in self {
-            result.insert(*parameter, parameter.default()?);
-        }
-        Some(result)
     }
 }
 
