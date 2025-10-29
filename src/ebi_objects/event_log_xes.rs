@@ -1,7 +1,5 @@
 use crate::{
-    ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable, IntoTraceIterator,
-    NumberOfTraces, TranslateActivityKey,
-    iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
+    Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable, IntoTraceIterator, NumberOfTraces, TranslateActivityKey, iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator}
 };
 use anyhow::{Error, Result, anyhow};
 use ebi_arithmetic::Fraction;
@@ -58,6 +56,25 @@ impl EventLogXes {
 
         //swap the the traces back
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
+    }
+
+    pub fn retain_traces<'a>(&'a mut self, f: Box<dyn Fn(&Vec<Activity>) -> bool + 'static>) {
+        let mut activity_key = self.activity_key().clone();
+
+        let event_classifier = self.event_classifier().clone();
+
+        self.rust4pm_log.traces.retain(|trace| {
+            let mut result = Vec::with_capacity(trace.events.len());
+
+            for event in trace.events.iter() {
+                let activity =
+                    activity_key.process_activity(&event_classifier.get_class_identity(event));
+
+                result.push(activity);
+            }
+
+            f(&result)
+        });
     }
 
     pub fn get_event(&self, trace_index: usize, event_index: usize) -> Option<&Event> {
