@@ -129,6 +129,18 @@ impl Hash for ImporterParameter {
     }
 }
 
+impl Ord for ImporterParameter {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name().cmp(other.name())
+    }
+}
+
+impl PartialOrd for ImporterParameter {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.name().partial_cmp(other.name())
+    }
+}
+
 #[derive(Clone)]
 pub enum ImporterParameterValue {
     Boolean(bool),
