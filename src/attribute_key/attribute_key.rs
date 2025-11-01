@@ -54,7 +54,29 @@ impl<'a> AttributeKey {
         }
     }
 
-    pub fn process_attribute(
+    ///Must be called consecutively for the first row.
+    pub fn process_attribute_column(
+        &mut self,
+        attribute_id: usize,
+        attribute_value: &str,
+    ) -> Attribute {
+        if attribute_id == self.name2attribute.len() {
+            let id = self.attribute2name.len();
+            self.attribute2name.push(id.to_string());
+            self.name2attribute.insert(id.to_string(), Attribute { id });
+            self.attribute2type
+                .push(DataType::init(&AttributeValue::String(
+                    attribute_value.to_string(),
+                )));
+            self.id_to_attribute(id)
+        } else {
+            self.attribute2type[attribute_id]
+                .update(&AttributeValue::String(attribute_value.to_string()));
+            self.id_to_attribute(attribute_id)
+        }
+    }
+
+    pub fn process_attribute_value(
         &mut self,
         attribute_name: &str,
         attribute_value: &AttributeValue,

@@ -35,6 +35,7 @@ impl Exportable for ScalableVectorGraphics {
             EbiObject::DirectlyFollowsModel(object) => object.to_svg()?.export(f),
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_svg()?.export(f),
             EbiObject::EventLog(_) => Err(anyhow!("cannot export event log as SVG")),
+            EbiObject::EventLogCsv(_) => Err(anyhow!("cannot export event log as SVG")),
             EbiObject::EventLogTraceAttributes(_) => Err(anyhow!("cannot export event log as SVG")),
             EbiObject::EventLogXes(_) => Err(anyhow!("cannot export event log as SVG")),
             EbiObject::Executions(_) => Err(anyhow!("cannot export executions as SVG")),

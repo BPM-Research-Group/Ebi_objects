@@ -49,7 +49,7 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogTraceAttri
                     let (attribute_name, attribute_value) =
                         (rust4pm_attribute.key, rust4pm_attribute.value);
                     let attribute =
-                        attribute_key.process_attribute(&attribute_name, &attribute_value);
+                        attribute_key.process_attribute_value(&attribute_name, &attribute_value);
                     attributes.insert(attribute, attribute_value);
                 }
 

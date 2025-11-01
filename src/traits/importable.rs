@@ -163,10 +163,17 @@ pub enum ImporterParameterValue {
 }
 
 impl ImporterParameterValue {
-    pub fn as_string(self) -> Result<String> {
+    pub fn as_string(&self) -> Result<String> {
         match self {
-            ImporterParameterValue::String(s) => Ok(s),
+            ImporterParameterValue::String(s) => Ok(s.clone()),
             _ => Err(anyhow!("cannot read importer parameter as string")),
+        }
+    }
+
+    pub fn as_bool(&self) -> Result<bool> {
+        match self {
+            ImporterParameterValue::Boolean(s) => Ok(*s),
+            _ => Err(anyhow!("cannot read importer parameter as bool")),
         }
     }
 }

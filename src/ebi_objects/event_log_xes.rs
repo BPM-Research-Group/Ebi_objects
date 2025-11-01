@@ -90,7 +90,10 @@ impl EventLogXes {
 
 impl TranslateActivityKey for EventLogXes {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
-        self.activity_key = to_activity_key.clone();
+        std::mem::swap(&mut self.activity_key, to_activity_key);
+        self.create_activity_key();
+        let mut cloned = self.activity_key.clone();
+        std::mem::swap(to_activity_key, &mut cloned);
     }
 }
 

@@ -1,16 +1,3 @@
-use anyhow::{Context, Result, anyhow};
-use itertools::Itertools;
-use std::{
-    collections::HashMap,
-    io::{BufRead, Write},
-};
-
-use crate::{
-    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
-};
-
 use super::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton,
     directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
@@ -19,6 +6,17 @@ use super::{
     stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
+};
+use crate::{
+    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+};
+use anyhow::{Context, Result, anyhow};
+use itertools::Itertools;
+use std::{
+    collections::HashMap,
+    io::{BufRead, Write},
 };
 
 pub struct LolaNet(pub LabelledPetriNet);
@@ -116,6 +114,7 @@ impl Exportable for LolaNet {
             }
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
+            EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as Lolanet."))
             }

@@ -39,7 +39,7 @@ impl EventLogTraceAttributes {
         rust4pm_log.traces.iter().for_each(|trace| {
             for attribute in &trace.attributes {
                 self.attribute_key
-                    .process_attribute(&attribute.key, &attribute.value);
+                    .process_attribute_value(&attribute.key, &attribute.value);
             }
         })
     }

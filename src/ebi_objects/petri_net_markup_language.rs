@@ -1,13 +1,3 @@
-use std::io::{BufRead, Write};
-
-use anyhow::{Result, anyhow};
-
-use crate::{
-    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
-};
-
 use super::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton,
     directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
@@ -17,6 +7,13 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
+use crate::{
+    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+};
+use anyhow::{Result, anyhow};
+use std::io::{BufRead, Write};
 
 #[derive(Clone)]
 pub struct PetriNetMarkupLanguage(pub LabelledPetriNet);
@@ -93,6 +90,7 @@ impl Exportable for PetriNetMarkupLanguage {
             }
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
+            EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as PNML."))
             }

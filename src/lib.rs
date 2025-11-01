@@ -44,6 +44,7 @@ pub mod ebi_objects {
     pub mod directly_follows_graph;
     pub mod directly_follows_model;
     pub mod event_log;
+    pub mod event_log_csv;
     pub mod event_log_trace_attributes;
     pub mod event_log_xes;
     pub mod executions;
