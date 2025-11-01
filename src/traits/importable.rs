@@ -56,16 +56,19 @@ pub type ImporterParameterValues = HashMap<ImporterParameter, ImporterParameterV
 pub enum ImporterParameter {
     Flag {
         name: &'static str,
+        short_name: &'static str,
         explanation: &'static str,
     },
     String {
         name: &'static str,
+        short_name: &'static str,
         explanation: &'static str,
         allowed_values: Option<&'static [&'static str]>,
         default_value: &'static str,
     },
     Usize {
         name: &'static str,
+        short_name: &'static str,
         explanation: &'static str,
         minimum_value: Option<usize>,
         maximum_value: Option<usize>,
@@ -73,6 +76,7 @@ pub enum ImporterParameter {
     },
     Fraction {
         name: &'static str,
+        short_name: &'static str,
         explanation: &'static str,
         minimum_value: Option<ConstFraction>,
         maximum_value: Option<ConstFraction>,
@@ -87,6 +91,15 @@ impl ImporterParameter {
             | ImporterParameter::String { name, .. }
             | ImporterParameter::Usize { name, .. }
             | ImporterParameter::Fraction { name, .. } => name,
+        }
+    }
+
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            ImporterParameter::Flag { short_name, .. }
+            | ImporterParameter::String { short_name, .. }
+            | ImporterParameter::Usize { short_name, .. }
+            | ImporterParameter::Fraction { short_name, .. } => short_name,
         }
     }
 

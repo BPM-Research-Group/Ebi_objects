@@ -103,7 +103,8 @@ For instance:
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[ImporterParameter::String {
         name: "event_classifier",
-        explanation: "the attribute that defines, for each event, what its activity is",
+        short_name: "ec",
+        explanation: "The attribute that defines, for each event, what its activity is",
         allowed_values: None,
         default_value: "concept:name",
     }];
