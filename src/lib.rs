@@ -113,6 +113,7 @@ pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomato
 pub use ebi_objects::directly_follows_graph::DirectlyFollowsGraph;
 pub use ebi_objects::directly_follows_model::DirectlyFollowsModel;
 pub use ebi_objects::event_log::EventLog;
+pub use ebi_objects::event_log_csv::EventLogCsv;
 pub use ebi_objects::event_log_trace_attributes::EventLogTraceAttributes;
 pub use ebi_objects::event_log_xes::EventLogXes;
 pub use ebi_objects::executions::Executions;

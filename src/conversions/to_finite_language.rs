@@ -3,9 +3,10 @@ use std::collections::HashSet;
 use fnv::FnvBuildHasher;
 
 use crate::{
-    Activity, ActivityKey, CompressedEventLog, EventLogXes,
+    Activity, ActivityKey, CompressedEventLog, EventLogTraceAttributes, EventLogXes,
     ebi_objects::{
-        event_log::EventLog, finite_language::FiniteLanguage,
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+        event_log::EventLog, event_log_csv::EventLogCsv, finite_language::FiniteLanguage,
         finite_stochastic_language::FiniteStochasticLanguage,
     },
 };
@@ -25,19 +26,22 @@ impl From<EventLog> for FiniteLanguage {
     }
 }
 
-impl From<EventLogXes> for FiniteLanguage {
-    fn from(value: EventLogXes) -> Self {
-        let log: EventLog = value.into();
-        log.into()
-    }
+macro_rules! from_via_log {
+    ($t:ident) => {
+        impl From<$t> for FiniteLanguage {
+            fn from(value: $t) -> Self {
+                let log: EventLog = value.into();
+                log.into()
+            }
+        }
+    };
 }
 
-impl From<CompressedEventLog> for FiniteLanguage {
-    fn from(value: CompressedEventLog) -> Self {
-        let log: EventLog = value.into();
-        log.into()
-    }
-}
+from_via_log!(EventLogCsv);
+from_via_log!(EventLogXes);
+from_via_log!(CompressedEventLog);
+from_via_log!(CompressedEventLogTraceAttributes);
+from_via_log!(EventLogTraceAttributes);
 
 impl From<FiniteStochasticLanguage> for FiniteLanguage {
     fn from(value: FiniteStochasticLanguage) -> Self {

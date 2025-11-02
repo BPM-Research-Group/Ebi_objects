@@ -1,10 +1,10 @@
 use crate::{
-    EventLogTraceAttributes, HasActivityKey, NumberOfTraces,
+    EventLogCsv, EventLogTraceAttributes, EventLogXes, HasActivityKey, NumberOfTraces,
     ebi_objects::{
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
-    traits::trace_iterators::IntoRefTraceIterator,
+    traits::trace_iterators::{IntoRefTraceIterator, IntoTraceIterator},
 };
 use ebi_arithmetic::{Fraction, One, Zero};
 use std::collections::{HashMap, hash_map::Entry};
@@ -114,3 +114,5 @@ macro_rules! log {
 
 log!(EventLog);
 log!(EventLogTraceAttributes);
+log!(EventLogXes);
+log!(EventLogCsv);
