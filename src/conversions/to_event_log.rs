@@ -1,13 +1,12 @@
-use process_mining::event_log::event_log_struct::EventLogClassifier;
-
 use crate::{
-    Activity, ActivityKey, EventLogTraceAttributes, EventLogXes, NumberOfTraces,
+    Activity, ActivityKey, EventLogTraceAttributes, EventLogXes, IntoTraceIterator,
     ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog,
+        event_log::EventLog, event_log_csv::EventLogCsv,
     },
 };
+use process_mining::event_log::event_log_struct::EventLogClassifier;
 
 impl From<CompressedEventLog> for EventLog {
     fn from(value: CompressedEventLog) -> Self {
@@ -33,23 +32,19 @@ impl From<EventLogTraceAttributes> for EventLog {
 }
 
 impl From<EventLogXes> for EventLog {
-    fn from(mut value: EventLogXes) -> Self {
+    fn from(value: EventLogXes) -> Self {
         log::info!("Convert event log with trace attributes into event log.");
-        let mut traces = vec![];
-
-        for trace_index in 0..value.number_of_traces() {
-            traces.push(
-                value.rust4pm_log.traces[trace_index]
-                    .events
-                    .iter()
-                    .map(|event| {
-                        value
-                            .activity_key
-                            .process_activity(&value.classifier.get_class_identity(event))
-                    })
-                    .collect::<Vec<Activity>>(),
-            );
+        let traces = value.iter_traces().collect();
+        Self {
+            activity_key: value.activity_key,
+            traces,
         }
+    }
+}
+
+impl From<EventLogCsv> for EventLog {
+    fn from(value: EventLogCsv) -> Self {
+        let traces = value.iter_traces().collect();
         Self {
             activity_key: value.activity_key,
             traces,

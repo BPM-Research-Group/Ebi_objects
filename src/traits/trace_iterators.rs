@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     Activity, Attribute,
     iterators::{
@@ -12,6 +10,7 @@ use crate::{
 use ebi_arithmetic::Fraction;
 use intmap::IntMap;
 use process_mining::event_log::AttributeValue;
+use std::collections::HashMap;
 
 pub trait IntoRefTraceIterator: Sync {
     fn iter_traces(&self) -> RefTraceIterator<'_>;

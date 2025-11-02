@@ -1,7 +1,8 @@
 use crate::{
-    ActivityKey, Attribute, AttributeKey, EbiObject, HasActivityKey, Importable, Infoable,
-    NumberOfTraces, TranslateActivityKey,
-    traits::importable::{ImporterParameter, ImporterParameterValues},
+    ActivityKey, Attribute, AttributeKey, EbiObject, Exportable, HasActivityKey, Importable,
+    Infoable, IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
+    iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
+    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 use anyhow::{Result, anyhow};
 use ebi_arithmetic::Fraction;
@@ -10,8 +11,11 @@ use intmap::IntMap;
 use std::{
     collections::{HashMap, hash_map::Entry},
     fmt,
-    io::BufRead,
+    io::{BufRead, Write},
 };
+
+pub const DEFAULT_SEPARATOR: &str = ",";
+pub const DEFAULT_QUOTE_CHARACTER: &str = "\"";
 
 pub const CSV_IMPORTER_PARAMETER_TRACE_ID: ImporterParameter = ImporterParameter::String {
     name: "trace_id",
@@ -38,23 +42,25 @@ pub const CSV_IMPORTER_PARAMETER_SEPARATOR: ImporterParameter = ImporterParamete
     short_name: "sep",
     explanation: "The character(s) that separate the columns",
     allowed_values: None,
-    default_value: ",",
+    default_value: DEFAULT_SEPARATOR,
 };
 pub const CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER: ImporterParameter = ImporterParameter::String {
     name: "quote_character",
     short_name: "qc",
     explanation: "The character(s) that begin and end a quote",
     allowed_values: None,
-    default_value: "\"",
+    default_value: DEFAULT_QUOTE_CHARACTER,
 };
 
 #[derive(Clone, AttributeKey, ActivityKey)]
 pub struct EventLogCsv {
-    pub(crate) trace_id_attribute: Attribute,
     pub(crate) activity_attribute: Attribute,
     pub(crate) activity_key: ActivityKey,
     pub(crate) attribute_key: AttributeKey,
-    pub(crate) traces: HashMap<String, Vec<IntMap<Attribute, String>>>,
+    pub(crate) traces: Vec<(String, Vec<IntMap<Attribute, String>>)>,
+
+    pub(crate) separator: u8,
+    pub(crate) quote_character: u8,
 }
 
 impl EventLogCsv {
@@ -80,6 +86,7 @@ impl Importable for EventLogCsv {
         CSV_IMPORTER_PARAMETER_ACTIVITY,
         CSV_IMPORTER_PARAMETER_HAS_NO_HEADER,
         CSV_IMPORTER_PARAMETER_SEPARATOR,
+        CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER,
     ];
 
     fn import_as_object(
@@ -96,19 +103,57 @@ impl Importable for EventLogCsv {
     where
         Self: Sized,
     {
-        let has_header = !parameter_values
-            .get(&CSV_IMPORTER_PARAMETER_HAS_NO_HEADER)
-            .ok_or_else(|| anyhow!("parameter not found"))?
-            .as_bool()?;
+        //create csv reader
+        let has_header;
+        let separator;
+        let quote_character;
+        let mut csv = {
+            //base reader
+            let mut csv = csv::ReaderBuilder::new();
 
-        let separator = parameter_values
-            .get(&CSV_IMPORTER_PARAMETER_SEPARATOR)
-            .ok_or_else(|| anyhow!("parameter not found"))?
-            .as_string()?;
+            //headers
+            if parameter_values
+                .get(&CSV_IMPORTER_PARAMETER_HAS_NO_HEADER)
+                .ok_or_else(|| anyhow!("parameter not found"))?
+                .as_bool()?
+            {
+                csv.has_headers(false);
+                has_header = false;
+            } else {
+                has_header = true;
+            }
 
-        let mut csv = csv::ReaderBuilder::new()
-            .has_headers(has_header)
-            .from_reader(reader);
+            //separator
+            let sep = parameter_values
+                .get(&CSV_IMPORTER_PARAMETER_SEPARATOR)
+                .ok_or_else(|| anyhow!("parameter not found"))?
+                .as_string()?;
+            if sep.as_bytes().len() != 1 {
+                return Err(anyhow!(
+                    "separator must be a one one-byte character, found `{}`",
+                    sep
+                ));
+            }
+            separator = sep.as_bytes()[0];
+            csv.delimiter(separator);
+
+            //quote character
+            let quote = parameter_values
+                .get(&CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER)
+                .ok_or_else(|| anyhow!("parameter not found"))?
+                .as_string()?;
+            if quote.as_bytes().len() != 1 {
+                return Err(anyhow!(
+                    "quote character must be a one one-byte character, found `{}`",
+                    quote
+                ));
+            }
+            quote_character = quote.as_bytes()[0];
+            csv.quote(quote_character);
+
+            csv
+        }
+        .from_reader(reader);
 
         //create the intermediate event structure
         let mut attribute_key = AttributeKey::new();
@@ -127,7 +172,7 @@ impl Importable for EventLogCsv {
         if has_header {
             let record = csv.headers()?;
             for (attribute_id, head) in record.iter().enumerate() {
-                attribute_key.attribute2name[attribute_id] = head.to_string();
+                attribute_key.set_label(attribute_key.id_to_attribute(attribute_id), head);
             }
         }
 
@@ -167,10 +212,10 @@ impl Importable for EventLogCsv {
             }
         };
 
-        //distribute events over traces
+        //combine events into traces
         let mut traces: HashMap<String, Vec<IntMap<Attribute, String>>> = HashMap::new();
         for event in events {
-            if let Some(trace_id) = event.get(activity_attribute) {
+            if let Some(trace_id) = event.get(trace_id_attribute) {
                 match traces.entry(trace_id.to_string()) {
                     Entry::Occupied(mut occupied_entry) => occupied_entry.get_mut().push(event),
                     Entry::Vacant(vacant_entry) => {
@@ -179,17 +224,60 @@ impl Importable for EventLogCsv {
                 }
             }
         }
+        let traces = traces.into_iter().collect();
 
         let mut result = Self {
-            trace_id_attribute,
             activity_attribute,
             activity_key: ActivityKey::new(),
             attribute_key,
             traces,
+            separator,
+            quote_character,
         };
 
         result.create_activity_key();
         Ok(result)
+    }
+}
+from_string!(EventLogCsv);
+
+impl Exportable for EventLogCsv {
+    fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
+        match object {
+            EbiObject::EventLogCsv(log) => log.export(f),
+            _ => Err(anyhow!("Cannot export as event log.")),
+        }
+    }
+
+    fn export(&self, f: &mut dyn Write) -> Result<()> {
+        let mut wtr = csv::WriterBuilder::new()
+            .delimiter(self.separator)
+            .quote(self.quote_character)
+            .from_writer(f);
+
+        //write header
+        for attribute_label in &self.attribute_key.attribute2name {
+            wtr.write_field(attribute_label)?;
+        }
+        wtr.write_record(None::<&[u8]>)?;
+
+        //write events
+        for (_, events) in &self.traces {
+            for event in events {
+                for attribute_id in 0..self.attribute_key.len() {
+                    if let Some(value) = event.get(self.attribute_key.id_to_attribute(attribute_id))
+                    {
+                        wtr.write_field(value)?;
+                    } else {
+                        wtr.write_field("")?;
+                    }
+                }
+                wtr.write_record(None::<&[u8]>)?;
+            }
+        }
+
+        wtr.flush()?;
+        Ok(())
     }
 }
 
@@ -210,9 +298,9 @@ impl Infoable for EventLogCsv {
             self.activity_key().get_number_of_activities()
         )?;
         writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
+        writeln!(f, "Number of events\t{}", self.number_of_events())?;
 
         let lengths = self.traces.iter().map(|t| t.1.len());
-        writeln!(f, "Number of events\t{}", lengths.clone().sum::<usize>())?;
         writeln!(
             f,
             "Minimum number of events per trace\t{}",
@@ -252,5 +340,84 @@ impl fmt::Display for EventLogCsv {
 impl NumberOfTraces for EventLogCsv {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
+    }
+
+    fn number_of_events(&self) -> usize {
+        self.traces.iter().map(|(_, t)| t.len()).sum()
+    }
+}
+
+impl IntoTraceIterator for EventLogCsv {
+    fn iter_traces(&'_ self) -> TraceIterator<'_> {
+        TraceIterator::Csv(self.into())
+    }
+
+    fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
+        self.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        Importable, NumberOfTraces,
+        ebi_objects::event_log_csv::{
+            CSV_IMPORTER_PARAMETER_SEPARATOR, CSV_IMPORTER_PARAMETER_TRACE_ID, EventLogCsv,
+        },
+        traits::importable::ImporterParameterValue,
+    };
+    use std::{
+        fs::{self, File},
+        io::BufReader,
+    };
+
+    #[test]
+    fn csv_parameters() {
+        //default
+        let fin = fs::read_to_string("testfiles/a-b.csv").unwrap();
+        let csv: EventLogCsv = fin.parse::<EventLogCsv>().unwrap();
+        assert_eq!(csv.number_of_traces(), 1);
+
+        //parse again with a different trace id column
+        let mut parameter_values = EventLogCsv::default_importer_parameter_values();
+        parameter_values.insert(
+            CSV_IMPORTER_PARAMETER_TRACE_ID,
+            ImporterParameterValue::String("alternative_case_id".to_string()),
+        );
+        let csv = EventLogCsv::import(
+            &mut BufReader::new(File::open("testfiles/a-b.csv").unwrap()),
+            &parameter_values,
+        )
+        .unwrap();
+        assert_eq!(csv.number_of_traces(), 2);
+
+        //parse again with a different separator (invalid)
+        parameter_values.insert(
+            CSV_IMPORTER_PARAMETER_SEPARATOR,
+            ImporterParameterValue::String("alternative_case_id".to_string()),
+        );
+        assert!(
+            EventLogCsv::import(
+                &mut BufReader::new(File::open("testfiles/a-b.csv").unwrap()),
+                &parameter_values,
+            )
+            .is_err()
+        );
+
+        //parse again with a different separator
+        parameter_values.insert(
+            CSV_IMPORTER_PARAMETER_SEPARATOR,
+            ImporterParameterValue::String(";".to_string()),
+        );
+        parameter_values.insert(
+            CSV_IMPORTER_PARAMETER_TRACE_ID,
+            ImporterParameterValue::String("case_column".to_string()),
+        );
+        let csv = EventLogCsv::import(
+            &mut BufReader::new(File::open("testfiles/a-b.csv").unwrap()),
+            &parameter_values,
+        )
+        .unwrap();
+        assert_eq!(csv.number_of_traces(), 1);
     }
 }

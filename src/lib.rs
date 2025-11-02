@@ -22,6 +22,7 @@ pub mod conversions {
     pub mod to_deterministic_finite_automaton;
     pub mod to_directly_follows_model;
     pub mod to_event_log;
+    pub mod to_event_log_csv;
     pub mod to_event_log_trace_attributes;
     pub mod to_event_log_xes;
     pub mod to_finite_language;

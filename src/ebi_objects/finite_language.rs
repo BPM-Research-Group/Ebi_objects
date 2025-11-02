@@ -213,6 +213,10 @@ impl NumberOfTraces for FiniteLanguage {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
+
+    fn number_of_events(&self) -> usize {
+        self.traces.iter().map(|t| t.len()).sum()
+    }
 }
 
 impl IntoRefTraceIterator for FiniteLanguage {

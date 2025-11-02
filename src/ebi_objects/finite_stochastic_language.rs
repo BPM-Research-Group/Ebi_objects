@@ -110,6 +110,10 @@ impl NumberOfTraces for FiniteStochasticLanguage {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
     }
+
+    fn number_of_events(&self) -> usize {
+        self.traces.iter().map(|(t, _)| t.len()).sum()
+    }
 }
 
 impl Eq for FiniteStochasticLanguage {}

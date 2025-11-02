@@ -1,13 +1,18 @@
-use crate::{Activity, EventLogXes, FiniteStochasticLanguage, NumberOfTraces};
+use crate::{
+    Activity, Attribute, EventLogXes, FiniteStochasticLanguage, NumberOfTraces,
+    ebi_objects::event_log_csv::EventLogCsv,
+};
 use ebi_arithmetic::Fraction;
+use intmap::IntMap;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
     plumbing::{Consumer, Producer, ProducerCallback, UnindexedConsumer, bridge},
 };
 
 /// A parallel iterator over traces. Note that the traces are created on iteration.
-pub struct ParallelTraceIterator<'a> {
-    log: &'a EventLogXes,
+pub enum ParallelTraceIterator<'a> {
+    Csv { log: &'a EventLogCsv },
+    Xes { log: &'a EventLogXes },
 }
 
 impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
@@ -25,47 +30,64 @@ impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
     }
 }
 
-impl<'a> From<&'a EventLogXes> for ParallelTraceIterator<'a> {
-    fn from(value: &'a EventLogXes) -> Self {
-        Self { log: value }
-    }
-}
-
 impl<'a> IndexedParallelIterator for ParallelTraceIterator<'a> {
-    fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
-        let producer = ParallelTraceAttributesIteratorDataProducer::from(self);
-        callback.callback(producer)
+    fn len(&self) -> usize {
+        match self {
+            ParallelTraceIterator::Csv { log } => log.number_of_traces(),
+            ParallelTraceIterator::Xes { log } => log.number_of_traces(),
+        }
     }
 
     fn drive<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
         bridge(self, consumer)
     }
 
-    fn len(&self) -> usize {
-        self.log.number_of_traces()
-    }
-}
-
-struct ParallelTraceAttributesIteratorDataProducer<'a> {
-    log: &'a EventLogXes,
-    traces: &'a [process_mining::event_log::Trace],
-}
-
-impl<'a> From<ParallelTraceIterator<'a>> for ParallelTraceAttributesIteratorDataProducer<'a> {
-    fn from(iterator: ParallelTraceIterator<'a>) -> Self {
-        Self {
-            log: iterator.log,
-            traces: &iterator.log.rust4pm_log.traces,
+    fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
+        match self {
+            ParallelTraceIterator::Csv { log } => {
+                let producer = ParallelTraceIteratorDataProducerCsv::from(log);
+                callback.callback(producer)
+            }
+            ParallelTraceIterator::Xes { log } => {
+                let producer = ParallelTraceIteratorDataProducerXes::from(log);
+                callback.callback(producer)
+            }
         }
     }
 }
 
-impl<'a> Producer for ParallelTraceAttributesIteratorDataProducer<'a> {
+impl<'a> From<&'a EventLogCsv> for ParallelTraceIterator<'a> {
+    fn from(value: &'a EventLogCsv) -> Self {
+        Self::Csv { log: value }
+    }
+}
+
+impl<'a> From<&'a EventLogXes> for ParallelTraceIterator<'a> {
+    fn from(value: &'a EventLogXes) -> Self {
+        Self::Xes { log: value }
+    }
+}
+
+struct ParallelTraceIteratorDataProducerCsv<'a> {
+    log: &'a EventLogCsv,
+    traces: &'a [(String, Vec<IntMap<Attribute, String>>)],
+}
+
+impl<'a> From<&'a EventLogCsv> for ParallelTraceIteratorDataProducerCsv<'a> {
+    fn from(value: &'a EventLogCsv) -> Self {
+        Self {
+            log: value,
+            traces: &value.traces,
+        }
+    }
+}
+
+impl<'a> Producer for ParallelTraceIteratorDataProducerCsv<'a> {
     type Item = Vec<Activity>;
-    type IntoIter = Rust4PMIterator<'a>;
+    type IntoIter = ParallelIteratorCsv<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Rust4PMIterator {
+        ParallelIteratorCsv {
             log: self.log,
             traces: self.traces,
         }
@@ -74,11 +96,11 @@ impl<'a> Producer for ParallelTraceAttributesIteratorDataProducer<'a> {
     fn split_at(self, index: usize) -> (Self, Self) {
         let (left, right) = self.traces.split_at(index);
         (
-            ParallelTraceAttributesIteratorDataProducer {
+            ParallelTraceIteratorDataProducerCsv {
                 log: self.log,
                 traces: left,
             },
-            ParallelTraceAttributesIteratorDataProducer {
+            ParallelTraceIteratorDataProducerCsv {
                 log: self.log,
                 traces: right,
             },
@@ -86,12 +108,123 @@ impl<'a> Producer for ParallelTraceAttributesIteratorDataProducer<'a> {
     }
 }
 
-struct Rust4PMIterator<'a> {
+struct ParallelIteratorCsv<'a> {
+    log: &'a EventLogCsv,
+    traces: &'a [(String, Vec<IntMap<Attribute, String>>)],
+}
+
+impl<'a> Iterator for ParallelIteratorCsv<'a> {
+    type Item = Vec<Activity>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (_, trace) = self.traces.get(0)?;
+        let mut result = Vec::with_capacity(trace.len());
+        for event in trace.iter() {
+            let empty = String::new();
+            let activity_label = event
+                .get(self.log.activity_attribute)
+                .unwrap_or_else(|| &empty);
+            let activity = self
+                .log
+                .activity_key
+                .process_activity_attempt(&activity_label)?;
+            result.push(activity);
+        }
+
+        self.traces = &self.traces[1..];
+        Some(result)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.traces.len(), Some(self.traces.len()))
+    }
+}
+
+impl<'a> DoubleEndedIterator for ParallelIteratorCsv<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let len = self.traces.len();
+        if len > 0 {
+            let (_, trace) = &self.traces[len - 1];
+
+            let mut result = Vec::with_capacity(trace.len());
+            for event in trace.iter() {
+                let empty = String::new();
+                let activity_label = event
+                    .get(self.log.activity_attribute)
+                    .unwrap_or_else(|| &empty);
+                let activity = self
+                    .log
+                    .activity_key
+                    .process_activity_attempt(&activity_label)?;
+                result.push(activity);
+            }
+
+            self.traces = &self.traces[0..(len - 1)];
+            Some(result)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ExactSizeIterator for ParallelIteratorCsv<'a> {
+    fn len(&self) -> usize {
+        let (lower, upper) = self.size_hint();
+        // Note: This assertion is overly defensive, but it checks the invariant
+        // guaranteed by the trait. If this trait were rust-internal,
+        // we could use debug_assert!; assert_eq! will check all Rust user
+        // implementations too.
+        std::assert_eq!(upper, Some(lower));
+        lower
+    }
+}
+
+struct ParallelTraceIteratorDataProducerXes<'a> {
     log: &'a EventLogXes,
     traces: &'a [process_mining::event_log::Trace],
 }
 
-impl<'a> Iterator for Rust4PMIterator<'a> {
+impl<'a> From<&'a EventLogXes> for ParallelTraceIteratorDataProducerXes<'a> {
+    fn from(value: &'a EventLogXes) -> Self {
+        Self {
+            log: value,
+            traces: &value.rust4pm_log.traces,
+        }
+    }
+}
+
+impl<'a> Producer for ParallelTraceIteratorDataProducerXes<'a> {
+    type Item = Vec<Activity>;
+    type IntoIter = ParallelIteratorXes<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ParallelIteratorXes {
+            log: self.log,
+            traces: self.traces,
+        }
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self) {
+        let (left, right) = self.traces.split_at(index);
+        (
+            ParallelTraceIteratorDataProducerXes {
+                log: self.log,
+                traces: left,
+            },
+            ParallelTraceIteratorDataProducerXes {
+                log: self.log,
+                traces: right,
+            },
+        )
+    }
+}
+
+struct ParallelIteratorXes<'a> {
+    log: &'a EventLogXes,
+    traces: &'a [process_mining::event_log::Trace],
+}
+
+impl<'a> Iterator for ParallelIteratorXes<'a> {
     type Item = Vec<Activity>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -114,7 +247,7 @@ impl<'a> Iterator for Rust4PMIterator<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for Rust4PMIterator<'a> {
+impl<'a> DoubleEndedIterator for ParallelIteratorXes<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let len = self.traces.len();
         if len > 0 {
@@ -137,7 +270,7 @@ impl<'a> DoubleEndedIterator for Rust4PMIterator<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for Rust4PMIterator<'a> {
+impl<'a> ExactSizeIterator for ParallelIteratorXes<'a> {
     fn len(&self) -> usize {
         let (lower, upper) = self.size_hint();
         // Note: This assertion is overly defensive, but it checks the invariant

@@ -39,6 +39,16 @@ impl<'a> AttributeKey {
         self.attribute2type.get(attribute.borrow().id)
     }
 
+    pub fn set_label(&mut self, attribute: impl Borrow<Attribute>, label: &str) {
+        if let Some(old_label) = self.attribute2name.get(attribute.borrow().id) {
+            let old_label = old_label.to_string();
+            self.attribute2name[attribute.borrow().id] = label.to_string();
+            self.name2attribute.remove(&old_label);
+            self.name2attribute
+                .insert(label.to_string(), attribute.borrow().clone());
+        }
+    }
+
     #[cfg(test)]
     pub fn add_categorical_attribute(&mut self, label: &str) -> Attribute {
         let next_index = self.name2attribute.len();

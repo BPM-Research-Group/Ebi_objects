@@ -211,14 +211,7 @@ impl fmt::Display for EventLogTraceAttributes {
 impl Infoable for EventLogTraceAttributes {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
-        writeln!(
-            f,
-            "Number of events\t{}",
-            self.traces
-                .iter()
-                .map(|(trace, _)| trace.len())
-                .sum::<usize>()
-        )?;
+        writeln!(f, "Number of events\t{}", self.number_of_events())?;
         writeln!(
             f,
             "Number of activities\t{}",
@@ -239,6 +232,10 @@ impl Infoable for EventLogTraceAttributes {
 impl NumberOfTraces for EventLogTraceAttributes {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
+    }
+
+    fn number_of_events(&self) -> usize {
+        self.traces.iter().map(|(trace, _)| trace.len()).sum()
     }
 }
 

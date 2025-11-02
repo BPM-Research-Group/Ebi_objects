@@ -13,6 +13,7 @@ use crate::{
 };
 use anyhow::{Result, anyhow};
 use core::fmt;
+use ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator};
 use std::{
@@ -133,15 +134,35 @@ impl fmt::Display for EventLog {
 impl Infoable for EventLog {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
-        writeln!(
-            f,
-            "Number of events\t{}",
-            self.traces.iter().map(|trace| trace.len()).sum::<usize>()
-        )?;
+        writeln!(f, "Number of events\t{}", self.number_of_events())?;
         writeln!(
             f,
             "Number of activities\t{}",
             self.activity_key().get_number_of_activities()
+        )?;
+
+        let lengths = self.traces.iter().map(|t| t.len());
+        writeln!(
+            f,
+            "Minimum number of events per trace\t{}",
+            lengths
+                .clone()
+                .min()
+                .map_or("n/a".to_string(), |l| l.to_string())
+        )?;
+        if self.number_of_traces() > 0 {
+            writeln!(
+                f,
+                "Average number of events per trace\t{}",
+                Fraction::from(self.number_of_events()) / self.number_of_traces().into()
+            )?;
+        } else {
+            writeln!(f, "Average number of events per trace\tn/a")?;
+        }
+        writeln!(
+            f,
+            "Maximum number of events per trace\t{}",
+            lengths.max().map_or("n/a".to_string(), |l| l.to_string())
         )?;
 
         writeln!(f, "")?;
@@ -154,6 +175,10 @@ impl Infoable for EventLog {
 impl NumberOfTraces for EventLog {
     fn number_of_traces(&self) -> usize {
         self.traces.len()
+    }
+
+    fn number_of_events(&self) -> usize {
+        self.traces.iter().map(|t| t.len()).sum()
     }
 }
 

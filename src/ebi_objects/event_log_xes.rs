@@ -178,9 +178,9 @@ impl Infoable for EventLogXes {
             self.activity_key().get_number_of_activities()
         )?;
         writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
+        writeln!(f, "Number of events\t{}", self.number_of_events())?;
 
         let lengths = self.rust4pm_log.traces.iter().map(|t| t.events.len());
-        writeln!(f, "Number of events\t{}", lengths.clone().sum::<usize>())?;
         writeln!(
             f,
             "Minimum number of events per trace\t{}",
@@ -193,7 +193,7 @@ impl Infoable for EventLogXes {
             writeln!(
                 f,
                 "Average number of events per trace\t{}",
-                Fraction::from(lengths.clone().sum::<usize>()) / self.number_of_traces().into()
+                Fraction::from(self.number_of_events()) / self.number_of_traces().into()
             )?;
         } else {
             writeln!(f, "Average number of events per trace\tn/a")?;
@@ -215,11 +215,15 @@ impl NumberOfTraces for EventLogXes {
     fn number_of_traces(&self) -> usize {
         self.rust4pm_log.traces.len()
     }
+
+    fn number_of_events(&self) -> usize {
+        self.rust4pm_log.traces.iter().map(|t| t.events.len()).sum()
+    }
 }
 
 impl IntoTraceIterator for EventLogXes {
     fn iter_traces(&'_ self) -> TraceIterator<'_> {
-        self.into()
+        TraceIterator::Xes(self.into())
     }
 
     fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
