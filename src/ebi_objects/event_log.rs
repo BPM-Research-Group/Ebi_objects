@@ -154,7 +154,7 @@ impl Infoable for EventLog {
             writeln!(
                 f,
                 "Average number of events per trace\t{}",
-                Fraction::from(self.number_of_events()) / self.number_of_traces().into()
+                Fraction::from(self.number_of_events()) / Fraction::from(self.number_of_traces())
             )?;
         } else {
             writeln!(f, "Average number of events per trace\tn/a")?;

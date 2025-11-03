@@ -336,7 +336,7 @@ impl Infoable for EventLogCsv {
             writeln!(
                 f,
                 "Average number of events per trace\t{}",
-                Fraction::from(lengths.clone().sum::<usize>()) / self.number_of_traces().into()
+                Fraction::from(lengths.clone().sum::<usize>()) / Fraction::from(self.number_of_traces())
             )?;
         } else {
             writeln!(f, "Average number of events per trace\tn/a")?;
