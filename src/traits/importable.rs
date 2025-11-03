@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use ebi_arithmetic::{ConstFraction, Fraction};
-use std::{collections::HashMap, hash::Hash, io::BufRead};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, io::BufRead};
 use strum_macros::Display;
 
 use crate::constants::ebi_object::EbiObject;
@@ -52,7 +52,7 @@ pub type ImporterParameterValues = HashMap<ImporterParameter, ImporterParameterV
 /// Parameters that can be given to an importer.
 /// It is a design decision that every parameter must have a default,
 /// to ensure every importer (also) works without user interaction.
-#[derive(Copy, Clone, Debug, Display)]
+#[derive(Copy, Clone, Display)]
 pub enum ImporterParameter {
     Flag {
         name: &'static str,
@@ -151,6 +151,17 @@ impl Ord for ImporterParameter {
 impl PartialOrd for ImporterParameter {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.name().partial_cmp(other.name())
+    }
+}
+
+impl Debug for ImporterParameter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Flag { name, .. } => write!(f, "{} (flag)", name),
+            Self::String { name, .. } => write!(f, "{} (string)", name),
+            Self::Usize { name, .. } => write!(f, "{} (usize)", name),
+            Self::Fraction { name, .. } => write!(f, "{} (fraction)", name),
+        }
     }
 }
 
