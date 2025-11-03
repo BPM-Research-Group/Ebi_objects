@@ -77,9 +77,10 @@ impl EventLogCsv {
 
 impl Importable for EventLogCsv {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str =
-        "A text file, of which each row is a comma-separated list of at least two attribute values. 
+        "A text file, of which each row is a comma-separated list of attribute values. 
     The first row contains the names of the attributes (unless the no-header flag is provided).
-    You'll likely need to set some import parameters to make importing succeed.";
+    You'll likely need to set some import parameters to make importing succeed.
+    A restriction imposed by Ebi is that there must be at least two attributes and at least two events.";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
         CSV_IMPORTER_PARAMETER_TRACE_ID,
@@ -163,7 +164,7 @@ impl Importable for EventLogCsv {
 
             //To prevent false positives, we add a restriction to .csv files: they must contain at least 2 columns.
             if record.len() <= 1 {
-                return Err(anyhow!("the csv does not contain at least 2 columns"));
+                return Err(anyhow!("the csv must contain at least 2 columns"));
             }
 
             let mut data = IntMap::new();
@@ -172,6 +173,10 @@ impl Importable for EventLogCsv {
                 data.insert(attribute, cell.to_string());
             }
             events.push(data);
+        }
+
+        if events.len() <= 1 {
+            return Err(anyhow!("the csv must contain at least 2 events"));
         }
 
         //update the headers if headers were requested
@@ -430,6 +435,9 @@ mod tests {
     #[test]
     fn csv_restrictive() {
         let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
+        assert!(fin.parse::<EventLogCsv>().is_err());
+
+        let fin = fs::read_to_string("testfiles/a-b.exs").unwrap();
         assert!(fin.parse::<EventLogCsv>().is_err());
     }
 }
