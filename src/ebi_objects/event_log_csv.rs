@@ -80,7 +80,9 @@ impl Importable for EventLogCsv {
         "A text file, of which each row is a comma-separated list of attribute values. 
     The first row contains the names of the attributes (unless the no-header flag is provided).
     You'll likely need to set some import parameters to make importing succeed.
-    A restriction imposed by Ebi is that there must be at least two attributes and at least two events.";
+    A restriction imposed by Ebi is that there must be at least two attributes and at least two events.
+    For instance:
+    \\lstinputlisting[language=csv, style=boxed]{../testfiles/a-b.csv}";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
         CSV_IMPORTER_PARAMETER_TRACE_ID,
@@ -397,7 +399,7 @@ mod tests {
     #[test]
     fn csv_parameters() {
         //default
-        let fin = fs::read_to_string("testfiles/a-b.csv").unwrap();
+        let fin = fs::read_to_string("testfiles/a-b_multiple_separators.csv").unwrap();
         let csv: EventLogCsv = fin.parse::<EventLogCsv>().unwrap();
         assert_eq!(csv.number_of_traces(), 1);
 
@@ -408,7 +410,7 @@ mod tests {
             ImporterParameterValue::String("alternative_case_id".to_string()),
         );
         let csv = EventLogCsv::import(
-            &mut BufReader::new(File::open("testfiles/a-b.csv").unwrap()),
+            &mut BufReader::new(File::open("testfiles/a-b_multiple_separators.csv").unwrap()),
             &parameter_values,
         )
         .unwrap();
@@ -421,7 +423,7 @@ mod tests {
         );
         assert!(
             EventLogCsv::import(
-                &mut BufReader::new(File::open("testfiles/a-b.csv").unwrap()),
+                &mut BufReader::new(File::open("testfiles/a-b_multiple_separators.csv").unwrap()),
                 &parameter_values,
             )
             .is_err()
@@ -437,7 +439,7 @@ mod tests {
             ImporterParameterValue::String("case_column".to_string()),
         );
         let csv = EventLogCsv::import(
-            &mut BufReader::new(File::open("testfiles/a-b.csv").unwrap()),
+            &mut BufReader::new(File::open("testfiles/a-b_multiple_separators.csv").unwrap()),
             &parameter_values,
         )
         .unwrap();
