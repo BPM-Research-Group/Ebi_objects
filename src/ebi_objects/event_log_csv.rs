@@ -4,7 +4,7 @@ use crate::{
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::Fraction;
 use ebi_derive::{ActivityKey, AttributeKey};
 use intmap::IntMap;
@@ -255,6 +255,18 @@ from_string!(EventLogCsv);
 impl Exportable for EventLogCsv {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
+            EbiObject::EventLog(log) => {
+                let csv: Self = log
+                    .try_into()
+                    .with_context(|| anyhow!("transforming event log to csv"))?;
+                csv.export(f)
+            },
+            EbiObject::EventLogTraceAttributes(log) => {
+                let csv: Self = log
+                    .try_into()
+                    .with_context(|| anyhow!("transforming event log to csv"))?;
+                csv.export(f)
+            }
             EbiObject::EventLogCsv(log) => log.export(f),
             _ => Err(anyhow!("Cannot export as event log.")),
         }

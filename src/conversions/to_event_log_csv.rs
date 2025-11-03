@@ -1,6 +1,9 @@
 use crate::{
-    AttributeKey, CompressedEventLog, EventLog,
-    ebi_objects::event_log_csv::{self, EventLogCsv},
+    AttributeKey, CompressedEventLog, EventLog, EventLogTraceAttributes,
+    ebi_objects::{
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+        event_log_csv::{self, EventLogCsv},
+    },
 };
 use anyhow::{Error, anyhow};
 use intmap::IntMap;
@@ -52,14 +55,22 @@ impl TryFrom<EventLog> for EventLogCsv {
     }
 }
 
-impl TryFrom<CompressedEventLog> for EventLogCsv {
-    type Error = Error;
+macro_rules! via_log {
+    ($t:ident) => {
+        impl TryFrom<$t> for EventLogCsv {
+            type Error = Error;
 
-    fn try_from(value: CompressedEventLog) -> Result<Self, Self::Error> {
-        log::info!("Convert compressed event log into event log.");
-        value.log.try_into()
-    }
+            fn try_from(value: $t) -> Result<Self, Self::Error> {
+                let log: EventLog = value.into();
+                log.try_into()
+            }
+        }
+    };
 }
+
+via_log!(CompressedEventLog);
+via_log!(CompressedEventLogTraceAttributes);
+via_log!(EventLogTraceAttributes);
 
 #[cfg(test)]
 mod tests {
