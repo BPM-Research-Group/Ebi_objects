@@ -77,8 +77,8 @@ impl EventLogCsv {
 
 impl Importable for EventLogCsv {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str =
-        "A text file, of which each row is a comma-separated list of attribute values. 
-    The first row contains the names of the attributes.
+        "A text file, of which each row is a comma-separated list of at least two attribute values. 
+    The first row contains the names of the attributes (unless the no-header flag is provided).
     You'll likely need to set some import parameters to make importing succeed.";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
@@ -160,6 +160,12 @@ impl Importable for EventLogCsv {
         let mut events = vec![];
         for record in csv.records() {
             let record = record?;
+
+            //To prevent false positives, we add a restriction to .csv files: they must contain at least 2 columns.
+            if record.len() <= 1 {
+                return Err(anyhow!("the csv does not contain at least 2 columns"));
+            }
+
             let mut data = IntMap::new();
             for (column_index, cell) in record.into_iter().enumerate() {
                 let attribute = attribute_key.process_attribute_column(column_index, cell);
@@ -419,5 +425,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(csv.number_of_traces(), 1);
+    }
+
+    #[test]
+    fn csv_restrictive() {
+        let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
+        assert!(fin.parse::<EventLogCsv>().is_err());
     }
 }
