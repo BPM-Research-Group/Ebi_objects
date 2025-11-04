@@ -16,6 +16,14 @@ use std::{
     io::{BufRead, Write},
 };
 
+pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
+    name: "xes_event_classifier",
+    short_name: "ec",
+    explanation: "The attribute that defines, for each event, what its activity is",
+    allowed_values: None,
+    default_value: "concept:name",
+};
+
 #[derive(ActivityKey, Clone)]
 pub struct EventLogXes {
     pub(crate) classifier: EventLogClassifier,
@@ -104,13 +112,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
 
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[ImporterParameter::String {
-        name: "event_classifier",
-        short_name: "ec",
-        explanation: "The attribute that defines, for each event, what its activity is",
-        allowed_values: None,
-        default_value: "concept:name",
-    }];
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[XES_IMPORTER_PARAMETER_ACTIVITY];
 
     fn import_as_object(
         reader: &mut dyn BufRead,
@@ -138,7 +140,7 @@ For instance:
 
         //create the classifier
         let key = parameter_values
-            .get(&Self::IMPORTER_PARAMETERS[0])
+            .get(&XES_IMPORTER_PARAMETER_ACTIVITY)
             .ok_or_else(|| anyhow!("expected parameter not found"))?;
         let classifier = EventLogClassifier {
             name: key.clone().as_string()?,

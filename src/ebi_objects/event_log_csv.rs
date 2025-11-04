@@ -18,34 +18,34 @@ pub const DEFAULT_SEPARATOR: &str = ",";
 pub const DEFAULT_QUOTE_CHARACTER: &str = "\"";
 
 pub const CSV_IMPORTER_PARAMETER_TRACE_ID: ImporterParameter = ImporterParameter::String {
-    name: "trace_id",
+    name: "csv_trace_id",
     short_name: "ti",
     explanation: "The name or number of the column that contains the trace id.",
     allowed_values: None,
     default_value: "0",
 };
 pub const CSV_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
-    name: "actvitiy",
+    name: "csv_actvitiy",
     short_name: "ec",
     explanation: "The name or number of the column that contains the activity",
     allowed_values: None,
     default_value: "1",
 };
 pub const CSV_IMPORTER_PARAMETER_HAS_NO_HEADER: ImporterParameter = ImporterParameter::Flag {
-    name: "no_header",
+    name: "csv_no_header",
     short_name: "nh",
     explanation: "Without this flag set, the first line is read as the header. 
     With this flag set, the first line is read as an event. In the latter case, the columns are given numbers, starting from 0.",
 };
 pub const CSV_IMPORTER_PARAMETER_SEPARATOR: ImporterParameter = ImporterParameter::String {
-    name: "separator",
+    name: "csv_separator",
     short_name: "sep",
     explanation: "The character(s) that separate the columns",
     allowed_values: None,
     default_value: DEFAULT_SEPARATOR,
 };
 pub const CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER: ImporterParameter = ImporterParameter::String {
-    name: "quote_character",
+    name: "csv_quote_character",
     short_name: "qc",
     explanation: "The character(s) that begin and end a quote",
     allowed_values: None,
