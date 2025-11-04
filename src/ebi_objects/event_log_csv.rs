@@ -82,7 +82,7 @@ impl Importable for EventLogCsv {
     You'll likely need to set some import parameters to make importing succeed.
     A restriction imposed by Ebi is that there must be at least two attributes and at least two events.
     For instance:
-    \\lstinputlisting[language=csv, style=boxed]{../testfiles/a-b.csv}";
+    \\lstinputlisting[style=boxed]{../testfiles/a-b.csv}";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
         CSV_IMPORTER_PARAMETER_TRACE_ID,
