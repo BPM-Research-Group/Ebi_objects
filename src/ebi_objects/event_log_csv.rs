@@ -25,7 +25,7 @@ pub const CSV_IMPORTER_PARAMETER_TRACE_ID: ImporterParameter = ImporterParameter
     default_value: "0",
 };
 pub const CSV_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
-    name: "csv_actvitiy",
+    name: "csv_activity",
     short_name: "ec",
     explanation: "The name or number of the column that contains the activity",
     allowed_values: None,
