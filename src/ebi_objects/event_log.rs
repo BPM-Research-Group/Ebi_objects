@@ -8,13 +8,15 @@ use crate::{
     traits::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
         number_of_traces::NumberOfTraces,
+        start_end_activities::StartEndActivities,
         trace_iterators::IntoRefTraceIterator,
     },
 };
 use anyhow::{Result, anyhow};
 use core::fmt;
-use ebi_arithmetic::Fraction;
+use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
+use intmap::IntMap;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator};
 use std::{
     io::{BufRead, Write},
@@ -168,6 +170,28 @@ impl Infoable for EventLog {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
+        writeln!(f, "")?;
+        writeln!(f, "Start activities")?;
+        for (activity, cardinality) in self.start_activites() {
+            writeln!(
+                f,
+                " {}: {}",
+                self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+
+        writeln!(f, "")?;
+        writeln!(f, "End activities")?;
+        for (activity, cardinality) in self.end_activites() {
+            writeln!(
+                f,
+                " {}: {}",
+                self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+
         Ok(write!(f, "")?)
     }
 }
@@ -179,6 +203,38 @@ impl NumberOfTraces for EventLog {
 
     fn number_of_events(&self) -> usize {
         self.traces.iter().map(|t| t.len()).sum()
+    }
+}
+
+impl StartEndActivities for EventLog {
+    fn start_activites(&self) -> IntMap<Activity, Fraction> {
+        let mut result = IntMap::new();
+        for trace in self.traces.iter() {
+            if let Some(activity) = trace.iter().next() {
+                match result.entry(*activity) {
+                    intmap::Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += 1,
+                    intmap::Entry::Vacant(vacant_entry) => {
+                        vacant_entry.insert(Fraction::one());
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    fn end_activites(&self) -> IntMap<Activity, Fraction> {
+        let mut result = IntMap::new();
+        for trace in self.traces.iter() {
+            if let Some(activity) = trace.iter().last() {
+                match result.entry(*activity) {
+                    intmap::Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += 1,
+                    intmap::Entry::Vacant(vacant_entry) => {
+                        vacant_entry.insert(Fraction::one());
+                    }
+                }
+            }
+        }
+        result
     }
 }
 

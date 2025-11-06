@@ -1,11 +1,11 @@
 use crate::{
-    ActivityKey, Attribute, AttributeKey, EbiObject, Exportable, HasActivityKey, Importable,
-    Infoable, IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
-    iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
-    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+    Activity, ActivityKey, Attribute, AttributeKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable, IntoTraceIterator, NumberOfTraces, TranslateActivityKey, iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator}, traits::{
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+        start_end_activities::StartEndActivities,
+    }
 };
 use anyhow::{Context, Result, anyhow};
-use ebi_arithmetic::Fraction;
+use ebi_arithmetic::{Fraction, One};
 use ebi_derive::{ActivityKey, AttributeKey};
 use intmap::IntMap;
 use std::{
@@ -262,7 +262,7 @@ impl Exportable for EventLogCsv {
                     .try_into()
                     .with_context(|| anyhow!("transforming event log to csv"))?;
                 csv.export(f)
-            },
+            }
             EbiObject::EventLogTraceAttributes(log) => {
                 let csv: Self = log
                     .try_into()
@@ -338,7 +338,8 @@ impl Infoable for EventLogCsv {
             writeln!(
                 f,
                 "Average number of events per trace\t{}",
-                Fraction::from(lengths.clone().sum::<usize>()) / Fraction::from(self.number_of_traces())
+                Fraction::from(lengths.clone().sum::<usize>())
+                    / Fraction::from(self.number_of_traces())
             )?;
         } else {
             writeln!(f, "Average number of events per trace\tn/a")?;
@@ -351,6 +352,28 @@ impl Infoable for EventLogCsv {
 
         writeln!(f, "")?;
         self.activity_key().info(f)?;
+
+        writeln!(f, "")?;
+        writeln!(f, "Start activities")?;
+        for (activity, cardinality) in self.start_activites() {
+            writeln!(
+                f,
+                " {}: {}",
+                self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+
+        writeln!(f, "")?;
+        writeln!(f, "End activities")?;
+        for (activity, cardinality) in self.end_activites() {
+            writeln!(
+                f,
+                " {}: {}",
+                self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
 
         Ok(write!(f, "")?)
     }
@@ -369,6 +392,54 @@ impl NumberOfTraces for EventLogCsv {
 
     fn number_of_events(&self) -> usize {
         self.traces.iter().map(|(_, t)| t.len()).sum()
+    }
+}
+
+impl StartEndActivities for EventLogCsv {
+    fn start_activites(&self) -> IntMap<Activity, Fraction> {
+        let mut result = IntMap::new();
+        for (_, trace) in self.traces.iter() {
+            if let Some(event) = trace.iter().next() {
+                let activity_label = event.get(self.activity_attribute);
+                if let Some(activity_label) = activity_label {
+                    let activity = self.activity_key.process_activity_attempt(&activity_label);
+                    if let Some(activity) = activity {
+                        match result.entry(activity) {
+                            intmap::Entry::Occupied(mut occupied_entry) => {
+                                *occupied_entry.get_mut() += 1
+                            }
+                            intmap::Entry::Vacant(vacant_entry) => {
+                                vacant_entry.insert(Fraction::one());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    fn end_activites(&self) -> IntMap<crate::Activity, Fraction> {
+        let mut result = IntMap::new();
+        for (_, trace) in self.traces.iter() {
+            if let Some(event) = trace.iter().last() {
+                let activity_label = event.get(self.activity_attribute);
+                if let Some(activity_label) = activity_label {
+                    let activity = self.activity_key.process_activity_attempt(&activity_label);
+                    if let Some(activity) = activity {
+                        match result.entry(activity) {
+                            intmap::Entry::Occupied(mut occupied_entry) => {
+                                *occupied_entry.get_mut() += 1
+                            }
+                            intmap::Entry::Vacant(vacant_entry) => {
+                                vacant_entry.insert(Fraction::one());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 }
 

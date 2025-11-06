@@ -1,3 +1,4 @@
+use intmap::IntKey;
 #[cfg(test)]
 use uuid::Uuid;
 
@@ -46,6 +47,16 @@ impl Debug for Activity {
 impl PartialOrd<usize> for Activity {
     fn partial_cmp(&self, other: &usize) -> Option<std::cmp::Ordering> {
         self.id.partial_cmp(other)
+    }
+}
+
+impl IntKey for Activity {
+    type Int = usize;
+
+    const PRIME: Self::Int = usize::PRIME;
+
+    fn into_int(self) -> Self::Int {
+        self.id
     }
 }
 

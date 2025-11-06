@@ -2,11 +2,15 @@ use crate::{
     Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
-    traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+    traits::{
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+        start_end_activities::StartEndActivities,
+    },
 };
 use anyhow::{Result, anyhow};
-use ebi_arithmetic::Fraction;
+use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
+use intmap::IntMap;
 use process_mining::{
     XESImportOptions,
     event_log::{Event, Trace, event_log_struct::EventLogClassifier},
@@ -209,6 +213,28 @@ impl Infoable for EventLogXes {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
+        writeln!(f, "")?;
+        writeln!(f, "Start activities")?;
+        for (activity, cardinality) in self.start_activites() {
+            writeln!(
+                f,
+                " {}: {}",
+                self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+
+        writeln!(f, "")?;
+        writeln!(f, "End activities")?;
+        for (activity, cardinality) in self.end_activites() {
+            writeln!(
+                f,
+                " {}: {}",
+                self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+
         Ok(write!(f, "")?)
     }
 }
@@ -220,6 +246,50 @@ impl NumberOfTraces for EventLogXes {
 
     fn number_of_events(&self) -> usize {
         self.rust4pm_log.traces.iter().map(|t| t.events.len()).sum()
+    }
+}
+
+impl StartEndActivities for EventLogXes {
+    fn start_activites(&self) -> intmap::IntMap<Activity, Fraction> {
+        let mut result = IntMap::new();
+        for trace in self.rust4pm_log.traces.iter() {
+            if let Some(event) = trace.events.iter().next() {
+                let activity_label = self.event_classifier().get_class_identity(event);
+                let activity = self.activity_key.process_activity_attempt(&activity_label);
+                if let Some(activity) = activity {
+                    match result.entry(activity) {
+                        intmap::Entry::Occupied(mut occupied_entry) => {
+                            *occupied_entry.get_mut() += 1
+                        }
+                        intmap::Entry::Vacant(vacant_entry) => {
+                            vacant_entry.insert(Fraction::one());
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    fn end_activites(&self) -> intmap::IntMap<Activity, Fraction> {
+        let mut result = IntMap::new();
+        for trace in self.rust4pm_log.traces.iter() {
+            if let Some(event) = trace.events.iter().last() {
+                let activity_label = self.event_classifier().get_class_identity(event);
+                let activity = self.activity_key.process_activity_attempt(&activity_label);
+                if let Some(activity) = activity {
+                    match result.entry(activity) {
+                        intmap::Entry::Occupied(mut occupied_entry) => {
+                            *occupied_entry.get_mut() += 1
+                        }
+                        intmap::Entry::Vacant(vacant_entry) => {
+                            vacant_entry.insert(Fraction::one());
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 }
 

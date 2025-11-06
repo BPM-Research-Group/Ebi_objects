@@ -80,6 +80,7 @@ pub mod traits {
     pub mod importable;
     pub mod infoable;
     pub mod number_of_traces;
+    pub mod start_end_activities;
     pub mod trace_attributes;
     pub mod trace_iterators;
 }
