@@ -254,7 +254,7 @@ impl Infoable for StochasticLabelledPetriNet {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 

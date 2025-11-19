@@ -433,6 +433,6 @@ impl Infoable for DirectlyFollowsModel {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }

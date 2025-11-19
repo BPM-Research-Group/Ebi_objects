@@ -333,7 +333,7 @@ impl Infoable for StochasticLanguageOfAlignments {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 

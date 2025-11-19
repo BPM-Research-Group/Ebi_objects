@@ -408,7 +408,7 @@ macro_rules! tree {
                 writeln!(f, "")?;
                 self.activity_key().info(f)?;
 
-                Ok(write!(f, "")?)
+                Ok(writeln!(f, "")?)
             }
         }
 

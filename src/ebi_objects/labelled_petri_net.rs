@@ -298,7 +298,7 @@ impl Infoable for LabelledPetriNet {
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 

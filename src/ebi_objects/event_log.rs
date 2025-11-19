@@ -192,7 +192,7 @@ impl Infoable for EventLog {
             )?;
         }
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 
