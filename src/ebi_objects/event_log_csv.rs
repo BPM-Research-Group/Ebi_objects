@@ -123,6 +123,7 @@ impl Importable for EventLogCsv {
                 csv.has_headers(false);
                 has_header = false;
             } else {
+                csv.has_headers(true);
                 has_header = true;
             }
 
