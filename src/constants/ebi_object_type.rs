@@ -56,13 +56,17 @@ impl Eq for EbiObjectType {}
 
 impl Ord for EbiObjectType {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.to_string().cmp(&other.to_string())
+        self.to_string()
+            .to_lowercase()
+            .cmp(&other.to_string().to_lowercase())
     }
 }
 
 impl PartialOrd for EbiObjectType {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.to_string().partial_cmp(&other.to_string())
+        self.to_string()
+            .to_lowercase()
+            .partial_cmp(&other.to_string().to_lowercase())
     }
 }
 
