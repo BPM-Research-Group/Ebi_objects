@@ -1,10 +1,9 @@
 use crate::{
-    Activity, ActivityKey, EventLogTraceAttributes, EventLogXes, IntoTraceIterator,
-    ebi_objects::{
+    Activity, ActivityKey, CompressedEventLogXes, EventLogTraceAttributes, EventLogXes, IntoTraceIterator, ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
         event_log::EventLog, event_log_csv::EventLogCsv,
-    },
+    }
 };
 use process_mining::event_log::event_log_struct::EventLogClassifier;
 
@@ -33,12 +32,18 @@ impl From<EventLogTraceAttributes> for EventLog {
 
 impl From<EventLogXes> for EventLog {
     fn from(value: EventLogXes) -> Self {
-        log::info!("Convert event log with trace attributes into event log.");
+        log::info!("Convert XES event log into event log.");
         let traces = value.iter_traces().collect();
         Self {
             activity_key: value.activity_key,
             traces,
         }
+    }
+}
+
+impl From<CompressedEventLogXes> for EventLog {
+    fn from(value: CompressedEventLogXes) -> Self {
+        value.log.into()
     }
 }
 

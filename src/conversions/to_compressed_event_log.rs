@@ -6,37 +6,19 @@ use crate::{
     },
 };
 
-impl From<EventLog> for CompressedEventLog {
-    fn from(value: EventLog) -> Self {
-        log::info!("Convert event log into compressed event log.");
-        Self { log: value }
-    }
-}
-
-impl From<EventLogTraceAttributes> for CompressedEventLog {
-    fn from(value: EventLogTraceAttributes) -> Self {
-        Self { log: value.into() }
-    }
-}
-
-impl From<EventLogXes> for CompressedEventLog {
-    fn from(value: EventLogXes) -> Self {
-        Self { log: value.into() }
-    }
-}
-
-impl From<CompressedEventLogTraceAttributes> for CompressedEventLog {
-    fn from(value: CompressedEventLogTraceAttributes) -> Self {
-        Self {
-            log: value.log.into(),
+macro_rules! via {
+    ($t:ident) => {
+        impl From<$t> for CompressedEventLog {
+            fn from(value: $t) -> Self {
+                let log: EventLog = value.into();
+                Self { log }
+            }
         }
-    }
+    };
 }
 
-impl From<CompressedEventLogXes> for CompressedEventLog {
-    fn from(value: CompressedEventLogXes) -> Self {
-        Self {
-            log: value.log.into(),
-        }
-    }
-}
+via!(CompressedEventLogXes);
+via!(CompressedEventLogTraceAttributes);
+via!(EventLog);
+via!(EventLogTraceAttributes);
+via!(EventLogXes);

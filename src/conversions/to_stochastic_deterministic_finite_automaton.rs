@@ -1,6 +1,8 @@
 use crate::{
-    EventLogCsv, EventLogTraceAttributes, EventLogXes, HasActivityKey, NumberOfTraces,
+    CompressedEventLog, CompressedEventLogXes, EventLogCsv, EventLogTraceAttributes, EventLogXes,
+    HasActivityKey, NumberOfTraces,
     ebi_objects::{
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
         event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
@@ -112,7 +114,21 @@ macro_rules! log {
     };
 }
 
+macro_rules! from_via_log {
+    ($t:ident) => {
+        impl From<$t> for StochasticDeterministicFiniteAutomaton {
+            fn from(value: $t) -> Self {
+                let log: EventLog = value.into();
+                log.into()
+            }
+        }
+    };
+}
+
 log!(EventLog);
 log!(EventLogTraceAttributes);
 log!(EventLogXes);
 log!(EventLogCsv);
+from_via_log!(CompressedEventLogXes);
+from_via_log!(CompressedEventLog);
+from_via_log!(CompressedEventLogTraceAttributes);
