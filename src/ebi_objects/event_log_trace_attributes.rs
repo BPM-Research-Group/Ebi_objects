@@ -248,7 +248,7 @@ impl Infoable for EventLogTraceAttributes {
         writeln!(f, "Trace attributes:")?;
         self.attribute_key.info(f)?;
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 

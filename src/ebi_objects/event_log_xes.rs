@@ -235,7 +235,7 @@ impl Infoable for EventLogXes {
             )?;
         }
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 

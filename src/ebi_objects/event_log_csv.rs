@@ -379,7 +379,7 @@ impl Infoable for EventLogCsv {
             )?;
         }
 
-        Ok(write!(f, "")?)
+        Ok(writeln!(f, "")?)
     }
 }
 
