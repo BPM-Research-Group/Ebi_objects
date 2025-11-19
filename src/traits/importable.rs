@@ -165,7 +165,7 @@ impl Debug for ImporterParameter {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum ImporterParameterValue {
     Boolean(bool),
     String(String),
