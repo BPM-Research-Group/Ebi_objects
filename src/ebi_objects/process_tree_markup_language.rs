@@ -1,6 +1,6 @@
 use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
 use crate::{
-    Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable,
+    Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     ebi_objects::process_tree::{Node, Operator},
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -20,6 +20,22 @@ use std::{
 #[derive(Clone)]
 pub struct ProcessTreeMarkupLanguage {
     pub tree: ProcessTree,
+}
+
+impl HasActivityKey for ProcessTreeMarkupLanguage {
+    fn activity_key(&self) -> &ActivityKey {
+        self.tree.activity_key()
+    }
+
+    fn activity_key_mut(&mut self) -> &mut ActivityKey {
+        self.tree.activity_key_mut()
+    }
+}
+
+impl TranslateActivityKey for ProcessTreeMarkupLanguage {
+    fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
+        self.tree.translate_using_activity_key(to_activity_key);
+    }
 }
 
 struct State {
