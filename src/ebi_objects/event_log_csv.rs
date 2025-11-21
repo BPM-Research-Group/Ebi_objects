@@ -264,17 +264,23 @@ impl Exportable for EventLogCsv {
             EbiObject::EventLog(log) => {
                 let csv: Self = log
                     .try_into()
-                    .with_context(|| anyhow!("transforming event log to csv"))?;
+                    .with_context(|| anyhow!("Cannot transform event log to csv."))?;
                 csv.export(f)
             }
             EbiObject::EventLogTraceAttributes(log) => {
                 let csv: Self = log
                     .try_into()
-                    .with_context(|| anyhow!("transforming event log to csv"))?;
+                    .with_context(|| anyhow!("Cannot transform event log to csv."))?;
+                csv.export(f)
+            }
+            EbiObject::EventLogXes(log) => {
+                let csv: Self = log
+                    .try_into()
+                    .with_context(|| anyhow!("Cannot transform event log to csv."))?;
                 csv.export(f)
             }
             EbiObject::EventLogCsv(log) => log.export(f),
-            _ => Err(anyhow!("Cannot export as event log.")),
+            _ => Err(anyhow!("Cannot export as csv event log.")),
         }
     }
 

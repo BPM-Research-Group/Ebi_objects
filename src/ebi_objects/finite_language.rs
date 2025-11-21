@@ -1,6 +1,7 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
-    IntoRefTraceIterator, NumberOfTraces, TranslateActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, EventLogCsv, EventLogTraceAttributes,
+    EventLogXes, Exportable, HasActivityKey, Importable, Infoable, IntoRefTraceIterator,
+    NumberOfTraces, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     iterators::{
         parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
@@ -67,6 +68,15 @@ impl Exportable for FiniteLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::EventLog(log) => <EventLog as Into<FiniteLanguage>>::into(log).export(f),
+            EbiObject::EventLogTraceAttributes(log) => {
+                <EventLogTraceAttributes as Into<FiniteLanguage>>::into(log).export(f)
+            }
+            EbiObject::EventLogXes(log) => {
+                <EventLogXes as Into<FiniteLanguage>>::into(log).export(f)
+            }
+            EbiObject::EventLogCsv(log) => {
+                <EventLogCsv as Into<FiniteLanguage>>::into(log).export(f)
+            }
             EbiObject::FiniteLanguage(slang) => slang.export(f),
             EbiObject::FiniteStochasticLanguage(slang) => {
                 <FiniteStochasticLanguage as Into<FiniteLanguage>>::into(slang).export(f)

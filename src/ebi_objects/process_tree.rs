@@ -497,26 +497,6 @@ tree!(
     StochasticParentsIterator
 );
 
-impl From<(ActivityKey, Vec<Node>)> for ProcessTree {
-    fn from(value: (ActivityKey, Vec<Node>)) -> Self {
-        let mut transition2node = vec![];
-        for (node_index, node) in value.1.iter().enumerate() {
-            match node {
-                Node::Tau | Node::Activity(_) => {
-                    transition2node.push(node_index);
-                }
-                Node::Operator(_, _) => {}
-            }
-        }
-
-        Self {
-            activity_key: value.0,
-            tree: value.1,
-            transition2node: transition2node,
-        }
-    }
-}
-
 impl Display for ProcessTree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
@@ -587,6 +567,9 @@ impl Exportable for ProcessTree {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::ProcessTree(lpn) => lpn.export(f),
+            EbiObject::StochasticProcessTree(lpn) => {
+                <StochasticProcessTree as Into<ProcessTree>>::into(lpn).export(f)
+            }
             _ => Err(anyhow!(
                 "cannot export {} {} as a process tree",
                 object.get_type().get_article(),

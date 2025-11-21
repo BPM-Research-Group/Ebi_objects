@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use flate2::{Compression, write::GzEncoder};
 use std::io::{BufRead, Write};
 
@@ -46,7 +46,24 @@ from_string!(CompressedEventLog);
 impl Exportable for CompressedEventLog {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::EventLog(log) => Self::export(&Self { log }, f),
+            EbiObject::EventLog(log) => {
+                let xes: Self = log.into();
+                xes.export(f)
+            }
+            EbiObject::EventLogTraceAttributes(log) => {
+                let xes: Self = log.into();
+                xes.export(f)
+            }
+            EbiObject::EventLogXes(log) => {
+                let xes: Self = log.into();
+                xes.export(f)
+            }
+            EbiObject::EventLogCsv(log) => {
+                let xes: Self = log
+                    .try_into()
+                    .with_context(|| anyhow!("Cannot transform csv to xes."))?;
+                xes.export(f)
+            }
             _ => unreachable!(),
         }
     }

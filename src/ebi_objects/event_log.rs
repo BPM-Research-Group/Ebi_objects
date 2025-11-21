@@ -88,6 +88,18 @@ impl Exportable for EventLog {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
             EbiObject::EventLog(log) => log.export(f),
+            EbiObject::EventLogCsv(log) => {
+                let elog: Self = log.into();
+                elog.export(f)
+            }
+            EbiObject::EventLogXes(log) => {
+                let elog: Self = log.into();
+                elog.export(f)
+            }
+            EbiObject::EventLogTraceAttributes(log) => {
+                let elog: Self = log.into();
+                elog.export(f)
+            }
             _ => Err(anyhow!("Cannot export as event log.")),
         }
     }
