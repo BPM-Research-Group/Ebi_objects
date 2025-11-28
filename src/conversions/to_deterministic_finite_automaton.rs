@@ -1,6 +1,6 @@
 use crate::{
     CompressedEventLog, CompressedEventLogXes, EventLogCsv, EventLogTraceAttributes, EventLogXes, NumberOfTraces, activity_key::has_activity_key::HasActivityKey, ebi_objects::{
-        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog, finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog, event_log_python::EventLogPython, finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton
     }
 };
 use ebi_arithmetic::ebi_number::{Signed, Zero};
@@ -70,6 +70,7 @@ via_lang!(EventLog);
 via_lang!(EventLogTraceAttributes);
 via_lang!(EventLogCsv);
 via_lang!(EventLogXes);
+via_lang!(EventLogPython);
 via_lang!(CompressedEventLog);
 via_lang!(CompressedEventLogTraceAttributes);
 via_lang!(CompressedEventLogXes);

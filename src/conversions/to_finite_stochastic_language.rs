@@ -1,9 +1,11 @@
 use crate::{
-    Activity, ActivityKey, CompressedEventLog, CompressedEventLogXes, EventLogTraceAttributes, EventLogXes, ebi_objects::{
+    Activity, ActivityKey, CompressedEventLog, CompressedEventLogXes, EventLogTraceAttributes,
+    EventLogXes,
+    ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, event_log_csv::EventLogCsv,
+        event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython,
         finite_stochastic_language::FiniteStochasticLanguage,
-    }
+    },
 };
 use ebi_arithmetic::{Fraction, One};
 use std::collections::{HashMap, hash_map::Entry};
@@ -81,6 +83,7 @@ macro_rules! from_via_log {
 
 from_via_log!(EventLogCsv);
 from_via_log!(EventLogXes);
+from_via_log!(EventLogPython);
 from_via_log!(CompressedEventLog);
 from_via_log!(CompressedEventLogXes);
 from_via_log!(CompressedEventLogTraceAttributes);

@@ -23,6 +23,7 @@ pub mod conversions {
     pub mod to_directly_follows_model;
     pub mod to_event_log;
     pub mod to_event_log_csv;
+    pub mod to_event_log_python;
     pub mod to_event_log_trace_attributes;
     pub mod to_event_log_xes;
     pub mod to_finite_language;
@@ -46,6 +47,7 @@ pub mod ebi_objects {
     pub mod directly_follows_model;
     pub mod event_log;
     pub mod event_log_csv;
+    pub mod event_log_python;
     pub mod event_log_trace_attributes;
     pub mod event_log_xes;
     pub mod executions;
@@ -115,6 +117,7 @@ pub use ebi_objects::directly_follows_graph::DirectlyFollowsGraph;
 pub use ebi_objects::directly_follows_model::DirectlyFollowsModel;
 pub use ebi_objects::event_log::EventLog;
 pub use ebi_objects::event_log_csv::EventLogCsv;
+pub use ebi_objects::event_log_python::EventLogPython;
 pub use ebi_objects::event_log_trace_attributes::EventLogTraceAttributes;
 pub use ebi_objects::event_log_xes::EventLogXes;
 pub use ebi_objects::executions::Executions;

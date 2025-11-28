@@ -1,5 +1,6 @@
 use crate::{
-    ActivityKey, CompressedEventLogXes, EventLogCsv, ebi_objects::event_log_xes::EventLogXes,
+    ActivityKey, CompressedEventLogXes, EventLogCsv,
+    ebi_objects::{event_log_python::EventLogPython, event_log_xes::EventLogXes},
 };
 use anyhow::{Error, anyhow};
 use process_mining::event_log::{
@@ -30,7 +31,9 @@ impl TryFrom<EventLogCsv> for EventLogXes {
 
             //add events
             for event in trace {
-                let mut new_event = Event{ attributes: vec![].into() };
+                let mut new_event = Event {
+                    attributes: vec![].into(),
+                };
 
                 for (attribute_key, attribute_value) in event {
                     let attribute_name = value
@@ -74,5 +77,11 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogXes {
         };
         result.create_activity_key();
         result
+    }
+}
+
+impl From<EventLogPython> for EventLogXes {
+    fn from(value: EventLogPython) -> Self {
+        (value.log, EventLogClassifier::default()).into()
     }
 }
