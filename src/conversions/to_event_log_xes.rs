@@ -82,6 +82,6 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogXes {
 
 impl From<EventLogPython> for EventLogXes {
     fn from(value: EventLogPython) -> Self {
-        (value.log, EventLogClassifier::default()).into()
+        value.log
     }
 }

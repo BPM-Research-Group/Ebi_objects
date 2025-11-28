@@ -1,14 +1,19 @@
 use crate::{
-    EbiObject, Exportable, Importable, NumberOfTraces, traits::importable::{ImporterParameter, ImporterParameterValues}
+    ActivityKey, EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, Infoable,
+    NumberOfTraces, TranslateActivityKey,
+    traits::importable::{ImporterParameter, ImporterParameterValues},
 };
-use anyhow::anyhow;
-use std::io::BufRead;
+use anyhow::{Result, anyhow};
+use std::{
+    fmt::Display,
+    io::{BufRead, Write},
+};
 
 #[derive(Clone)]
 /// A Python log is an XES log, but without trace attributes.
-/// It is represented in memory only; there is no file format; the importer and exporter will always fail.
+/// There are no importers, as Python logs can only come from Python.
 pub struct EventLogPython {
-    pub log: process_mining::EventLog,
+    pub log: EventLogXes,
 }
 
 impl Importable for EventLogPython {
@@ -34,22 +39,50 @@ impl Importable for EventLogPython {
     }
 }
 
+impl Display for EventLogPython {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.log.fmt(f)
+    }
+}
+
 impl Exportable for EventLogPython {
-    fn export_from_object(_object: EbiObject, _f: &mut dyn std::io::Write) -> anyhow::Result<()> {
-        Err(anyhow!("A Python log can only be exported to Python."))
+    fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
+        EventLogXes::export_from_object(object, f)
     }
 
-    fn export(&self, _f: &mut dyn std::io::Write) -> anyhow::Result<()> {
-        Err(anyhow!("A Python log can only be exported to Python."))
+    fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
+        EventLogXes::export(&self.log, f)
+    }
+}
+
+impl Infoable for EventLogPython {
+    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
+        self.log.info(f)
     }
 }
 
 impl NumberOfTraces for EventLogPython {
     fn number_of_traces(&self) -> usize {
-        self.log.traces.len()
+        self.log.number_of_traces()
     }
 
     fn number_of_events(&self) -> usize {
-        self.log.traces.iter().map(|trace| trace.events.len()).sum()
+        self.log.number_of_events()
+    }
+}
+
+impl HasActivityKey for EventLogPython {
+    fn activity_key(&self) -> &ActivityKey {
+        self.log.activity_key()
+    }
+
+    fn activity_key_mut(&mut self) -> &mut ActivityKey {
+        self.log.activity_key_mut()
+    }
+}
+
+impl TranslateActivityKey for EventLogPython {
+    fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
+        self.log.translate_using_activity_key(to_activity_key);
     }
 }

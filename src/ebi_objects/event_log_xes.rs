@@ -162,6 +162,7 @@ impl Exportable for EventLogXes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
             EbiObject::EventLogXes(log) => log.export(f),
+            EbiObject::EventLogPython(log) => log.export(f),
             EbiObject::EventLogCsv(log) => {
                 let xes: EventLogXes = log
                     .try_into()

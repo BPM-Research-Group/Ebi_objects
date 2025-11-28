@@ -45,7 +45,7 @@ impl From<EventLogXes> for EventLog {
 
 impl From<EventLogPython> for EventLog {
     fn from(value: EventLogPython) -> Self {
-        EventLog::from((value.log, EventLogClassifier::default())).into()
+        value.log.into()
     }
 }
 
