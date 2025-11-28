@@ -8,7 +8,7 @@ use std::io::BufRead;
 /// A Python log is an XES log, but without trace attributes.
 /// It is represented in memory only; there is no file format; the importer and exporter will always fail.
 pub struct EventLogPython {
-    pub(crate) log: process_mining::EventLog,
+    pub log: process_mining::EventLog,
 }
 
 impl Importable for EventLogPython {
