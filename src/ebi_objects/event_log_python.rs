@@ -19,7 +19,7 @@ pub struct EventLogPython {
 impl Importable for EventLogPython {
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A Pm4py log can be imported by Ebi from Python. Ensure to set \\texttt{{return_legacy_log_object=True}} at importing.";
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A Pm4py log can be imported by Ebi from Python. Ensure to set \\texttt{{return\\_legacy\\_log\\_object=True}} at importing.";
 
     fn import_as_object(
         _reader: &mut dyn BufRead,
