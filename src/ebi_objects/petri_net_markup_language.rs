@@ -109,6 +109,12 @@ impl Exportable for PetriNetMarkupLanguage {
             )),
             EbiObject::ScalableVectorGraphics(_) => {
                 Err(anyhow!("Cannot export scalable vector graphics as PNML."))
+            },
+            EbiObject::PortableDocumentFormat(_) => {
+                Err(anyhow!("Cannot export portable document format as PNML."))
+            }
+            EbiObject::PortableNetworkGraphics(_) => {
+                Err(anyhow!("Cannot export portable network graphics as PNML."))
             }
         }
     }

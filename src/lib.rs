@@ -58,6 +58,7 @@ pub mod ebi_objects {
     pub mod lola_net;
     pub mod petri_net_markup_language;
     pub mod portable_document_format;
+    pub mod portable_network_graphics;
     pub mod process_tree;
     pub mod process_tree_markup_language;
     pub mod scalable_vector_graphics;
@@ -131,6 +132,7 @@ pub use ebi_objects::portable_document_format::PortableDocumentFormat;
 pub use ebi_objects::process_tree::ProcessTree;
 pub use ebi_objects::process_tree_markup_language::ProcessTreeMarkupLanguage;
 pub use ebi_objects::scalable_vector_graphics::ScalableVectorGraphics;
+pub use ebi_objects::portable_network_graphics::PortableNetworkGraphics;
 pub use ebi_objects::stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton;
 pub use ebi_objects::stochastic_directly_follows_model::StochasticDirectlyFollowsModel;
 pub use ebi_objects::stochastic_labelled_petri_net::StochasticLabelledPetriNet;

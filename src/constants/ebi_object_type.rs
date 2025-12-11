@@ -25,6 +25,8 @@ pub enum EbiObjectType {
     Executions,
     DirectlyFollowsGraph,
     ScalableVectorGraphics,
+    PortableNetworkGraphics,
+    PortableDocumentFormat,
 }
 
 impl EbiObjectType {
@@ -50,6 +52,8 @@ impl EbiObjectType {
             EbiObjectType::Executions => "",
             EbiObjectType::DirectlyFollowsGraph => "a",
             EbiObjectType::ScalableVectorGraphics => "a",
+            EbiObjectType::PortableDocumentFormat => "a",
+            EbiObjectType::PortableNetworkGraphics => "a",
         }
     }
 }
@@ -101,6 +105,8 @@ impl Display for EbiObjectType {
                 EbiObjectType::Executions => "executions",
                 EbiObjectType::DirectlyFollowsGraph => "directly follows graph",
                 EbiObjectType::ScalableVectorGraphics => "scalable vector graphics",
+                EbiObjectType::PortableDocumentFormat => "portable document format",
+                EbiObjectType::PortableNetworkGraphics => "portable network graphics",
             }
         )
     }

@@ -136,6 +136,12 @@ impl Exportable for LolaNet {
             EbiObject::ScalableVectorGraphics(_) => Err(anyhow!(
                 "Cannot export scalable vector graphics as Lolanet."
             )),
+            EbiObject::PortableDocumentFormat(_) => Err(anyhow!(
+                "Cannot export portable document format as Lolanet."
+            )),
+            EbiObject::PortableNetworkGraphics(_) => Err(anyhow!(
+                "Cannot export portable network graphics as Lolanet."
+            )),
         }
     }
 

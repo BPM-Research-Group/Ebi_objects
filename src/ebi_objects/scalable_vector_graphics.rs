@@ -57,6 +57,12 @@ impl Exportable for ScalableVectorGraphics {
             EbiObject::StochasticProcessTree(object) => object.to_svg()?.export(f),
             EbiObject::DirectlyFollowsGraph(object) => object.to_svg()?.export(f),
             EbiObject::ScalableVectorGraphics(object) => object.export(f),
+            EbiObject::PortableDocumentFormat(_) => {
+                Err(anyhow!("cannot export portable document format as SVG"))
+            }
+            EbiObject::PortableNetworkGraphics(_) => {
+                Err(anyhow!("cannot export portable network graphics as SVG"))
+            }
         }
     }
 

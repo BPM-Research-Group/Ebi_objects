@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::fmt::Display;
 
 use crate::{
-    EventLogPython, EventLogTraceAttributes,
+    EventLogPython, EventLogTraceAttributes, PortableDocumentFormat, PortableNetworkGraphics,
     constants::ebi_object_type::EbiObjectType,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -43,6 +43,8 @@ pub enum EbiObject {
     Executions(Executions),
     DirectlyFollowsGraph(DirectlyFollowsGraph),
     ScalableVectorGraphics(ScalableVectorGraphics),
+    PortableNetworkGraphics(PortableNetworkGraphics),
+    PortableDocumentFormat(PortableDocumentFormat),
 }
 
 impl EbiObject {
@@ -76,6 +78,8 @@ impl EbiObject {
             EbiObject::Executions(_) => EbiObjectType::Executions,
             EbiObject::DirectlyFollowsGraph(_) => EbiObjectType::DirectlyFollowsGraph,
             EbiObject::ScalableVectorGraphics(_) => EbiObjectType::ScalableVectorGraphics,
+            EbiObject::PortableDocumentFormat(_) => EbiObjectType::PortableDocumentFormat,
+            EbiObject::PortableNetworkGraphics(_) => EbiObjectType::PortableNetworkGraphics,
         }
     }
 }
@@ -103,6 +107,8 @@ impl Display for EbiObject {
             EbiObject::Executions(o) => write!(f, "{}", o),
             EbiObject::DirectlyFollowsGraph(o) => write!(f, "{}", o),
             EbiObject::ScalableVectorGraphics(o) => write!(f, "{}", o),
+            EbiObject::PortableDocumentFormat(o) => write!(f, "{}", o),
+            EbiObject::PortableNetworkGraphics(o) => write!(f, "{}", o),
         }
     }
 }
@@ -130,6 +136,8 @@ impl Infoable for EbiObject {
             EbiObject::Executions(o) => o.info(f),
             EbiObject::DirectlyFollowsGraph(o) => o.info(f),
             EbiObject::ScalableVectorGraphics(o) => o.info(f),
+            EbiObject::PortableDocumentFormat(o) => o.info(f),
+            EbiObject::PortableNetworkGraphics(o) => o.info(f),
         }
     }
 }

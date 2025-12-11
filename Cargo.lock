@@ -340,7 +340,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.61"
+version = "0.3.62"
 dependencies = [
  "anyhow",
  "chrono",
@@ -357,11 +357,13 @@ dependencies = [
  "process_mining",
  "quick-xml 0.38.3",
  "rayon",
+ "resvg",
  "serde",
  "serde_json",
  "strum",
  "strum_macros",
  "svg2pdf",
+ "tiny-skia",
  "uuid",
 ]
 

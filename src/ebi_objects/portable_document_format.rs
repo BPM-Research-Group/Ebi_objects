@@ -3,13 +3,12 @@ use std::fmt::Display;
 use svg2pdf::{ConversionOptions, PageOptions};
 
 use crate::{
-    Exportable,
-    constants::ebi_object::EbiObject,
-    ebi_objects::scalable_vector_graphics::{ScalableVectorGraphics, ToSVG},
+    Exportable, Infoable, constants::ebi_object::EbiObject, ebi_objects::scalable_vector_graphics::{ScalableVectorGraphics, ToSVG}
 };
 
 pub const FORMAT_SPECIFICATION: &str = "Ebi does not support importing PDF files.";
 
+#[derive(Clone)]
 pub struct PortableDocumentFormat(Vec<u8>);
 
 impl Display for PortableDocumentFormat {
@@ -53,11 +52,21 @@ impl Exportable for PortableDocumentFormat {
             EbiObject::StochasticProcessTree(object) => object.to_pdf()?.export(f),
             EbiObject::DirectlyFollowsGraph(object) => object.to_pdf()?.export(f),
             EbiObject::ScalableVectorGraphics(object) => object.to_pdf()?.export(f),
+            EbiObject::PortableDocumentFormat(object) => object.export(f),
+            EbiObject::PortableNetworkGraphics(_) => {
+                Err(anyhow!("cannot export portable network graphics as PDF"))
+            }
         }
     }
 
     fn export(&self, f: &mut dyn std::io::Write) -> anyhow::Result<()> {
         Ok(f.write_all(&self.0)?)
+    }
+}
+
+impl Infoable for PortableDocumentFormat {
+    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
+        Ok(writeln!(f, "PDF object")?)
     }
 }
 
