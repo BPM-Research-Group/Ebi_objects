@@ -457,11 +457,16 @@ impl Display for DirectlyFollowsGraph {
             self.activity_key
                 .get_activities()
                 .iter()
-                .map(|activity| {
-                    (
-                        self.activity_key.get_activity_label(activity).to_string(),
-                        { Value::String(self.activity_cardinality(**activity).to_string()) },
-                    )
+                .filter_map(|activity| {
+                    let cardinality = self.activity_cardinality(**activity);
+                    if cardinality.is_positive() {
+                        Some((
+                            self.activity_key.get_activity_label(activity).to_string(),
+                            { Value::String(cardinality.to_string()) },
+                        ))
+                    } else {
+                        None
+                    }
                 })
                 .collect(),
         );
@@ -541,13 +546,16 @@ impl Graphable for DirectlyFollowsGraph {
 
         //nodes
         let mut nodes = vec![sink; self.activity_key.get_number_of_activities()];
-        for n in &self.activity_key.get_activities() {
-            let id = self.activity_key.get_id_from_activity(*n);
-            nodes[id] = graphable::create_transition(
-                &mut graph,
-                self.activity_key.get_activity_label(n),
-                "",
-            );
+        for activity in &self.activity_key.get_activities() {
+            let id = self.activity_key.get_id_from_activity(*activity);
+            let cardinality = self.activity_cardinality(**activity);
+            if cardinality.is_positive() {
+                nodes[id] = graphable::create_transition(
+                    &mut graph,
+                    self.activity_key.get_activity_label(activity),
+                    "",
+                );
+            }
         }
 
         //start activities
