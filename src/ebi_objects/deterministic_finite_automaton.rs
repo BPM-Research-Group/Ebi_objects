@@ -272,6 +272,9 @@ impl Exportable for DeterministicFiniteAutomaton {
             EbiObject::FiniteLanguage(lang) => Into::<Self>::into(lang).export(f),
             EbiObject::FiniteStochasticLanguage(slang) => Into::<Self>::into(slang).export(f),
             EbiObject::EventLog(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogTraceAttributes(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogXes(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogCsv(log) => Into::<Self>::into(log).export(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
                 Into::<Self>::into(sdfa).export(f)
             }

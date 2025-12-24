@@ -91,6 +91,7 @@ impl Exportable for PetriNetMarkupLanguage {
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as PNML.")),
+            EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as PNML."))
             }
@@ -108,6 +109,12 @@ impl Exportable for PetriNetMarkupLanguage {
             )),
             EbiObject::ScalableVectorGraphics(_) => {
                 Err(anyhow!("Cannot export scalable vector graphics as PNML."))
+            },
+            EbiObject::PortableDocumentFormat(_) => {
+                Err(anyhow!("Cannot export portable document format as PNML."))
+            }
+            EbiObject::PortableNetworkGraphics(_) => {
+                Err(anyhow!("Cannot export portable network graphics as PNML."))
             }
         }
     }

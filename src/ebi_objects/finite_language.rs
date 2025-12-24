@@ -21,8 +21,6 @@ use std::{
     io::BufRead,
 };
 
-use super::{event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage};
-
 pub const HEADER: &str = "finite language";
 
 #[derive(ActivityKey, Clone)]
@@ -66,11 +64,12 @@ impl TranslateActivityKey for FiniteLanguage {
 impl Exportable for FiniteLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
-            EbiObject::EventLog(log) => <EventLog as Into<FiniteLanguage>>::into(log).export(f),
+            EbiObject::EventLog(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogTraceAttributes(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogXes(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogCsv(log) => Into::<Self>::into(log).export(f),
             EbiObject::FiniteLanguage(slang) => slang.export(f),
-            EbiObject::FiniteStochasticLanguage(slang) => {
-                <FiniteStochasticLanguage as Into<FiniteLanguage>>::into(slang).export(f)
-            }
+            EbiObject::FiniteStochasticLanguage(slang) => Into::<Self>::into(slang).export(f),
             _ => Err(anyhow!(
                 "Cannote export {} {} as a finite language.",
                 object.get_type().get_article(),

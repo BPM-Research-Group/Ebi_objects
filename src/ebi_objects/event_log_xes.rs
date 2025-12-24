@@ -7,7 +7,7 @@ use crate::{
         start_end_activities::StartEndActivities,
     },
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
 use intmap::IntMap;
@@ -20,12 +20,14 @@ use std::{
     io::{BufRead, Write},
 };
 
+pub const DEFAULT_PARAMETER_ACTIVITY: &str = "concept:name";
+
 pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
     name: "xes_event_classifier",
     short_name: "ec",
     explanation: "The attribute that defines, for each event, what its activity is",
     allowed_values: None,
-    default_value: "concept:name",
+    default_value: DEFAULT_PARAMETER_ACTIVITY,
 };
 
 #[derive(ActivityKey, Clone)]
@@ -159,8 +161,16 @@ from_string!(EventLogXes);
 impl Exportable for EventLogXes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
+            EbiObject::EventLog(log) => log.export(f),
             EbiObject::EventLogXes(log) => log.export(f),
-            _ => Err(anyhow!("Cannot export as event log.")),
+            EbiObject::EventLogPython(log) => log.export(f),
+            EbiObject::EventLogCsv(log) => {
+                let xes: EventLogXes = log
+                    .try_into()
+                    .with_context(|| anyhow!("Cannot transform csv to xes."))?;
+                xes.export(f)
+            }
+            _ => Err(anyhow!("Cannot export as xes event log.")),
         }
     }
 

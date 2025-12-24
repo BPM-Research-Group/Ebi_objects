@@ -115,6 +115,7 @@ impl Exportable for LolaNet {
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
+            EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as Lolanet."))
             }
@@ -134,6 +135,12 @@ impl Exportable for LolaNet {
             )),
             EbiObject::ScalableVectorGraphics(_) => Err(anyhow!(
                 "Cannot export scalable vector graphics as Lolanet."
+            )),
+            EbiObject::PortableDocumentFormat(_) => Err(anyhow!(
+                "Cannot export portable document format as Lolanet."
+            )),
+            EbiObject::PortableNetworkGraphics(_) => Err(anyhow!(
+                "Cannot export portable network graphics as Lolanet."
             )),
         }
     }

@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::fmt::Display;
 
 use crate::{
-    EventLogTraceAttributes,
+    EventLogPython, EventLogTraceAttributes, PortableDocumentFormat, PortableNetworkGraphics,
     constants::ebi_object_type::EbiObjectType,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -29,6 +29,7 @@ pub enum EbiObject {
     StochasticDeterministicFiniteAutomaton(StochasticDeterministicFiniteAutomaton),
     EventLog(EventLog),
     EventLogCsv(EventLogCsv),
+    EventLogPython(EventLogPython),
     EventLogTraceAttributes(EventLogTraceAttributes),
     EventLogXes(EventLogXes),
     FiniteLanguage(FiniteLanguage),
@@ -42,6 +43,8 @@ pub enum EbiObject {
     Executions(Executions),
     DirectlyFollowsGraph(DirectlyFollowsGraph),
     ScalableVectorGraphics(ScalableVectorGraphics),
+    PortableNetworkGraphics(PortableNetworkGraphics),
+    PortableDocumentFormat(PortableDocumentFormat),
 }
 
 impl EbiObject {
@@ -55,6 +58,7 @@ impl EbiObject {
             }
             EbiObject::EventLog(_) => EbiObjectType::EventLog,
             EbiObject::EventLogCsv(_) => EbiObjectType::EventLogCsv,
+            EbiObject::EventLogPython(_) => EbiObjectType::EventLogPython,
             EbiObject::EventLogTraceAttributes(_) => EbiObjectType::EventLogTraceAttributes,
             EbiObject::EventLogXes(_) => EbiObjectType::EventLogXes,
             EbiObject::FiniteLanguage(_) => EbiObjectType::FiniteLanguage,
@@ -74,6 +78,8 @@ impl EbiObject {
             EbiObject::Executions(_) => EbiObjectType::Executions,
             EbiObject::DirectlyFollowsGraph(_) => EbiObjectType::DirectlyFollowsGraph,
             EbiObject::ScalableVectorGraphics(_) => EbiObjectType::ScalableVectorGraphics,
+            EbiObject::PortableDocumentFormat(_) => EbiObjectType::PortableDocumentFormat,
+            EbiObject::PortableNetworkGraphics(_) => EbiObjectType::PortableNetworkGraphics,
         }
     }
 }
@@ -87,6 +93,7 @@ impl Display for EbiObject {
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => write!(f, "{}", o),
             EbiObject::EventLog(o) => write!(f, "{}", o),
             EbiObject::EventLogCsv(o) => write!(f, "{}", o),
+            EbiObject::EventLogPython(o) => write!(f, "{}", o),
             EbiObject::EventLogTraceAttributes(o) => write!(f, "{}", o),
             EbiObject::EventLogXes(o) => write!(f, "{}", o),
             EbiObject::FiniteLanguage(o) => write!(f, "{}", o),
@@ -100,6 +107,8 @@ impl Display for EbiObject {
             EbiObject::Executions(o) => write!(f, "{}", o),
             EbiObject::DirectlyFollowsGraph(o) => write!(f, "{}", o),
             EbiObject::ScalableVectorGraphics(o) => write!(f, "{}", o),
+            EbiObject::PortableDocumentFormat(o) => write!(f, "{}", o),
+            EbiObject::PortableNetworkGraphics(o) => write!(f, "{}", o),
         }
     }
 }
@@ -113,6 +122,7 @@ impl Infoable for EbiObject {
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => o.info(f),
             EbiObject::EventLog(o) => o.info(f),
             EbiObject::EventLogCsv(o) => o.info(f),
+            EbiObject::EventLogPython(o) => o.info(f),
             EbiObject::EventLogTraceAttributes(o) => o.info(f),
             EbiObject::EventLogXes(o) => o.info(f),
             EbiObject::FiniteLanguage(o) => o.info(f),
@@ -126,6 +136,8 @@ impl Infoable for EbiObject {
             EbiObject::Executions(o) => o.info(f),
             EbiObject::DirectlyFollowsGraph(o) => o.info(f),
             EbiObject::ScalableVectorGraphics(o) => o.info(f),
+            EbiObject::PortableDocumentFormat(o) => o.info(f),
+            EbiObject::PortableNetworkGraphics(o) => o.info(f),
         }
     }
 }

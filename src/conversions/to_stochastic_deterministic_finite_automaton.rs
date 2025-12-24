@@ -2,9 +2,7 @@ use crate::{
     CompressedEventLog, CompressedEventLogXes, EventLogCsv, EventLogTraceAttributes, EventLogXes,
     HasActivityKey, NumberOfTraces,
     ebi_objects::{
-        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, finite_stochastic_language::FiniteStochasticLanguage,
-        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, event_log::EventLog, event_log_python::EventLogPython, finite_stochastic_language::FiniteStochasticLanguage, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton
     },
     traits::trace_iterators::{IntoRefTraceIterator, IntoTraceIterator},
 };
@@ -132,3 +130,9 @@ log!(EventLogCsv);
 from_via_log!(CompressedEventLogXes);
 from_via_log!(CompressedEventLog);
 from_via_log!(CompressedEventLogTraceAttributes);
+
+impl From<EventLogPython> for StochasticDeterministicFiniteAutomaton {
+    fn from(value: EventLogPython) -> Self {
+        EventLog::from(value).into()
+    }
+}

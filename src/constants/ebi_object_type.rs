@@ -13,6 +13,7 @@ pub enum EbiObjectType {
     StochasticDirectlyFollowsModel,
     EventLog,
     EventLogCsv,
+    EventLogPython,
     EventLogTraceAttributes,
     EventLogXes,
     FiniteLanguage,
@@ -24,6 +25,8 @@ pub enum EbiObjectType {
     Executions,
     DirectlyFollowsGraph,
     ScalableVectorGraphics,
+    PortableNetworkGraphics,
+    PortableDocumentFormat,
 }
 
 impl EbiObjectType {
@@ -35,6 +38,7 @@ impl EbiObjectType {
             EbiObjectType::StochasticDeterministicFiniteAutomaton => "a",
             EbiObjectType::EventLog => "an",
             EbiObjectType::EventLogCsv => "an",
+            EbiObjectType::EventLogPython => "a",
             EbiObjectType::EventLogTraceAttributes => "an",
             EbiObjectType::EventLogXes => "an",
             EbiObjectType::FiniteLanguage => "a",
@@ -48,6 +52,8 @@ impl EbiObjectType {
             EbiObjectType::Executions => "",
             EbiObjectType::DirectlyFollowsGraph => "a",
             EbiObjectType::ScalableVectorGraphics => "a",
+            EbiObjectType::PortableDocumentFormat => "a",
+            EbiObjectType::PortableNetworkGraphics => "a",
         }
     }
 }
@@ -83,6 +89,7 @@ impl Display for EbiObjectType {
                     "stochastic deterministic finite automaton",
                 EbiObjectType::EventLog => "event log",
                 EbiObjectType::EventLogCsv => "CSV event log",
+                EbiObjectType::EventLogPython => "Python event log",
                 EbiObjectType::EventLogTraceAttributes => "event log with trace attributes",
                 EbiObjectType::EventLogXes => "XES event log",
                 EbiObjectType::FiniteLanguage => "finite language",
@@ -98,6 +105,8 @@ impl Display for EbiObjectType {
                 EbiObjectType::Executions => "executions",
                 EbiObjectType::DirectlyFollowsGraph => "directly follows graph",
                 EbiObjectType::ScalableVectorGraphics => "scalable vector graphics",
+                EbiObjectType::PortableDocumentFormat => "portable document format",
+                EbiObjectType::PortableNetworkGraphics => "portable network graphics",
             }
         )
     }

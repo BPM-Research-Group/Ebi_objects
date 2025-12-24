@@ -247,6 +247,7 @@ impl Exportable for LabelledPetriNet {
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as LPN.")),
+            EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as LPN."))
             }
@@ -264,6 +265,12 @@ impl Exportable for LabelledPetriNet {
             )),
             EbiObject::ScalableVectorGraphics(_) => {
                 Err(anyhow!("Cannot export scalable vector graphics as LPN."))
+            }
+            EbiObject::PortableDocumentFormat(_) => {
+                Err(anyhow!("Cannot export portable document format as LPN."))
+            }
+            EbiObject::PortableNetworkGraphics(_) => {
+                Err(anyhow!("Cannot export portable network graphics as LPN."))
             }
         }
     }
