@@ -138,3 +138,4 @@ pub use ebi_objects::stochastic_directly_follows_model::StochasticDirectlyFollow
 pub use ebi_objects::stochastic_labelled_petri_net::StochasticLabelledPetriNet;
 pub use ebi_objects::stochastic_language_of_alignments::StochasticLanguageOfAlignments;
 pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
+pub use ebi_derive;

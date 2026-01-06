@@ -1,6 +1,8 @@
 use anyhow::Result;
-use ebi_arithmetic::{Fraction, MaybeExact};
-use malachite::{base::num::logic::traits::SignificantBits, rational::Rational};
+use ebi_arithmetic::{
+    Fraction, MaybeExact,
+    malachite::{base::num::logic::traits::SignificantBits, rational::Rational},
+};
 
 pub trait Infoable {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()>;
