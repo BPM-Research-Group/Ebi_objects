@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey,
+    Importable, Infoable, StochasticNondeterministicFiniteAutomaton, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     line_reader::LineReader,
     marking::Marking,
@@ -239,6 +239,10 @@ impl Exportable for LabelledPetriNet {
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
                 <StochasticDeterministicFiniteAutomaton as Into<LabelledPetriNet>>::into(sdfa)
+                    .export(f)
+            }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(sdfa) => {
+                <StochasticNondeterministicFiniteAutomaton as Into<LabelledPetriNet>>::into(sdfa)
                     .export(f)
             }
             EbiObject::StochasticLabelledPetriNet(slpn) => {

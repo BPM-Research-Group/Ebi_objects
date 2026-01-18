@@ -8,6 +8,7 @@ pub enum EbiObjectType {
     LanguageOfAlignments,
     StochasticLanguageOfAlignments,
     StochasticDeterministicFiniteAutomaton,
+    StochasticNondeterministicFiniteAutomaton,
     DeterministicFiniteAutomaton,
     DirectlyFollowsModel,
     StochasticDirectlyFollowsModel,
@@ -36,6 +37,7 @@ impl EbiObjectType {
             EbiObjectType::StochasticLabelledPetriNet => "a",
             EbiObjectType::FiniteStochasticLanguage => "a",
             EbiObjectType::StochasticDeterministicFiniteAutomaton => "a",
+            EbiObjectType::StochasticNondeterministicFiniteAutomaton => "a",
             EbiObjectType::EventLog => "an",
             EbiObjectType::EventLogCsv => "an",
             EbiObjectType::EventLogPython => "a",
@@ -87,6 +89,8 @@ impl Display for EbiObjectType {
                 EbiObjectType::FiniteStochasticLanguage => "finite stochastic language",
                 EbiObjectType::StochasticDeterministicFiniteAutomaton =>
                     "stochastic deterministic finite automaton",
+                EbiObjectType::StochasticNondeterministicFiniteAutomaton =>
+                    "stochastic non-deterministic finite automaton",
                 EbiObjectType::EventLog => "event log",
                 EbiObjectType::EventLogCsv => "CSV event log",
                 EbiObjectType::EventLogPython => "Python event log",

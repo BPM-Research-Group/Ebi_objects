@@ -1,7 +1,7 @@
 use ebi_arithmetic::{Fraction, One, Signed};
 
 use crate::{
-    ActivityKeyTranslator, HasActivityKey,
+    ActivityKeyTranslator, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
         directly_follows_graph::DirectlyFollowsGraph, labelled_petri_net::LabelledPetriNet,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -188,5 +188,72 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
 impl From<DirectlyFollowsGraph> for StochasticLabelledPetriNet {
     fn from(value: DirectlyFollowsGraph) -> Self {
         <DirectlyFollowsGraph as Into<StochasticDirectlyFollowsModel>>::into(value).into()
+    }
+}
+
+impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetriNet {
+    fn from(value: StochasticNondeterministicFiniteAutomaton) -> Self {
+        log::info!("convert SNFA to SLPN");
+
+        if value.initial_state.is_none() {
+            //SNFA has an empty language, return a livelocked SLPN
+            return Self {
+                activity_key: value.activity_key,
+                initial_marking: Marking::new(0),
+                labels: vec![None],
+                transition2input_places: vec![vec![]],
+                transition2output_places: vec![vec![]],
+                transition2input_places_cardinality: vec![vec![]],
+                transition2output_places_cardinality: vec![vec![]],
+                place2output_transitions: vec![],
+                weights: vec![Fraction::one()],
+            };
+        }
+
+        let mut result = LabelledPetriNet::new();
+        let mut weights = vec![];
+
+        let source = result.add_place();
+        result
+            .get_initial_marking_mut()
+            .increase(source, 1)
+            .unwrap();
+
+        //add places
+        let mut state2place = vec![];
+        for state in &value.states {
+            let lpn_place = result.add_place();
+            state2place.push(lpn_place);
+
+            //add termination
+            if state.termination_probability.is_positive() {
+                let lpn_transition = result.add_transition(None);
+                weights.push(state.termination_probability.clone());
+                result
+                    .add_place_transition_arc(lpn_place, lpn_transition, 1)
+                    .unwrap();
+            }
+        }
+
+        //add edges
+        for (source, state) in value.states.into_iter().enumerate() {
+            for transition in state.transitions {
+                //add transition
+                let lpn_activity = transition.label;
+                let lpn_transition = result.add_transition(lpn_activity);
+                let source_place = state2place[source];
+                let target_place = state2place[transition.target];
+                result
+                    .add_place_transition_arc(source_place, lpn_transition, 1)
+                    .unwrap();
+                result
+                    .add_transition_place_arc(lpn_transition, target_place, 1)
+                    .unwrap();
+
+                weights.push(transition.probability);
+            }
+        }
+
+        StochasticLabelledPetriNet::from((result, weights))
     }
 }

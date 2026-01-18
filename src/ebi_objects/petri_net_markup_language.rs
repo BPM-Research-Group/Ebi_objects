@@ -8,7 +8,8 @@ use super::{
     stochastic_process_tree::StochasticProcessTree,
 };
 use crate::{
-    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
+    Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
+    TranslateActivityKey,
     constants::ebi_object::EbiObject,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
@@ -85,6 +86,12 @@ impl Exportable for PetriNetMarkupLanguage {
                 )?
                 .export(f)
             }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(sdfa) => {
+                <StochasticNondeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(
+                    sdfa,
+                )?
+                .export(f)
+            }
             EbiObject::StochasticLabelledPetriNet(slpn) => {
                 <StochasticLabelledPetriNet as TryInto<LabelledPetriNet>>::try_into(slpn)?.export(f)
             }
@@ -109,7 +116,7 @@ impl Exportable for PetriNetMarkupLanguage {
             )),
             EbiObject::ScalableVectorGraphics(_) => {
                 Err(anyhow!("Cannot export scalable vector graphics as PNML."))
-            },
+            }
             EbiObject::PortableDocumentFormat(_) => {
                 Err(anyhow!("Cannot export portable document format as PNML."))
             }

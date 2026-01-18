@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use anyhow::{Error, Result, anyhow};
 
 use crate::{
+    ActivityKeyTranslator, HasActivityKey, PetriNetMarkupLanguage,
+    StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
         directly_follows_graph::DirectlyFollowsGraph,
@@ -15,7 +17,8 @@ use crate::{
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
         stochastic_process_tree::StochasticProcessTree,
-    }, marking::Marking, ActivityKeyTranslator, HasActivityKey, PetriNetMarkupLanguage
+    },
+    marking::Marking,
 };
 
 macro_rules! tree {
@@ -590,6 +593,13 @@ impl From<StochasticDeterministicFiniteAutomaton> for LabelledPetriNet {
     fn from(value: StochasticDeterministicFiniteAutomaton) -> Self {
         let dfa: DeterministicFiniteAutomaton = value.into();
         dfa.into()
+    }
+}
+
+impl From<StochasticNondeterministicFiniteAutomaton> for LabelledPetriNet {
+    fn from(value: StochasticNondeterministicFiniteAutomaton) -> Self {
+        let slpn = StochasticLabelledPetriNet::from(value);
+        slpn.into()
     }
 }
 

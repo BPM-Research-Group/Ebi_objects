@@ -1,5 +1,6 @@
 use crate::{
-    EbiObject, Exportable, Infoable, ScalableVectorGraphics, ebi_objects::scalable_vector_graphics::ToSVG
+    EbiObject, Exportable, Infoable, ScalableVectorGraphics,
+    ebi_objects::scalable_vector_graphics::ToSVG,
 };
 use anyhow::{Result, anyhow};
 use resvg::usvg::{self};
@@ -44,6 +45,9 @@ impl Exportable for PortableNetworkGraphics {
             }
             EbiObject::ProcessTree(object) => object.to_png()?.export(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(object) => object.to_png()?.export(f),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(object) => {
+                object.to_png()?.export(f)
+            }
             EbiObject::StochasticLabelledPetriNet(object) => object.to_png()?.export(f),
             EbiObject::StochasticLanguageOfAlignments(_) => Err(anyhow!(
                 "cannot export stochastic language of alignments as PNG"

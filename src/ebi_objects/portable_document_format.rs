@@ -3,7 +3,9 @@ use std::fmt::Display;
 use svg2pdf::{ConversionOptions, PageOptions};
 
 use crate::{
-    Exportable, Infoable, constants::ebi_object::EbiObject, ebi_objects::scalable_vector_graphics::{ScalableVectorGraphics, ToSVG}
+    Exportable, Infoable,
+    constants::ebi_object::EbiObject,
+    ebi_objects::scalable_vector_graphics::{ScalableVectorGraphics, ToSVG},
 };
 
 pub const FORMAT_SPECIFICATION: &str = "Ebi does not support importing PDF files.";
@@ -45,6 +47,7 @@ impl Exportable for PortableDocumentFormat {
             }
             EbiObject::ProcessTree(object) => object.to_pdf()?.export(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(object) => object.to_pdf()?.export(f),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(object) => object.to_pdf()?.export(f),
             EbiObject::StochasticLabelledPetriNet(object) => object.to_pdf()?.export(f),
             EbiObject::StochasticLanguageOfAlignments(_) => Err(anyhow!(
                 "cannot export stochastic language of alignments as PDF"

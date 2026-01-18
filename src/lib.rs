@@ -36,6 +36,7 @@ pub mod conversions {
     pub mod to_stochastic_deterministic_finite_automaton;
     pub mod to_stochastic_directly_follows_model;
     pub mod to_stochastic_labelled_petri_net;
+    pub mod to_stochastic_nondeterministic_finite_automaton;
     pub mod to_stochastic_process_tree;
 }
 pub mod ebi_objects {
@@ -66,6 +67,7 @@ pub mod ebi_objects {
     pub mod stochastic_directly_follows_model;
     pub mod stochastic_labelled_petri_net;
     pub mod stochastic_language_of_alignments;
+    pub mod stochastic_nondeterministic_finite_automaton;
     pub mod stochastic_process_tree;
 }
 pub mod iterators {
@@ -112,6 +114,7 @@ pub use crate::traits::trace_attributes::*;
 pub use crate::traits::trace_iterators::*;
 
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
+pub use ebi_objects::compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes;
 pub use ebi_objects::compressed_event_log_xes::CompressedEventLogXes;
 pub use ebi_objects::deterministic_finite_automaton::DeterministicFiniteAutomaton;
 pub use ebi_objects::directly_follows_graph::DirectlyFollowsGraph;
@@ -129,15 +132,16 @@ pub use ebi_objects::language_of_alignments::LanguageOfAlignments;
 pub use ebi_objects::lola_net::LolaNet;
 pub use ebi_objects::petri_net_markup_language::PetriNetMarkupLanguage;
 pub use ebi_objects::portable_document_format::PortableDocumentFormat;
+pub use ebi_objects::portable_network_graphics::PortableNetworkGraphics;
 pub use ebi_objects::process_tree::ProcessTree;
 pub use ebi_objects::process_tree_markup_language::ProcessTreeMarkupLanguage;
 pub use ebi_objects::scalable_vector_graphics::ScalableVectorGraphics;
-pub use ebi_objects::portable_network_graphics::PortableNetworkGraphics;
 pub use ebi_objects::stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton;
 pub use ebi_objects::stochastic_directly_follows_model::StochasticDirectlyFollowsModel;
 pub use ebi_objects::stochastic_labelled_petri_net::StochasticLabelledPetriNet;
 pub use ebi_objects::stochastic_language_of_alignments::StochasticLanguageOfAlignments;
+pub use ebi_objects::stochastic_nondeterministic_finite_automaton::StochasticNondeterministicFiniteAutomaton;
 pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 
-pub use ebi_derive;
 pub use ebi_arithmetic;
+pub use ebi_derive;

@@ -8,7 +8,8 @@ use super::{
     stochastic_process_tree::StochasticProcessTree,
 };
 use crate::{
-    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
+    Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
+    TranslateActivityKey,
     constants::ebi_object::EbiObject,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
@@ -95,6 +96,9 @@ impl Exportable for LolaNet {
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
                 <StochasticDeterministicFiniteAutomaton as Into<LolaNet>>::into(sdfa).export(f)
+            }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(sdfa) => {
+                <StochasticNondeterministicFiniteAutomaton as Into<LolaNet>>::into(sdfa).export(f)
             }
             EbiObject::DirectlyFollowsModel(dfm) => {
                 <DirectlyFollowsModel as Into<LolaNet>>::into(dfm).export(f)

@@ -1,6 +1,6 @@
-use crate::ebi_objects::{
+use crate::{StochasticNondeterministicFiniteAutomaton, ebi_objects::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton, directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel, labelled_petri_net::LabelledPetriNet, lola_net::LolaNet, process_tree::ProcessTree, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton, stochastic_directly_follows_model::StochasticDirectlyFollowsModel, stochastic_labelled_petri_net::StochasticLabelledPetriNet, stochastic_process_tree::StochasticProcessTree
-};
+}};
 
 impl From<LabelledPetriNet> for LolaNet {
     fn from(value: LabelledPetriNet) -> Self {
@@ -28,3 +28,4 @@ from!(StochasticDirectlyFollowsModel);
 from!(ProcessTree);
 from!(StochasticProcessTree);
 from!(StochasticDeterministicFiniteAutomaton);
+from!(StochasticNondeterministicFiniteAutomaton);

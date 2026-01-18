@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use crate::{
     EventLogPython, EventLogTraceAttributes, PortableDocumentFormat, PortableNetworkGraphics,
+    StochasticNondeterministicFiniteAutomaton,
     constants::ebi_object_type::EbiObjectType,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -27,6 +28,7 @@ pub enum EbiObject {
     StochasticLabelledPetriNet(StochasticLabelledPetriNet),
     FiniteStochasticLanguage(FiniteStochasticLanguage),
     StochasticDeterministicFiniteAutomaton(StochasticDeterministicFiniteAutomaton),
+    StochasticNondeterministicFiniteAutomaton(StochasticNondeterministicFiniteAutomaton),
     EventLog(EventLog),
     EventLogCsv(EventLogCsv),
     EventLogPython(EventLogPython),
@@ -55,6 +57,9 @@ impl EbiObject {
             EbiObject::FiniteStochasticLanguage(_) => EbiObjectType::FiniteStochasticLanguage,
             EbiObject::StochasticDeterministicFiniteAutomaton(_) => {
                 EbiObjectType::StochasticDeterministicFiniteAutomaton
+            }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(_) => {
+                EbiObjectType::StochasticNondeterministicFiniteAutomaton
             }
             EbiObject::EventLog(_) => EbiObjectType::EventLog,
             EbiObject::EventLogCsv(_) => EbiObjectType::EventLogCsv,
@@ -91,6 +96,7 @@ impl Display for EbiObject {
             EbiObject::StochasticLabelledPetriNet(o) => write!(f, "{}", o),
             EbiObject::FiniteStochasticLanguage(o) => write!(f, "{}", o),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => write!(f, "{}", o),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(o) => write!(f, "{}", o),
             EbiObject::EventLog(o) => write!(f, "{}", o),
             EbiObject::EventLogCsv(o) => write!(f, "{}", o),
             EbiObject::EventLogPython(o) => write!(f, "{}", o),
@@ -120,6 +126,7 @@ impl Infoable for EbiObject {
             EbiObject::StochasticLabelledPetriNet(o) => o.info(f),
             EbiObject::FiniteStochasticLanguage(o) => o.info(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => o.info(f),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(o) => o.info(f),
             EbiObject::EventLog(o) => o.info(f),
             EbiObject::EventLogCsv(o) => o.info(f),
             EbiObject::EventLogPython(o) => o.info(f),

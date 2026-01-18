@@ -50,6 +50,9 @@ impl Exportable for ScalableVectorGraphics {
             }
             EbiObject::ProcessTree(object) => object.to_svg()?.export(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(object) => object.to_svg()?.export(f),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(object) => {
+                object.to_svg()?.export(f)
+            }
             EbiObject::StochasticLabelledPetriNet(object) => object.to_svg()?.export(f),
             EbiObject::StochasticLanguageOfAlignments(_) => Err(anyhow!(
                 "cannot export stochastic language of alignments as SVG"
