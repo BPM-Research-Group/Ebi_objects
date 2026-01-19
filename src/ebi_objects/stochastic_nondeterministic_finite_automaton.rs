@@ -76,6 +76,13 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.get_termination_probability(state).is_positive()
     }
 
+    /**
+     * Returns whether a transition is not permanently disabled.
+     */
+    pub fn can_execute_transition(&self, transition: usize) -> bool {
+        self.probabilities[transition].is_positive()
+    }
+
     /// Ensures that a state with index `new_max_state` exists,
     fn ensure_states(&mut self, new_max_state: usize) {
         if new_max_state > self.max_state {
