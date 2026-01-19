@@ -221,14 +221,14 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
 
         //add places
         let mut state2place = vec![];
-        for state in &value.states {
+        for state in 0..value.number_of_states() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 
             //add termination
-            if state.termination_probability.is_positive() {
+            if value.terminating_probabilities[state].is_positive() {
                 let lpn_transition = result.add_transition(None);
-                weights.push(state.termination_probability.clone());
+                weights.push(value.terminating_probabilities[state].clone());
                 result
                     .add_place_transition_arc(lpn_place, lpn_transition, 1)
                     .unwrap();
@@ -236,22 +236,20 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
         }
 
         //add edges
-        for (source, state) in value.states.into_iter().enumerate() {
-            for transition in state.transitions {
-                //add transition
-                let lpn_activity = transition.label;
-                let lpn_transition = result.add_transition(lpn_activity);
-                let source_place = state2place[source];
-                let target_place = state2place[transition.target];
-                result
-                    .add_place_transition_arc(source_place, lpn_transition, 1)
-                    .unwrap();
-                result
-                    .add_transition_place_arc(lpn_transition, target_place, 1)
-                    .unwrap();
+        for (transition, probability) in value.probabilities.into_iter().enumerate() {
+            //add transition
+            let lpn_activity = value.activities[transition];
+            let lpn_transition = result.add_transition(lpn_activity);
+            let source_place = state2place[value.sources[transition]];
+            let target_place = state2place[value.targets[transition]];
+            result
+                .add_place_transition_arc(source_place, lpn_transition, 1)
+                .unwrap();
+            result
+                .add_transition_place_arc(lpn_transition, target_place, 1)
+                .unwrap();
 
-                weights.push(transition.probability);
-            }
+            weights.push(probability);
         }
 
         StochasticLabelledPetriNet::from((result, weights))

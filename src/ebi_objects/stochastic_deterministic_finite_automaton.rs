@@ -91,6 +91,7 @@ impl StochasticDeterministicFiniteAutomaton {
         }
     }
 
+    /// Inserts a transition; will fail if determinism or stochastic perspective is violated.
     pub fn add_transition(
         &mut self,
         source: usize,
@@ -129,7 +130,7 @@ impl StochasticDeterministicFiniteAutomaton {
         }
     }
 
-    pub fn get_number_of_transitions(&self) -> usize {
+    pub fn number_of_transitions(&self) -> usize {
         self.sources.len()
     }
 
@@ -243,9 +244,36 @@ impl StochasticDeterministicFiniteAutomaton {
 impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
-        self.activities
-            .iter_mut()
-            .for_each(|activity| *activity = translator.translate_activity(&activity));
+
+        //as the order of activities may have changed, we need to rebuild the transitions
+        let mut sources = Vec::with_capacity(self.number_of_transitions());
+        let mut targets = Vec::with_capacity(self.number_of_transitions());
+        let mut probabilities = Vec::with_capacity(self.number_of_transitions());
+        let mut activities = Vec::with_capacity(self.number_of_transitions());
+
+        std::mem::swap(&mut self.sources, &mut sources);
+        std::mem::swap(&mut self.targets, &mut targets);
+        std::mem::swap(&mut self.probabilities, &mut probabilities);
+        std::mem::swap(&mut self.activities, &mut activities);
+
+        /*
+         * The order will remain largely the same, as transitions are first sorted by source, which does not change.
+         * Therefore, we add the transitions back in the original order as much as possible.
+         * A potential further optimisation would be to apply a proper sorting algorithm, or to avoid binary search.
+         */
+        for (source, (target, (probability, activity))) in sources.into_iter().zip(
+            targets
+                .into_iter()
+                .zip(probabilities.into_iter().zip(activities.into_iter())),
+        ) {
+            self.add_transition(
+                source,
+                translator.translate_activity(&activity),
+                target,
+                probability,
+            )
+            .unwrap(); //by invariant, this can only fail if the original model was incorrect already
+        }
         self.activity_key = to_activity_key.clone();
     }
 }

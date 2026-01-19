@@ -1,13 +1,10 @@
-use std::collections::{HashMap, hash_map::Entry};
-
-use ebi_arithmetic::{Fraction, One, Zero};
-
 use crate::{
     CompressedEventLog, CompressedEventLogTraceAttributes, CompressedEventLogXes, EventLog,
     EventLogCsv, EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, NumberOfTraces,
     StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton,
-    ebi_objects::stochastic_nondeterministic_finite_automaton::{State, Transition},
 };
+use ebi_arithmetic::{Fraction, One, Zero};
+use std::collections::{HashMap, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
     fn from(value: FiniteStochasticLanguage) -> Self {
@@ -24,7 +21,8 @@ impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomato
             for (trace, probability) in &value.traces {
                 let mut state = result.initial_state.unwrap();
                 for activity in trace {
-                    state = result.take_or_add_transition(state, *activity, probability.clone());
+                    state =
+                        result.take_or_add_transition(state, Some(*activity), probability.clone());
                 }
 
                 match final_states.entry(state) {
@@ -35,8 +33,19 @@ impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomato
                 }
             }
 
+            //count
+            let mut sums = final_states;
+            for (source, _, _, probability) in &result {
+                match sums.entry(*source) {
+                    Entry::Occupied(mut e) => *e.get_mut() += probability,
+                    Entry::Vacant(e) => {
+                        e.insert(probability.clone());
+                    }
+                }
+            }
+
             //normalise
-            result.scale_outgoing_probabilities();
+            result.scale_outgoing_probabilities(sums);
         }
         result
     }
@@ -71,33 +80,18 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticNondeterministic
             sources,
             targets,
             terminating_probabilities,
-            ..
+            max_state,
         } = value;
-
-        let mut states = terminating_probabilities
-            .into_iter()
-            .map(|termination_probability| State {
-                termination_probability,
-                transitions: vec![],
-            })
-            .collect::<Vec<_>>();
-
-        for (source, (target, (activity, probability))) in sources.into_iter().zip(
-            targets
-                .into_iter()
-                .zip(activities.into_iter().zip(probabilities.into_iter())),
-        ) {
-            states[source].transitions.push(Transition {
-                target,
-                label: Some(activity),
-                probability,
-            });
-        }
 
         Self {
             activity_key,
-            states,
             initial_state,
+            max_state,
+            sources,
+            targets,
+            activities: activities.into_iter().map(|a| Some(a)).collect(),
+            probabilities,
+            terminating_probabilities,
         }
     }
 }
