@@ -132,11 +132,6 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.sources.len()
     }
 
-    /// Sets the final-probability of a state.
-    pub fn set_final_probability(&mut self, state: usize, termination_probability: Fraction) {
-        self.terminating_probabilities[state] = termination_probability;
-    }
-
     /**
      * Adds the probability to the transition. Returns the target state, which may be new.
      * The caller is responsible for updating the termination probability.
@@ -406,7 +401,11 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
                 self.probabilities[transition]
             )?;
             if let Some(act) = self.activities[transition] {
-                writeln!(f, "# activity\nlabel {}", act)?;
+                writeln!(
+                    f,
+                    "# activity\nlabel {}",
+                    self.activity_key.get_activity_label(&act)
+                )?;
             } else {
                 writeln!(f, "# activity\nsilent")?;
             }
