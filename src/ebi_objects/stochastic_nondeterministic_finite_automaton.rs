@@ -4,7 +4,7 @@ use crate::{
     line_reader::LineReader,
     traits::{
         graphable,
-        importable::{ImporterParameter, ImporterParameterValues},
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
 use anyhow::{Context, Result, anyhow};
@@ -94,6 +94,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         }
     }
 
+    /// Add a transition. Will reduce the termination probability of the source state accordingly.
     pub fn add_transition(
         &mut self,
         source: usize,
@@ -103,6 +104,8 @@ impl StochasticNondeterministicFiniteAutomaton {
     ) -> Result<()> {
         self.ensure_states(max(source, target));
 
+        self.terminating_probabilities[source] -= &probability;
+
         let (found, from) = self.binary_search(source, self.label_to_id(activity), target);
         if found {
             //edge already present
@@ -111,7 +114,6 @@ impl StochasticNondeterministicFiniteAutomaton {
             self.sources.insert(from, source);
             self.targets.insert(from, target);
             self.activities.insert(from, activity);
-            self.terminating_probabilities[source] -= &probability;
             self.probabilities.insert(from, probability);
 
             if self.terminating_probabilities[source].is_negative() {
@@ -205,6 +207,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         &self.terminating_probabilities[state]
     }
 
+    //Adds a state with 1 terminating probability.
     pub fn add_state(&mut self) -> usize {
         self.max_state += 1;
         self.terminating_probabilities.push(Fraction::one());
@@ -329,6 +332,21 @@ impl StochasticNondeterministicFiniteAutomaton {
         }
         Ok(())
     }
+
+    /// Returns an iterator over the outgoing edges of `source`.
+    pub fn outgoing_edges(
+        &'_ self,
+        source: usize,
+    ) -> StochasticNondeterministicFiniteAutomatonIterator<'_> {
+        let (_, start) = self.binary_search(source, 0, 0);
+        let (_, end) = self.binary_search(source, usize::MAX, usize::MAX);
+        StochasticNondeterministicFiniteAutomatonIterator {
+            it_sources: self.get_sources()[start..end].iter(),
+            it_targets: self.get_targets()[start..end].iter(),
+            it_activities: self.get_activities()[start..end].iter(),
+            it_probabilities: self.get_probabilities()[start..end].iter(),
+        }
+    }
 }
 
 impl TranslateActivityKey for StochasticNondeterministicFiniteAutomaton {
@@ -378,14 +396,6 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
         writeln!(f, "{}", HEADER)?;
         writeln!(f, "# initial state\n{:?}", self.initial_state)?;
         writeln!(f, "# number of states\n{}", self.number_of_states())?;
-        for (state, terminating_probability) in self.terminating_probabilities.iter().enumerate() {
-            writeln!(
-                f,
-                "# state {} termination probability\n{}",
-                state, terminating_probability
-            )?;
-        }
-
         for transition in 0..self.number_of_transitions() {
             writeln!(
                 f,
@@ -412,7 +422,6 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
     This first line is exactly `stochastic non-deterministic finite automaton'.
     The second line is the initial state of the SNFA, or the word `None'.
     The third line is the number of states in the SNFA.
-    The lines thereafter contain the termination probability of each state.
     Then, for each transition, the following lines are next: 
     (i) the source state of the transition;
     (ii) the target state of the transition;
@@ -476,26 +485,8 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
         let number_of_states = lreader
             .next_line_index()
             .with_context(|| "failed to read number of states")?;
-
-        //read states
-        for state_nr in 0..number_of_states {
-            //read termination probability
-            let termination_probability = lreader.next_line_weight().with_context(|| {
-                format!(
-                    "could not read termination probability of state {}",
-                    state_nr
-                )
-            })?;
-            if !termination_probability.is_positive() {
-                return Err(anyhow!(
-                    "termination probability of state {} is not positive: {}",
-                    state_nr,
-                    termination_probability
-                ));
-            }
-
-            let new_state = result.add_state();
-            result.terminating_probabilities[new_state] = termination_probability;
+        for _ in 0..number_of_states {
+            result.add_state();
         }
 
         //read the number of transitions
@@ -540,13 +531,16 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
                 None
             };
 
-            result.add_transition(source, label, target, probability)?;
+            result
+                .add_transition(source, label, target, probability)
+                .with_context(|| format!("could not add transition {}", transition))?;
         }
 
         result.check_consistency()?;
         Ok(result)
     }
 }
+from_string!(StochasticNondeterministicFiniteAutomaton);
 
 impl Infoable for StochasticNondeterministicFiniteAutomaton {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
@@ -660,6 +654,10 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonIterator<'a> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.it_sources.size_hint()
+    }
 }
 
 impl<'a> IntoIterator for &'a mut StochasticNondeterministicFiniteAutomaton {
@@ -697,5 +695,36 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
         } else {
             None
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.it_sources.size_hint()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::StochasticNondeterministicFiniteAutomaton;
+    use itertools::Itertools;
+    use std::fs;
+
+    #[test]
+    fn snfa_outgoing_iter() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.snfa").unwrap();
+        let dfm = fin
+            .parse::<StochasticNondeterministicFiniteAutomaton>()
+            .unwrap();
+
+        let mut it = dfm.outgoing_edges(0);
+        assert_eq!(it.try_len().unwrap(), 3);
+        assert!(it.next().is_some());
+        assert!(it.next().is_some());
+        assert!(it.next().is_some());
+        assert!(it.next().is_none());
+
+        let mut it = dfm.outgoing_edges(1);
+        assert_eq!(it.try_len().unwrap(), 1);
+        assert!(it.next().is_some());
+        assert!(it.next().is_none());
     }
 }

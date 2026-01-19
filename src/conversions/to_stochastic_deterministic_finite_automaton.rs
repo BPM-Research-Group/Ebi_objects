@@ -21,7 +21,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
             result.set_initial_state(None);
         } else {
             let mut final_states = HashMap::new();
-            result.set_activity_key(&value.activity_key);
+            result.activity_key = value.activity_key.clone();
 
             //create automaton
             for (trace, probability) in &value.traces {
@@ -63,7 +63,7 @@ macro_rules! log {
                 log::info!("convert event log to SDFA");
 
                 let mut result = StochasticDeterministicFiniteAutomaton::new();
-                result.set_activity_key(value.activity_key());
+                result.activity_key = value.activity_key().clone();
 
                 if value.number_of_traces().is_zero() {
                     result.set_initial_state(None);

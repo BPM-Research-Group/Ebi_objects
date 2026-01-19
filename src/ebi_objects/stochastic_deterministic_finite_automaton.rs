@@ -236,8 +236,19 @@ impl StochasticDeterministicFiniteAutomaton {
         (false, left)
     }
 
-    pub fn set_activity_key(&mut self, activity_key: &ActivityKey) {
-        self.activity_key = activity_key.clone();
+    /// Returns an iterator over the outgoing edges of `source`.
+    pub fn outgoing_edges(
+        &'_ self,
+        source: usize,
+    ) -> StochasticDeterministicFiniteAutomatonIterator<'_> {
+        let (_, start) = self.binary_search(source, 0);
+        let (_, end) = self.binary_search(source, usize::MAX);
+        StochasticDeterministicFiniteAutomatonIterator {
+            it_sources: self.get_sources()[start..end].iter(),
+            it_targets: self.get_targets()[start..end].iter(),
+            it_activities: self.get_activities()[start..end].iter(),
+            it_probabilities: self.get_probabilities()[start..end].iter(),
+        }
     }
 }
 
@@ -470,6 +481,10 @@ impl<'a> Iterator for StochasticDeterministicFiniteAutomatonIterator<'a> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.it_sources.size_hint()
+    }
 }
 
 impl<'a> IntoIterator for &'a mut StochasticDeterministicFiniteAutomaton {
@@ -507,5 +522,36 @@ impl<'a> Iterator for StochasticDeterministicFiniteAutomatonMutIterator<'a> {
         } else {
             None
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.it_sources.size_hint()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::StochasticDeterministicFiniteAutomaton;
+    use itertools::Itertools;
+    use std::fs;
+
+    #[test]
+    fn sdfa_outgoing_iter() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.sdfa").unwrap();
+        let dfm = fin
+            .parse::<StochasticDeterministicFiniteAutomaton>()
+            .unwrap();
+
+        let mut it = dfm.outgoing_edges(0);
+        assert_eq!(it.try_len().unwrap(), 2);
+        assert!(it.next().is_some());
+        assert!(it.next().is_some());
+        assert!(it.next().is_none());
+
+        let mut it = dfm.outgoing_edges(1);
+        assert_eq!(it.try_len().unwrap(), 2);
+        assert!(it.next().is_some());
+        assert!(it.next().is_some());
+        assert!(it.next().is_none());
     }
 }
