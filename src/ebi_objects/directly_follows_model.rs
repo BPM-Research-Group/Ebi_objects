@@ -96,8 +96,23 @@ impl DirectlyFollowsModel {
         true
     }
 
-    pub fn get_max_state(&self) -> usize {
+    pub fn number_of_states(&self) -> usize {
         self.node_2_activity.len() + 2
+    }
+
+    pub fn number_of_transitions(&self) -> usize {
+        self.sources.len()
+            + self
+                .start_nodes
+                .iter()
+                .filter_map(|b| if *b { Some(()) } else { None })
+                .count()
+            + self
+                .end_nodes
+                .iter()
+                .filter_map(|b| if *b { Some(()) } else { None })
+                .count()
+            + if self.empty_traces { 1 } else { 0 }
     }
 
     pub fn add_empty_trace(&mut self) {

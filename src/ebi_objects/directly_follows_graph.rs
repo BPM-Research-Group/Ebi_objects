@@ -46,8 +46,19 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn get_max_state(&self) -> usize {
+    pub fn number_of_states(&self) -> usize {
         self.activity_key.get_number_of_activities() + 2
+    }
+
+    pub fn number_of_transitions(&self) -> usize {
+        self.sources.len()
+            + self.start_activities.len()
+            + self.end_activities.len()
+            + if self.empty_traces_weight.is_positive() {
+                1
+            } else {
+                0
+            }
     }
 
     pub fn edge_weight(&self, source: Activity, target: Activity) -> Option<&Fraction> {
