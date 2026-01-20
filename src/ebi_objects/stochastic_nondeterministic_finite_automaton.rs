@@ -394,7 +394,7 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
         for transition in 0..self.number_of_transitions() {
             writeln!(
                 f,
-                "# transition {}\n# source\n{}\n# target{}\n# probability\n{}",
+                "# transition {}\n# source\n{}\n# target\n{}\n# probability\n{}",
                 transition,
                 self.sources[transition],
                 self.targets[transition],
