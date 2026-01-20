@@ -389,8 +389,17 @@ impl TranslateActivityKey for StochasticNondeterministicFiniteAutomaton {
 impl Display for StochasticNondeterministicFiniteAutomaton {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
-        writeln!(f, "# initial state\n{:?}", self.initial_state)?;
+        writeln!(
+            f,
+            "# initial state\n{:?}",
+            if let Some(i) = self.initial_state {
+                format!("{}", i)
+            } else {
+                "none".to_string()
+            }
+        )?;
         writeln!(f, "# number of states\n{}", self.number_of_states())?;
+
         for transition in 0..self.number_of_transitions() {
             writeln!(
                 f,
@@ -577,7 +586,7 @@ impl Graphable for StochasticNondeterministicFiniteAutomaton {
             let activity = if let Some(activity) = self.activities[transition] {
                 self.activity_key.get_activity_label(&activity)
             } else {
-                ""
+                "τ"
             };
 
             graphable::create_edge(
