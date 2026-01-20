@@ -22,7 +22,6 @@ use std::{
 pub struct StochasticDeterministicFiniteAutomaton {
     pub activity_key: ActivityKey,
     pub initial_state: Option<usize>,
-    pub max_state: usize,
     pub sources: Vec<usize>,          //transition -> source of arc
     pub targets: Vec<usize>,          //transition -> target of arc
     pub activities: Vec<Activity>,    //transition -> activity of arc (every transition is labelled)
@@ -37,7 +36,6 @@ impl StochasticDeterministicFiniteAutomaton {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            max_state: 0,
             initial_state: Some(0),
             sources: vec![],
             targets: vec![],
@@ -82,12 +80,8 @@ impl StochasticDeterministicFiniteAutomaton {
     }
 
     fn ensure_states(&mut self, new_max_state: usize) {
-        if new_max_state > self.max_state {
-            self.terminating_probabilities
-                .extend(vec![Fraction::one(); new_max_state - self.max_state]);
-            self.max_state = new_max_state;
-
-            assert!(self.terminating_probabilities.len() == self.max_state + 1)
+        while self.number_of_states() < new_max_state {
+            self.add_state();
         }
     }
 
@@ -132,6 +126,10 @@ impl StochasticDeterministicFiniteAutomaton {
 
     pub fn number_of_transitions(&self) -> usize {
         self.sources.len()
+    }
+
+    pub fn number_of_states(&self) -> usize {
+        self.terminating_probabilities.len()
     }
 
     /**
@@ -186,13 +184,9 @@ impl StochasticDeterministicFiniteAutomaton {
     }
 
     pub fn add_state(&mut self) -> usize {
-        self.max_state += 1;
+        let state = self.number_of_states();
         self.terminating_probabilities.push(Fraction::one());
-        return self.max_state;
-    }
-
-    pub fn get_max_state(&self) -> usize {
-        self.max_state
+        return state;
     }
 
     fn compare(source1: usize, activity1: usize, source2: usize, activity2: Activity) -> Ordering {
@@ -371,7 +365,7 @@ impl Exportable for StochasticDeterministicFiniteAutomaton {
 
 impl Infoable for StochasticDeterministicFiniteAutomaton {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of states\t{}", self.max_state)?;
+        writeln!(f, "Number of states\t{}", self.number_of_states())?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
         writeln!(
             f,
@@ -419,7 +413,7 @@ impl Graphable for StochasticDeterministicFiniteAutomaton {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         let mut places = vec![];
-        for state in 0..=self.max_state {
+        for state in 0..self.number_of_states() {
             places.push(graphable::create_place(
                 &mut graph,
                 &format!("{}", self.terminating_probabilities[state]),

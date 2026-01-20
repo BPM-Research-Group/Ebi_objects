@@ -1,7 +1,14 @@
 use crate::{
-    CompressedEventLog, CompressedEventLogXes, EventLogCsv, EventLogTraceAttributes, EventLogXes, NumberOfTraces, activity_key::has_activity_key::HasActivityKey, ebi_objects::{
-        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog, event_log_python::EventLogPython, finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton
-    }
+    CompressedEventLog, CompressedEventLogXes, EventLogCsv, EventLogTraceAttributes, EventLogXes,
+    NumberOfTraces,
+    activity_key::has_activity_key::HasActivityKey,
+    ebi_objects::{
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+        deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog,
+        event_log_python::EventLogPython, finite_language::FiniteLanguage,
+        finite_stochastic_language::FiniteStochasticLanguage,
+        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+    },
 };
 use ebi_arithmetic::ebi_number::{Signed, Zero};
 
@@ -38,10 +45,12 @@ impl From<StochasticDeterministicFiniteAutomaton> for DeterministicFiniteAutomat
             .map(|p| p.is_positive())
             .collect();
 
+        let max_state = value.number_of_states();
+
         Self {
             activity_key: value.activity_key,
             initial_state: value.initial_state,
-            max_state: value.max_state,
+            max_state: max_state,
             sources: value.sources,
             targets: value.targets,
             activities: value.activities,

@@ -133,8 +133,12 @@ impl DeterministicFiniteAutomaton {
         return self.max_state;
     }
 
-    pub fn get_max_state(&self) -> usize {
+    pub fn number_of_states(&self) -> usize {
         self.max_state
+    }
+
+    pub fn number_of_transitions(&self) -> usize {
+        self.sources.len()
     }
 
     fn compare(source1: usize, activity1: usize, source2: usize, activity2: Activity) -> Ordering {

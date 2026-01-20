@@ -43,7 +43,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
 
         //add places
         let mut state2place = vec![];
-        for state in 0..=value.max_state {
+        for state in 0..=value.number_of_states() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 
