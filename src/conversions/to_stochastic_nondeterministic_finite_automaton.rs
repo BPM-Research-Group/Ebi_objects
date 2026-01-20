@@ -80,13 +80,12 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticNondeterministic
             sources,
             targets,
             terminating_probabilities,
-            max_state,
+            ..
         } = value;
 
         Self {
             activity_key,
             initial_state,
-            max_state,
             sources,
             targets,
             activities: activities.into_iter().map(|a| Some(a)).collect(),

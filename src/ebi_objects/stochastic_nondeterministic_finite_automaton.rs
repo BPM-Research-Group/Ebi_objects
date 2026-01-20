@@ -26,7 +26,6 @@ pub struct StochasticNondeterministicFiniteAutomaton {
     /// If the initial state is None, then the language is empty
     pub initial_state: Option<usize>,
 
-    pub max_state: usize,
     pub sources: Vec<usize>,               //transition -> source of arc
     pub targets: Vec<usize>,               //transition -> target of arc
     pub activities: Vec<Option<Activity>>, //transition -> activity of arc
@@ -39,7 +38,6 @@ impl StochasticNondeterministicFiniteAutomaton {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            max_state: 0,
             initial_state: Some(0),
             sources: vec![],
             targets: vec![],
@@ -85,12 +83,8 @@ impl StochasticNondeterministicFiniteAutomaton {
 
     /// Ensures that a state with index `new_max_state` exists,
     fn ensure_states(&mut self, new_max_state: usize) {
-        if new_max_state > self.max_state {
-            self.terminating_probabilities
-                .extend(vec![Fraction::one(); new_max_state - self.max_state]);
-            self.max_state = new_max_state;
-
-            assert!(self.terminating_probabilities.len() == self.max_state + 1)
+        while self.number_of_states() < new_max_state {
+            self.add_state();
         }
     }
 
@@ -153,8 +147,11 @@ impl StochasticNondeterministicFiniteAutomaton {
             return self.targets[transition];
         } else {
             //find the last position where our edge could be
-            let (_, transition2) =
-                self.binary_search(source_state, self.label_to_id(activity), self.max_state);
+            let (_, transition2) = self.binary_search(
+                source_state,
+                self.label_to_id(activity),
+                self.number_of_states(),
+            );
 
             //our edge could be anywhere between transition1 (inclusive) and transition2 (inclusive)
             if transition != transition2 {
@@ -204,13 +201,9 @@ impl StochasticNondeterministicFiniteAutomaton {
 
     //Adds a state with 1 terminating probability.
     pub fn add_state(&mut self) -> usize {
-        self.max_state += 1;
+        let state = self.terminating_probabilities.len();
         self.terminating_probabilities.push(Fraction::one());
-        return self.max_state;
-    }
-
-    pub fn get_max_state(&self) -> usize {
-        self.max_state
+        return state;
     }
 
     fn compare(
@@ -493,7 +486,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
         let number_of_states = lreader
             .next_line_index()
             .with_context(|| "failed to read number of states")?;
-        for _ in 0..number_of_states {
+        for _ in 1..number_of_states {
             result.add_state();
         }
 
@@ -509,11 +502,25 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
             let source = lreader.next_line_index().with_context(|| {
                 format!("could not read source state of transition {}", transition)
             })?;
+            if source >= result.number_of_states() {
+                return Err(anyhow!(
+                    "transition {} has an invalid source {}",
+                    transition,
+                    source
+                ));
+            }
 
             //read target
             let target = lreader.next_line_index().with_context(|| {
                 format!("could not read target state of transition {}", transition)
             })?;
+            if target >= result.number_of_states() {
+                return Err(anyhow!(
+                    "transition {} has an invalid target {}",
+                    transition,
+                    target
+                ));
+            }
 
             //read probability
             let probability = lreader.next_line_weight().with_context(|| {
@@ -545,6 +552,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
         }
 
         result.check_consistency()?;
+
         Ok(result)
     }
 }
@@ -738,10 +746,14 @@ mod tests {
 
     #[test]
     fn snfa_graph() {
-        let fin = fs::read_to_string("testfiles/xor(a,tau)and(bc)-removedtaus.snfa").unwrap();
+        let fin = fs::read_to_string("testfiles/xor(a,tau)and(bc).snfa").unwrap();
         let dfm = fin
             .parse::<StochasticNondeterministicFiniteAutomaton>()
             .unwrap();
+
+        assert_eq!(dfm.number_of_states(), 7);
+        assert_eq!(dfm.number_of_transitions(), 8);
+
         dfm.to_dot().unwrap();
     }
 }
