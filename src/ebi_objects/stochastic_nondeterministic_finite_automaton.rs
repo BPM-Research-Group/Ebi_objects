@@ -395,6 +395,11 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
             writeln!(f, "#initial state\nnone")?;
         }
         writeln!(f, "# number of states\n{}", self.number_of_states())?;
+        writeln!(
+            f,
+            "# number of transitions\n{}",
+            self.number_of_transitions()
+        )?;
 
         for transition in 0..self.number_of_transitions() {
             writeln!(
@@ -426,6 +431,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
     This first line is exactly `stochastic non-deterministic finite automaton'.
     The second line is the initial state of the SNFA, or the word `None'.
     The third line is the number of states in the SNFA.
+    The fourth line is the number of transitions in the SNFA.
     Then, for each transition, the following lines are next: 
     (i) the source state of the transition;
     (ii) the target state of the transition;
