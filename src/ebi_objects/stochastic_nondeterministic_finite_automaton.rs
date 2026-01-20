@@ -475,8 +475,6 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
             ));
         }
 
-        let mut activity_key = ActivityKey::new();
-
         //read initial state
         let initial_state = lreader
             .next_line_string()
@@ -535,7 +533,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
                 .with_context(|| format!("failed to read label of transition {}", transition))?;
             let label = if label_line.trim_start().starts_with("label ") {
                 let label = label_line.trim_start()[6..].to_string();
-                let activity = activity_key.process_activity(&label);
+                let activity = result.activity_key.process_activity(&label);
                 Some(activity)
             } else {
                 None
@@ -714,7 +712,7 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::StochasticNondeterministicFiniteAutomaton;
+    use crate::{Graphable, StochasticNondeterministicFiniteAutomaton};
     use itertools::Itertools;
     use std::fs;
 
@@ -736,5 +734,14 @@ mod tests {
         assert_eq!(it.try_len().unwrap(), 1);
         assert!(it.next().is_some());
         assert!(it.next().is_none());
+    }
+
+    #[test]
+    fn snfa_graph() {
+        let fin = fs::read_to_string("testfiles/xor(a,tau)and(bc)-removedtaus.snfa").unwrap();
+        let dfm = fin
+            .parse::<StochasticNondeterministicFiniteAutomaton>()
+            .unwrap();
+        dfm.to_dot().unwrap();
     }
 }
