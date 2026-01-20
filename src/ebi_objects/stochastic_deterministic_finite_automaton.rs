@@ -114,9 +114,10 @@ impl StochasticDeterministicFiniteAutomaton {
 
             if self.terminating_probabilities[source].is_negative() {
                 Err(anyhow!(
-                    "tried to insert edge from {} to {}, which brings the sum outgoing probability of the source state (1-{}) above 1",
+                    "tried to insert edge from {} to {}, which makes the terminating probability of state {} {}, i.e. negative",
                     source,
                     target,
+                    source,
                     self.terminating_probabilities[source]
                 ))
             } else {
@@ -272,13 +273,14 @@ impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
                 .into_iter()
                 .zip(probabilities.into_iter().zip(activities.into_iter())),
         ) {
-            self.add_transition(
-                source,
-                translator.translate_activity(&activity),
-                target,
-                probability,
-            )
-            .unwrap(); //by invariant, this can only fail if the original model was incorrect already
+            let activity = translator.translate_activity(&activity);
+            let (_, from) =
+                self.binary_search(source, self.activity_key.get_id_from_activity(activity));
+
+            self.sources.insert(from, source);
+            self.targets.insert(from, target);
+            self.activities.insert(from, activity);
+            self.probabilities.insert(from, probability);
         }
         self.activity_key = to_activity_key.clone();
     }
@@ -526,7 +528,9 @@ impl<'a> Iterator for StochasticDeterministicFiniteAutomatonMutIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::StochasticDeterministicFiniteAutomaton;
+    use crate::{
+        EventLogXes, HasActivityKey, StochasticDeterministicFiniteAutomaton, TranslateActivityKey,
+    };
     use itertools::Itertools;
     use std::fs;
 
@@ -560,8 +564,20 @@ mod tests {
     #[test]
     fn probability_sdfa_livelock_zeroweight() {
         let fin1 = fs::read_to_string("testfiles/a-livelock-zeroweight.sdfa").unwrap();
-        fin1
+        fin1.parse::<StochasticDeterministicFiniteAutomaton>()
+            .unwrap();
+    }
+
+    #[test]
+    fn sdfa_translate_activity_key() {
+        let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
+        let mut log = fin.parse::<EventLogXes>().unwrap();
+
+        let fin2 = fs::read_to_string("testfiles/a-b-c-livelock.sdfa").unwrap();
+        let mut model = fin2
             .parse::<StochasticDeterministicFiniteAutomaton>()
             .unwrap();
+
+        model.translate_using_activity_key(log.activity_key_mut());
     }
 }

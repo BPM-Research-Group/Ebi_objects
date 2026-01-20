@@ -362,18 +362,17 @@ impl TranslateActivityKey for StochasticNondeterministicFiniteAutomaton {
                 .into_iter()
                 .zip(probabilities.into_iter().zip(activities.into_iter())),
         ) {
-            if let Some(activity) = activity {
-                self.add_transition(
-                    source,
-                    Some(translator.translate_activity(&activity)),
-                    target,
-                    probability,
-                )
-                .unwrap(); //by invariant, the original model must have satisfied this
+            let activity = if let Some(activity) = activity {
+                Some(translator.translate_activity(&activity))
             } else {
-                self.add_transition(source, None, target, probability)
-                    .unwrap(); //by invariant, the original model must have satisfied this
-            }
+                None
+            };
+            let (_, from) = self.binary_search(source, self.label_to_id(activity), target);
+
+            self.sources.insert(from, source);
+            self.targets.insert(from, target);
+            self.activities.insert(from, activity);
+            self.probabilities.insert(from, probability);
         }
         self.activity_key = to_activity_key.clone();
     }
