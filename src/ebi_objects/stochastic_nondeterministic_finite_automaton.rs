@@ -389,15 +389,11 @@ impl TranslateActivityKey for StochasticNondeterministicFiniteAutomaton {
 impl Display for StochasticNondeterministicFiniteAutomaton {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
-        writeln!(
-            f,
-            "# initial state\n{:?}",
-            if let Some(i) = self.initial_state {
-                format!("{}", i)
-            } else {
-                "none".to_string()
-            }
-        )?;
+        if let Some(i) = self.initial_state {
+            writeln!(f, "# initial state\n{:?}", i)?;
+        } else {
+            writeln!(f, "#initial state\nnone")?;
+        }
         writeln!(f, "# number of states\n{}", self.number_of_states())?;
 
         for transition in 0..self.number_of_transitions() {
