@@ -134,3 +134,19 @@ from_via_log!(EventLogPython);
 from_via_log!(CompressedEventLogXes);
 from_via_log!(CompressedEventLog);
 from_via_log!(CompressedEventLogTraceAttributes);
+
+#[cfg(test)]
+mod tests {
+    use crate::{FiniteStochasticLanguage, NumberOfTraces, StochasticDeterministicFiniteAutomaton};
+    use std::fs;
+
+    #[test]
+    fn slang_minprob_zero_through_sdfa() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.slang").unwrap();
+        let slang = fin.parse::<FiniteStochasticLanguage>().unwrap();
+        assert_eq!(slang.number_of_traces(), 3);
+        let sdfa: StochasticDeterministicFiniteAutomaton = slang.into();
+        assert_eq!(sdfa.number_of_states(), 6);
+        assert_eq!(sdfa.number_of_transitions(), 5);
+    }
+}

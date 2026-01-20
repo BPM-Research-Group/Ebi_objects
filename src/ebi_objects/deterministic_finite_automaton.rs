@@ -20,7 +20,6 @@ use std::{
 pub struct DeterministicFiniteAutomaton {
     pub activity_key: ActivityKey,
     pub initial_state: Option<usize>,
-    pub max_state: usize,
     pub sources: Vec<usize>,       //transition -> source of arc
     pub targets: Vec<usize>,       //transition -> target of arc
     pub activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
@@ -34,7 +33,6 @@ impl DeterministicFiniteAutomaton {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            max_state: 0,
             initial_state: Some(0),
             sources: vec![],
             targets: vec![],
@@ -62,10 +60,10 @@ impl DeterministicFiniteAutomaton {
         self.initial_state = state;
     }
 
+    /// Ensures that a state with index `new_max_state` exists
     fn ensure_states(&mut self, new_max_state: usize) {
-        while new_max_state > self.max_state {
-            self.max_state += 1;
-            self.final_states.push(false);
+        while self.number_of_states() <= new_max_state {
+            self.add_state();
         }
     }
 
@@ -128,13 +126,13 @@ impl DeterministicFiniteAutomaton {
     }
 
     pub fn add_state(&mut self) -> usize {
-        self.max_state += 1;
+        let state = self.final_states.len();
         self.final_states.push(false);
-        return self.max_state;
+        state
     }
 
     pub fn number_of_states(&self) -> usize {
-        self.max_state
+        self.final_states.len()
     }
 
     fn compare(source1: usize, activity1: usize, source2: usize, activity2: Activity) -> Ordering {
@@ -249,13 +247,11 @@ impl Importable for DeterministicFiniteAutomaton {
 
         //read final states
         let jfinal_states = json::read_field_list(&json, "finalStates")
-            .context("failed to read list of final states")?;
+            .with_context(|| "failed to read list of final states")?;
         for jfinal_state in jfinal_states {
             let state = json::read_number(jfinal_state).context("could not read final state")?;
 
-            if state > result.max_state {
-                result.ensure_states(state);
-            }
+            result.ensure_states(state);
 
             result.final_states[state] = true;
         }
@@ -289,7 +285,7 @@ impl Exportable for DeterministicFiniteAutomaton {
 
 impl Infoable for DeterministicFiniteAutomaton {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of states\t{}", self.max_state)?;
+        writeln!(f, "Number of states\t{}", self.number_of_states())?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
         writeln!(
             f,
@@ -346,7 +342,7 @@ impl Graphable for DeterministicFiniteAutomaton {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         let mut places = vec![];
-        for state in 0..=self.max_state {
+        for state in 0..self.number_of_states() {
             if self.can_terminate_in_state(state) {
                 places.push(graphable::create_transition(
                     &mut graph,

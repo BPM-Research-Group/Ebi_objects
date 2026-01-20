@@ -81,9 +81,9 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.probabilities[transition].is_positive()
     }
 
-    /// Ensures that a state with index `new_max_state` exists,
+    /// Ensures that a state with index `new_max_state` exists
     fn ensure_states(&mut self, new_max_state: usize) {
-        while self.number_of_states() < new_max_state {
+        while self.number_of_states() <= new_max_state {
             self.add_state();
         }
     }

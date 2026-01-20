@@ -420,7 +420,7 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
 
         //add places
         let mut state2place = vec![];
-        for state in 0..=value.max_state {
+        for state in 0..value.number_of_states() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 
@@ -613,9 +613,12 @@ impl From<DirectlyFollowsGraph> for LabelledPetriNet {
 mod tests {
     use std::fs;
 
-    use crate::ebi_objects::{
-        deterministic_finite_automaton::DeterministicFiniteAutomaton,
-        labelled_petri_net::LabelledPetriNet,
+    use crate::{
+        StochasticDeterministicFiniteAutomaton,
+        ebi_objects::{
+            deterministic_finite_automaton::DeterministicFiniteAutomaton,
+            labelled_petri_net::LabelledPetriNet,
+        },
     };
 
     #[test]
@@ -628,5 +631,14 @@ mod tests {
         let lpn2 = fin2.parse::<LabelledPetriNet>().unwrap();
 
         assert_eq!(lpn.to_string(), lpn2.to_string());
+    }
+
+    #[test]
+    fn sdfa_dfa_lpn() {
+        let fin = fs::read_to_string("testfiles/a-livelock-zeroweight.sdfa").unwrap();
+        let sdfa = fin
+            .parse::<StochasticDeterministicFiniteAutomaton>()
+            .unwrap();
+        let _lpn: LabelledPetriNet = sdfa.into();
     }
 }
