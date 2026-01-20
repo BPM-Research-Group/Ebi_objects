@@ -50,17 +50,6 @@ impl DirectlyFollowsGraph {
         self.activity_key.get_number_of_activities() + 2
     }
 
-    pub fn number_of_transitions(&self) -> usize {
-        self.sources.len()
-            + self.start_activities.len()
-            + self.end_activities.len()
-            + if self.empty_traces_weight.is_positive() {
-                1
-            } else {
-                0
-            }
-    }
-
     pub fn edge_weight(&self, source: Activity, target: Activity) -> Option<&Fraction> {
         let (found, from) = self.binary_search(source, target);
         if found {

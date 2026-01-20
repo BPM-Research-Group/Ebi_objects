@@ -80,7 +80,7 @@ impl StochasticDeterministicFiniteAutomaton {
     }
 
     fn ensure_states(&mut self, new_max_state: usize) {
-        while self.number_of_states() < new_max_state {
+        while self.number_of_states() <= new_max_state{
             self.add_state();
         }
     }
@@ -124,7 +124,7 @@ impl StochasticDeterministicFiniteAutomaton {
         }
     }
 
-    pub fn number_of_transitions(&self) -> usize {
+    fn number_of_transitions(&self) -> usize {
         self.sources.len()
     }
 
@@ -547,5 +547,20 @@ mod tests {
         assert!(it.next().is_some());
         assert!(it.next().is_some());
         assert!(it.next().is_none());
+    }
+
+    #[test]
+    fn sdfa_trace_prob_livelock() {
+        let fin = fs::read_to_string("testfiles/a-b-c-livelock.sdfa").unwrap();
+        fin.parse::<StochasticDeterministicFiniteAutomaton>()
+            .unwrap();
+    }
+
+    #[test]
+    fn probability_sdfa_livelock_zeroweight() {
+        let fin1 = fs::read_to_string("testfiles/a-livelock-zeroweight.sdfa").unwrap();
+        fin1
+            .parse::<StochasticDeterministicFiniteAutomaton>()
+            .unwrap();
     }
 }

@@ -87,25 +87,6 @@ impl StochasticDirectlyFollowsModel {
         self.node_2_activity.len() + 2
     }
 
-    pub fn number_of_transitions(&self) -> usize {
-        self.sources.len()
-            + self
-                .start_node_weights
-                .iter()
-                .filter_map(|b| if b.is_positive() { Some(()) } else { None })
-                .count()
-            + self
-                .end_node_weights
-                .iter()
-                .filter_map(|b| if b.is_positive() { Some(()) } else { None })
-                .count()
-            + if self.empty_traces_weight.is_positive() {
-                1
-            } else {
-                0
-            }
-    }
-
     pub fn add_node(&mut self, activity: Activity) -> NodeIndex {
         let index = self.node_2_activity.len();
         self.node_2_activity.push(activity);

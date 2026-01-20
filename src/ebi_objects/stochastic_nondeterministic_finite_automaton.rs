@@ -122,7 +122,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         Ok(())
     }
 
-    pub fn number_of_transitions(&self) -> usize {
+    fn number_of_transitions(&self) -> usize {
         self.sources.len()
     }
 
