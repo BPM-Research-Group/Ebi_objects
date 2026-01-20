@@ -124,7 +124,7 @@ impl StochasticDeterministicFiniteAutomaton {
         }
     }
 
-    fn number_of_transitions(&self) -> usize {
+    pub fn number_of_transitions(&self) -> usize {
         self.sources.len()
     }
 
