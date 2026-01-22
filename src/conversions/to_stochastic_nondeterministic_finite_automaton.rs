@@ -1,7 +1,5 @@
 use crate::{
-    CompressedEventLog, CompressedEventLogTraceAttributes, CompressedEventLogXes, EventLog,
-    EventLogCsv, EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, NumberOfTraces,
-    StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton,
+    CompressedEventLog, CompressedEventLogTraceAttributes, CompressedEventLogXes, EventLog, EventLogCsv, EventLogPython, EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, NumberOfTraces, StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton
 };
 use ebi_arithmetic::{Fraction, One, Zero};
 use std::collections::{HashMap, hash_map::Entry};
@@ -66,6 +64,7 @@ from_via_slang!(EventLog);
 from_via_slang!(EventLogTraceAttributes);
 from_via_slang!(EventLogXes);
 from_via_slang!(EventLogCsv);
+from_via_slang!(EventLogPython);
 from_via_slang!(CompressedEventLogXes);
 from_via_slang!(CompressedEventLog);
 from_via_slang!(CompressedEventLogTraceAttributes);
