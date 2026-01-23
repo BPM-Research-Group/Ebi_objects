@@ -745,7 +745,7 @@ mod tests {
 
     #[test]
     fn snfa_graph() {
-        let fin = fs::read_to_string("testfiles/xor(a,tau)and(bc).snfa").unwrap();
+        let fin = fs::read_to_string("testfiles/loop(a,tau)and(bc).snfa").unwrap();
         let dfm = fin
             .parse::<StochasticNondeterministicFiniteAutomaton>()
             .unwrap();
