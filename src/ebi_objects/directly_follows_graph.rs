@@ -1,25 +1,23 @@
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, hash_map::Entry},
-    fmt::Display,
-};
-
-use anyhow::{Context, Result, anyhow};
-use ebi_arithmetic::{Fraction, Signed, Zero};
-use ebi_derive::ActivityKey;
-use layout::topo::layout::VisualGraph;
-use serde_json::Value;
-
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    format_comparison, json,
+    dfg_format_comparison, json,
     traits::{
         exportable::Exportable,
         graphable,
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
     },
+};
+use anyhow::{Context, Result, anyhow};
+use ebi_arithmetic::{Fraction, Signed, Zero};
+use ebi_derive::ActivityKey;
+use layout::topo::layout::VisualGraph;
+use serde_json::Value;
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, hash_map::Entry},
+    fmt::Display,
 };
 
 #[derive(ActivityKey, Clone, Debug)]
@@ -182,7 +180,7 @@ impl Importable for DirectlyFollowsGraph {
     
     For instance:
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.dfg}",
-        format_comparison!()
+        dfg_format_comparison!()
     );
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];

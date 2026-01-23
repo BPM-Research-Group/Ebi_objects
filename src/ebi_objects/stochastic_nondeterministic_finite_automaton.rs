@@ -1,6 +1,6 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey,
+    Importable, Infoable, TranslateActivityKey, dfg_format_comparison,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -419,7 +419,7 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
 impl Importable for StochasticNondeterministicFiniteAutomaton {
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A stochastic non-deterministic finite automaton is a line-based structure. Lines starting with a \\# are ignored.
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A stochastic non-deterministic finite automaton is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `stochastic non-deterministic finite automaton'.
     The second line is the initial state of the SNFA, or the word `None'.
     The third line is the number of states in the SNFA.
@@ -433,7 +433,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
     A stochastic non-deterministic finite automaton will have one probability for each (source, activity, target).
     
     For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.snfa}";
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.snfa}", dfg_format_comparison!());
 
     fn import_as_object(
         reader: &mut dyn std::io::BufRead,

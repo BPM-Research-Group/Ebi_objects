@@ -20,19 +20,20 @@ use super::stochastic_directly_follows_model::NodeIndex;
 pub const HEADER: &str = "directly follows model";
 
 #[macro_export]
-macro_rules! format_comparison {
+macro_rules! dfg_format_comparison {
     () => {"
     
     The following table gives an overview of several directly follows-based file types and their features:
     \\begin{center}
-    \\begin{tabularx}{\\linewidth}{Xlll}
+    \\begin{tabularx}{\\linewidth}{Xllll}
         \\toprule
         \rotatebox{90}{File type} & \rotatebox{90}{stochastic} & \rotatebox{90}{multiple nodes with the same label} & \rotatebox{90}{silent transitions} & file syntax \\\\
         \\midrule
         \\hyperref[filehandler:directly follows model]{directly follows model (.dfm)} & no & yes & no & line-based \\\\
         \\hyperref[filehandler:directly follows graph]{directly follows graph (.dfg)} & weights & no & no & JSON \\\\
         \\hyperref[filehandler:stochastic directly follows model]{stochastic directly follows model (.sdfm)} & yes & yes & no & line-based \\\\
-        \\hyperref[filehandler:stochastic non-deterministic finite automaton]{stochastic non-deterministic finite automaton (.snfa)} & yes & yes & no & line-based \\\\
+        \\hyperref[filehandler:stochastic deterministic finite automaton]{stochastic deterministic finite automaton (.sdfa)} & yes & yes & no & line-based \\\\
+        \\hyperref[filehandler:stochastic non-deterministic finite automaton]{stochastic non-deterministic finite automaton (.snfa)} & yes & yes & yes & line-based \\\\
         \\bottomrule
     \\end{tabularx}
     \\end{center}"}
@@ -192,7 +193,7 @@ impl Importable for DirectlyFollowsModel {
     The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity.
     
     For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/a-b_star.dfm}", format_comparison!());
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/a-b_star.dfm}", dfg_format_comparison!());
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 

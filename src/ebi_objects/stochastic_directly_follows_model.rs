@@ -1,6 +1,6 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, format_comparison,
+    Importable, Infoable, TranslateActivityKey, dfg_format_comparison,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -170,7 +170,7 @@ impl Importable for StochasticDirectlyFollowsModel {
     The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity, then a `w`, and then the weight of the transition.
     
     For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.sdfm}", format_comparison!());
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.sdfm}", dfg_format_comparison!());
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 

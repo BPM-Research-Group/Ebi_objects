@@ -1,10 +1,8 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, json,
-    traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json, traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    },
+    }
 };
 use anyhow::{Context, Result, anyhow};
 use ebi_derive::ActivityKey;
@@ -192,7 +190,7 @@ impl TranslateActivityKey for DeterministicFiniteAutomaton {
 }
 
 impl Importable for DeterministicFiniteAutomaton {
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A deterministic finite automaton is a JSON structure with the top level being an object.
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A deterministic finite automaton is a JSON structure with the top level being an object.
     This object contains the following key-value pairs:
     \\begin{itemize}
     \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the DFA has an empty language.
@@ -204,7 +202,7 @@ impl Importable for DeterministicFiniteAutomaton {
     The file format supports deadlocks and livelocks.
     \\end{itemize}
     For instance:
-    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.dfa}";
+    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.dfa}", dfg_format_comparison!());
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 

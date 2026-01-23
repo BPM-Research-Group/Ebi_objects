@@ -1,6 +1,6 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, json,
+    Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
     traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -287,7 +287,7 @@ impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
 }
 
 impl Importable for StochasticDeterministicFiniteAutomaton {
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A stochastic deterministic finite automaton is a JSON structure with the top level being an object.
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A stochastic deterministic finite automaton is a JSON structure with the top level being an object.
     This object contains the following key-value pairs:
     \\begin{itemize}
     \\item \\texttt{initialState} being the index of the initial state. This field is optional: if omitted, the SDFA has an empty stochastic language.
@@ -301,7 +301,7 @@ impl Importable for StochasticDeterministicFiniteAutomaton {
     The probability that a trace terminates in a state is 1 - the sum probability of the outgoing transitions of the state.
     \\end{itemize}
     For instance:
-    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.sdfa}";
+    \\lstinputlisting[language=json, style=boxed]{../testfiles/aa-ab-ba.sdfa}", dfg_format_comparison!());
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 
