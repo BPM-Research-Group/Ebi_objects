@@ -27,7 +27,7 @@ macro_rules! dfg_format_comparison {
     \\begin{center}
     \\begin{tabularx}{\\linewidth}{Xllll}
         \\toprule
-        \rotatebox{90}{File type} & \rotatebox{90}{stochastic} & \rotatebox{90}{multiple nodes with the same label} & \rotatebox{90}{silent transitions} & file syntax \\\\
+        \\rotatebox{90}{File type} & \\rotatebox{90}{stochastic} & \\rotatebox{90}{multiple nodes with the same label} & \\rotatebox{90}{silent transitions} & file syntax \\\\
         \\midrule
         \\hyperref[filehandler:directly follows model]{directly follows model (.dfm)} & no & yes & no & line-based \\\\
         \\hyperref[filehandler:directly follows graph]{directly follows graph (.dfg)} & weights & no & no & JSON \\\\
