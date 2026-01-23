@@ -31,17 +31,8 @@ silent
 # probability
 3/4
 # activity
-label c
+silent
 # transition 3
-# source
-2
-# target
-4
-# probability
-2/5
-# activity
-label c
-# transition 4
 # source
 2
 # target
@@ -50,6 +41,15 @@ label c
 3/5
 # activity
 label b
+# transition 4
+# source
+2
+# target
+4
+# probability
+2/5
+# activity
+label c
 # transition 5
 # source
 3

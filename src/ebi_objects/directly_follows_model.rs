@@ -27,11 +27,12 @@ macro_rules! format_comparison {
     \\begin{center}
     \\begin{tabularx}{\\linewidth}{Xlll}
         \\toprule
-        File type & stochastic & multiple nodes with the same label & file syntax \\\\
+        \rotatebox{90}{File type} & \rotatebox{90}{stochastic} & \rotatebox{90}{multiple nodes with the same label} & \rotatebox{90}{silent transitions} & file syntax \\\\
         \\midrule
-        \\hyperref[filehandler:directly follows graph]{directly follows graph (.dfg)} & yes & no & JSON \\\\
-        \\hyperref[filehandler:directly follows model]{directly follows model (.dfm)} & no & yes & line-based \\\\
-        \\hyperref[filehandler:stochastic directly follows model]{stochastic directly follows model (.sdfm)} & yes & yes & line-based \\\\
+        \\hyperref[filehandler:directly follows model]{directly follows model (.dfm)} & no & yes & no & line-based \\\\
+        \\hyperref[filehandler:directly follows graph]{directly follows graph (.dfg)} & weights & no & no & JSON \\\\
+        \\hyperref[filehandler:stochastic directly follows model]{stochastic directly follows model (.sdfm)} & yes & yes & no & line-based \\\\
+        \\hyperref[filehandler:stochastic non-deterministic finite automaton]{stochastic non-deterministic finite automaton (.snfa)} & yes & yes & no & line-based \\\\
         \\bottomrule
     \\end{tabularx}
     \\end{center}"}

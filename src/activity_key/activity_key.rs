@@ -11,6 +11,10 @@ use crate::{Infoable, activity_key::activity::Activity};
 
 #[derive(Clone, Debug)]
 #[cfg(test)]
+/// An ActivityKey provides a map String -> Activity, which compiles to a usize in release mode.
+/// There are automated tests in place to ensure an Activity is never interacting with an ActivityKey it does not belong to.
+/// ActivityKeys are assumed to reflect the model: each Activity in the ActivityKey should appear in the object, and 
+/// each Activity in an object should appear in its ActivityKey.
 pub struct ActivityKey {
     pub name2activity: HashMap<String, Activity>,
     pub activity2name: Vec<String>,

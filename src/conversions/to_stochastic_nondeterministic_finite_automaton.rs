@@ -1,7 +1,10 @@
 use crate::{
-    CompressedEventLog, CompressedEventLogTraceAttributes, CompressedEventLogXes, EventLog, EventLogCsv, EventLogPython, EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, NumberOfTraces, StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton
+    CompressedEventLog, CompressedEventLogTraceAttributes, CompressedEventLogXes,
+    DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogPython, EventLogTraceAttributes,
+    EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
+    StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton,
 };
-use ebi_arithmetic::{Fraction, One, Zero};
+use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
@@ -91,5 +94,127 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticNondeterministic
             probabilities,
             terminating_probabilities,
         }
+    }
+}
+
+impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
+    fn from(value: DirectlyFollowsGraph) -> Self {
+        let mut result = Self::new();
+        let initial_state = 0;
+
+        //add states
+        for _ in value.activity_key().get_activities() {
+            result.add_state(); //we do not keep a map, as we can predict the numbers: 0 = initial state, 1..=n = activity states, n+1 = final state.
+        }
+
+        let final_state = result.add_state();
+
+        //start activities
+        {
+            let mut sum_of_start_activities = value
+                .start_activities
+                .iter()
+                .map(|(_, f)| f)
+                .sum::<Fraction>();
+            sum_of_start_activities += &value.empty_traces_weight;
+            for (activity, weight) in &value.start_activities {
+                result
+                    .add_transition(
+                        initial_state,
+                        Some(*activity),
+                        activity.id + 1,
+                        weight / &sum_of_start_activities,
+                    )
+                    .unwrap(); //by construction, outgoing probability cannot become lower than 0
+            }
+
+            //emptytraces
+            if value.empty_traces_weight.is_positive() {
+                result
+                    .add_transition(
+                        0,
+                        None,
+                        final_state,
+                        &value.empty_traces_weight / &sum_of_start_activities,
+                    )
+                    .unwrap(); //by construction, outgoing probabilities cannot become lower than 0
+            }
+        }
+
+        //edges
+        {
+            for activity in value.activity_key().get_activities() {
+                //gather the outgoing sum
+                let mut sum = Fraction::zero();
+                {
+                    let (_, mut i) =
+                        value.binary_search(*activity, value.activity_key().get_activity_by_id(0));
+                    while i < value.sources.len() && &value.sources[i] == activity {
+                        if value.weights[i].is_positive() {
+                            sum += &value.weights[i];
+                        }
+                        i += 1;
+                    }
+
+                    if value.end_activities[activity].is_positive() {
+                        sum += &value.end_activities[activity];
+                    }
+                }
+
+                // add the edges
+                let (_, mut i) =
+                    value.binary_search(*activity, value.activity_key().get_activity_by_id(0));
+                while i < value.sources.len() && &value.sources[i] == activity {
+                    if value.weights[i].is_positive() {
+                        result
+                            .add_transition(
+                                activity.id + 1,
+                                Some(value.targets[i]),
+                                value.targets[i].id + 1,
+                                &value.weights[i] / &sum,
+                            )
+                            .unwrap(); //by construction, remaining outgoing probability cannot become negative
+                        sum += &value.weights[i];
+                    }
+                    i += 1;
+                }
+
+                // termination
+                if value.end_activities[activity].is_positive() {
+                    result
+                        .add_transition(
+                            activity.id + 1,
+                            None,
+                            final_state,
+                            &value.end_activities[activity] / &sum,
+                        )
+                        .unwrap(); //by construction, remaining outgoing probability cannot become negative
+                }
+            }
+        }
+
+        result.activity_key = value.activity_key;
+
+        result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{DirectlyFollowsGraph, StochasticNondeterministicFiniteAutomaton};
+    use std::fs;
+
+    #[test]
+    fn dfg_to_snfa() {
+        let fin1 = fs::read_to_string("testfiles/aa-ab-ba.dfg").unwrap();
+        let dfg: DirectlyFollowsGraph = fin1.parse::<DirectlyFollowsGraph>().unwrap();
+
+        let snfa: StochasticNondeterministicFiniteAutomaton = dfg.into();
+        assert_eq!(snfa.number_of_states(), 4);
+        assert_eq!(snfa.number_of_transitions(), 7);
+        assert_eq!(snfa.sources, [0, 0, 1, 1, 1, 2, 2]);
+        assert_eq!(snfa.targets, [1, 2, 3, 1, 2, 3, 1]);
+        assert_eq!(snfa.activities[2], None);
+        assert_eq!(snfa.activities[5], None);
     }
 }
