@@ -213,6 +213,12 @@ impl Exportable for StochasticLabelledPetriNet {
             EbiObject::StochasticDirectlyFollowsModel(log) => {
                 Into::<StochasticLabelledPetriNet>::into(log).export(f)
             }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(snfa) => {
+                Into::<StochasticLabelledPetriNet>::into(snfa).export(f)
+            }
+            EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
+                Into::<StochasticLabelledPetriNet>::into(sdfa).export(f)
+            }
             EbiObject::DirectlyFollowsGraph(log) => {
                 Into::<StochasticLabelledPetriNet>::into(log).export(f)
             }
