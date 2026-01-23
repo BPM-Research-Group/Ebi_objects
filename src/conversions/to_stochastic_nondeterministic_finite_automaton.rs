@@ -156,7 +156,9 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                         i += 1;
                     }
 
-                    if let Some(w) = value.end_activities.get(activity) && w.is_positive() {
+                    if let Some(w) = value.end_activities.get(activity)
+                        && w.is_positive()
+                    {
                         sum += w;
                     }
                 }
@@ -174,20 +176,16 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                                 &value.weights[i] / &sum,
                             )
                             .unwrap(); //by construction, remaining outgoing probability cannot become negative
-                        sum += &value.weights[i];
                     }
                     i += 1;
                 }
 
                 // termination
-                if let Some(w) = value.end_activities.get(activity) && w.is_positive() {
+                if let Some(w) = value.end_activities.get(activity)
+                    && w.is_positive()
+                {
                     result
-                        .add_transition(
-                            activity.id + 1,
-                            None,
-                            final_state,
-                            w / &sum,
-                        )
+                        .add_transition(activity.id + 1, None, final_state, w / &sum)
                         .unwrap(); //by construction, remaining outgoing probability cannot become negative
                 }
             }
@@ -201,13 +199,19 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 
 #[cfg(test)]
 mod tests {
-    use crate::{DirectlyFollowsGraph, StochasticNondeterministicFiniteAutomaton};
+    use crate::{DirectlyFollowsGraph, HasActivityKey, StochasticNondeterministicFiniteAutomaton};
+    use ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
 
     #[test]
     fn dfg_to_snfa() {
         let fin1 = fs::read_to_string("testfiles/aa-ab-ba.dfg").unwrap();
-        let dfg: DirectlyFollowsGraph = fin1.parse::<DirectlyFollowsGraph>().unwrap();
+        let mut dfg: DirectlyFollowsGraph = fin1.parse::<DirectlyFollowsGraph>().unwrap();
+
+        let a = dfg.activity_key_mut().process_activity("a");
+        let b = dfg.activity_key_mut().process_activity("b");
+        assert_eq!(dfg.start_activities[&a], Fraction::from((2, 5)));
+        assert_eq!(dfg.start_activities[&b], Fraction::from((3, 5)));
 
         let snfa: StochasticNondeterministicFiniteAutomaton = dfg.into();
         assert_eq!(snfa.number_of_states(), 4);
@@ -216,5 +220,18 @@ mod tests {
         assert_eq!(snfa.targets, [1, 2, 3, 1, 2, 3, 1]);
         assert_eq!(snfa.activities[2], None);
         assert_eq!(snfa.activities[5], None);
+        assert_eq!(
+            snfa.probabilities,
+            [
+                Fraction::from((2, 5)),
+                Fraction::from((3, 5)),
+                Fraction::from((2, 3)),
+                Fraction::from((1, 6)),
+                Fraction::from((1, 6)),
+                Fraction::from((1, 4)),
+                Fraction::from((3, 4))
+            ]
+        );
+        assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
     }
 }
