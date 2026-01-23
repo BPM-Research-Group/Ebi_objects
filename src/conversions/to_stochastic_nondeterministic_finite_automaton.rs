@@ -156,8 +156,8 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                         i += 1;
                     }
 
-                    if value.end_activities[activity].is_positive() {
-                        sum += &value.end_activities[activity];
+                    if let Some(w) = value.end_activities.get(activity) && w.is_positive() {
+                        sum += w;
                     }
                 }
 
@@ -180,13 +180,13 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                 }
 
                 // termination
-                if value.end_activities[activity].is_positive() {
+                if let Some(w) = value.end_activities.get(activity) && w.is_positive() {
                     result
                         .add_transition(
                             activity.id + 1,
                             None,
                             final_state,
-                            &value.end_activities[activity] / &sum,
+                            w / &sum,
                         )
                         .unwrap(); //by construction, remaining outgoing probability cannot become negative
                 }
