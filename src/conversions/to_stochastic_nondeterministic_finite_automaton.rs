@@ -1,11 +1,16 @@
 use crate::{
-    CompressedEventLog, CompressedEventLogTraceAttributes, CompressedEventLogXes,
-    DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogPython, EventLogTraceAttributes,
-    EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
+    ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogTraceAttributes,
+    CompressedEventLogXes, DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogPython,
+    EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
     StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton,
+    StochasticProcessTree,
+    ebi_objects::stochastic_process_tree::{
+        execute_transition, get_enabled_transitions, get_initial_state,
+        get_total_weight_of_enabled_transitions, get_transition_activity, get_transition_weight,
+    },
 };
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{HashMap, VecDeque, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
     fn from(value: FiniteStochasticLanguage) -> Self {
@@ -178,12 +183,81 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
     }
 }
 
+impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
+    fn from(tree: StochasticProcessTree) -> Self {
+        log::info!("convert (stochastic) process tree to LPN");
+
+        let initial_marking = if let Some(marking) = get_initial_state(&tree) {
+            marking
+        } else {
+            //empty language
+            return Self {
+                activity_key: ActivityKey::new(),
+                initial_state: None,
+                sources: vec![],
+                targets: vec![],
+                activities: vec![],
+                probabilities: vec![],
+                terminating_probabilities: vec![],
+            };
+        };
+
+        let mut result = StochasticNondeterministicFiniteAutomaton::new();
+        let translator = ActivityKeyTranslator::new(tree.activity_key(), result.activity_key_mut());
+
+        let mut marking2node = HashMap::new();
+
+        //initial state
+        let source_node = result.initial_state.unwrap(); //exists by contract of new()
+        marking2node.insert(initial_marking.clone(), source_node);
+
+        let mut queue = VecDeque::new();
+        queue.push_back(initial_marking);
+
+        while let Some(marking) = queue.pop_front() {
+            let node = marking2node[&marking];
+
+            let sum_weight = get_total_weight_of_enabled_transitions(&tree, &marking);
+            for transition in get_enabled_transitions(&tree, &marking) {
+                let mut target_marking = marking.clone();
+                execute_transition(&tree, &mut target_marking, transition).unwrap(); //by construction, transition is enabled
+
+                //get the target node
+                let target_node = marking2node
+                    .entry(target_marking.clone())
+                    .or_insert_with(|| {
+                        queue.push_back(target_marking.clone());
+                        result.add_state()
+                    });
+
+                //add the transition
+                let probability = get_transition_weight(&tree, &marking, transition) / &sum_weight;
+                if let Some(activity) = get_transition_activity(&tree, transition) {
+                    //labelled transition
+                    let new_activity = translator.translate_activity(&activity);
+                    result
+                        .add_transition(node, Some(new_activity), *target_node, probability)
+                        .unwrap(); //by construction, sum outgoing weight cannot surpass 1
+                } else {
+                    //silent transition
+                    result
+                        .add_transition(node, None, *target_node, probability)
+                        .unwrap(); //by construction, sum outgoing weight cannot surpass 1
+                }
+            }
+        }
+
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         DirectlyFollowsGraph, EventLog, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
+        StochasticProcessTree,
     };
-    use ebi_arithmetic::{Fraction, Zero, f0};
+    use ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
 
     #[test]
@@ -223,5 +297,20 @@ mod tests {
         let dfm = fin.parse::<EventLog>().unwrap();
 
         let _snfa = StochasticNondeterministicFiniteAutomaton::from(dfm);
+    }
+
+    #[test]
+    fn sptree_to_snfa() {
+        let fin = fs::read_to_string("testfiles/seq(a-xor(b-c)).sptree").unwrap();
+        let tree = fin.parse::<StochasticProcessTree>().unwrap();
+
+        let snfa = StochasticNondeterministicFiniteAutomaton::from(tree);
+        assert_eq!(snfa.sources, [0, 1, 1, 2]);
+        assert_eq!(snfa.targets, [1, 2, 2, 3]);
+        assert_eq!(
+            snfa.probabilities,
+            [f1!(), Fraction::from((1, 3)), Fraction::from((2, 3)), f1!()]
+        );
+        assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
     }
 }

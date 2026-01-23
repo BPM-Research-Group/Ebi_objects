@@ -1,5 +1,3 @@
-use ebi_arithmetic::{Fraction, One, Signed};
-
 use crate::{
     ActivityKeyTranslator, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
@@ -10,6 +8,7 @@ use crate::{
     },
     marking::Marking,
 };
+use ebi_arithmetic::{Fraction, One, Signed};
 
 impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet {
     fn from(value: StochasticDeterministicFiniteAutomaton) -> Self {
@@ -266,7 +265,9 @@ mod tests {
     #[test]
     fn sdfa_to_slpn() {
         let fin1 = fs::read_to_string("testfiles/aa-ab-ba.sdfa").unwrap();
-        let dfg = fin1.parse::<StochasticDeterministicFiniteAutomaton>().unwrap();
+        let dfg = fin1
+            .parse::<StochasticDeterministicFiniteAutomaton>()
+            .unwrap();
 
         let _ = StochasticLabelledPetriNet::from(dfg);
     }
