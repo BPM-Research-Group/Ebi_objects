@@ -141,7 +141,11 @@ impl StochasticNondeterministicFiniteAutomaton {
 
         let (found, mut transition) =
             self.binary_search(source_state, self.label_to_id(activity), 0);
-        if found {
+        if found
+            || (transition < self.sources.len()
+                && self.sources[transition] == source_state
+                && self.activities[transition] == activity)
+        {
             //there is already an edge (source, activity, target); add to its probability
             self.probabilities[transition] += &probability;
             return self.targets[transition];
@@ -157,9 +161,14 @@ impl StochasticNondeterministicFiniteAutomaton {
             if transition != transition2 {
                 // There is already at least one transition of (source, activity, _).
                 // Add the probability to that transition.
-                if !found {
-                    transition += 1;
-                }
+                println!("insert {} {:?}", source_state, activity);
+                println!("found {}", found);
+                println!("transition {}", transition);
+                println!("transition2 {}", transition2);
+                println!("sources    {:?}", self.sources);
+                println!("activities {:?}", self.activities);
+                println!("targets    {:?}", self.targets);
+                transition += 1;
                 self.probabilities[transition] += &probability;
                 return self.targets[transition];
             } else {

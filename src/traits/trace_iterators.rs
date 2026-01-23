@@ -187,6 +187,8 @@ mod tests {
     #[test]
     fn test_logs_iters() {
         test_log!("testfiles/a-b.xes");
-        test_log!("testfiles/publishing.xes");
+        test_log!("testfiles/empty.xes");
+        test_log!("testfiles/a-b-double.xes");
+        test_log!("testfiles/simple_log_markovian_abstraction.xes");
     }
 }
