@@ -237,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn dfg_to_snfa() {
+    fn dfg_to_sdfa() {
         let fin1 = fs::read_to_string("testfiles/aa-ab-ba.dfg").unwrap();
         let mut dfg: DirectlyFollowsGraph = fin1.parse::<DirectlyFollowsGraph>().unwrap();
 

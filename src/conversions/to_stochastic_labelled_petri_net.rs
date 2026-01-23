@@ -43,7 +43,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
 
         //add places
         let mut state2place = vec![];
-        for state in 0..=value.number_of_states() {
+        for state in 0..value.number_of_states() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 
@@ -253,5 +253,20 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
         }
 
         StochasticLabelledPetriNet::from((result, weights))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use crate::{StochasticDeterministicFiniteAutomaton, StochasticLabelledPetriNet};
+
+    #[test]
+    fn sdfa_to_slpn() {
+        let fin1 = fs::read_to_string("testfiles/aa-ab-ba.sdfa").unwrap();
+        let dfg = fin1.parse::<StochasticDeterministicFiniteAutomaton>().unwrap();
+
+        let _ = StochasticLabelledPetriNet::from(dfg);
     }
 }
