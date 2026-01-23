@@ -402,14 +402,13 @@ impl<'a> IntoParallelIterator for &'a FiniteStochasticLanguage {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
-    use ebi_arithmetic::{Fraction, Zero};
-
     use crate::{
+        StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
         traits::number_of_traces::NumberOfTraces,
     };
+    use ebi_arithmetic::{Fraction, Zero};
+    use std::fs;
 
     #[test]
     fn empty_slang() {
@@ -425,5 +424,18 @@ mod tests {
             }),
             Fraction::zero()
         );
+    }
+
+    #[test]
+    fn slang_to_slpn_via_snfa() {
+        let fin = fs::read_to_string("testfiles/ba-aa-ab.slang").unwrap();
+        let slang = fin.parse::<FiniteStochasticLanguage>().unwrap();
+        slang.to_string();
+
+        let snfa = StochasticNondeterministicFiniteAutomaton::from(slang);
+        snfa.to_string();
+
+        let slpn = StochasticLabelledPetriNet::from(snfa);
+        slpn.to_string();
     }
 }

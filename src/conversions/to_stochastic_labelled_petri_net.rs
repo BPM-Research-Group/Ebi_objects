@@ -252,6 +252,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
             weights.push(probability);
         }
 
+        result.activity_key = value.activity_key;
         StochasticLabelledPetriNet::from((result, weights))
     }
 }
