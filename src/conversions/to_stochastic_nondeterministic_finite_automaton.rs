@@ -199,7 +199,9 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 
 #[cfg(test)]
 mod tests {
-    use crate::{DirectlyFollowsGraph, HasActivityKey, StochasticNondeterministicFiniteAutomaton};
+    use crate::{
+        DirectlyFollowsGraph, EventLog, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
+    };
     use ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
 
@@ -233,5 +235,13 @@ mod tests {
             ]
         );
         assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
+    }
+
+    #[test]
+    fn log_to_snfa() {
+        let fin = fs::read_to_string("testfiles/simple_log_markovian_abstraction.xes").unwrap();
+        let dfm = fin.parse::<EventLog>().unwrap();
+
+        let _snfa = StochasticNondeterministicFiniteAutomaton::from(dfm);
     }
 }

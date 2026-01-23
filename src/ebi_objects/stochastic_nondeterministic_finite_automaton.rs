@@ -157,7 +157,9 @@ impl StochasticNondeterministicFiniteAutomaton {
             if transition != transition2 {
                 // There is already at least one transition of (source, activity, _).
                 // Add the probability to that transition.
-                transition += 1;
+                if !found {
+                    transition += 1;
+                }
                 self.probabilities[transition] += &probability;
                 return self.targets[transition];
             } else {
