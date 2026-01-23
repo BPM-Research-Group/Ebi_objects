@@ -1,6 +1,5 @@
 use intmap::IntMap;
-use process_mining::event_log::event_log_struct::EventLogClassifier;
-
+use process_mining::core::event_data::case_centric::EventLogClassifier;
 use crate::{
     Activity, ActivityKey, AttributeKey, CompressedEventLogXes, EventLogTraceAttributes,
     EventLogXes,

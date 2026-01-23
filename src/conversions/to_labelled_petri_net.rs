@@ -492,7 +492,7 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
         //arcs
         for arc in pnml.arcs.iter() {
             match arc.from_to {
-                process_mining::petri_net::petri_net_struct::ArcType::PlaceTransition(
+                process_mining::core::process_models::petri_net::ArcType::PlaceTransition(
                     place_id,
                     transition_id,
                 ) => {
@@ -508,7 +508,7 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
                         arc.weight.into(),
                     )?;
                 }
-                process_mining::petri_net::petri_net_struct::ArcType::TransitionPlace(
+                process_mining::core::process_models::petri_net::ArcType::TransitionPlace(
                     transition_id,
                     place_id,
                 ) => {

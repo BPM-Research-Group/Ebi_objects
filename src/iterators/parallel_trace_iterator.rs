@@ -181,7 +181,7 @@ impl<'a> ExactSizeIterator for ParallelIteratorCsv<'a> {
 
 struct ParallelTraceIteratorDataProducerXes<'a> {
     log: &'a EventLogXes,
-    traces: &'a [process_mining::event_log::Trace],
+    traces: &'a [process_mining::core::event_data::case_centric::Trace],
 }
 
 impl<'a> From<&'a EventLogXes> for ParallelTraceIteratorDataProducerXes<'a> {
@@ -221,7 +221,7 @@ impl<'a> Producer for ParallelTraceIteratorDataProducerXes<'a> {
 
 struct ParallelIteratorXes<'a> {
     log: &'a EventLogXes,
-    traces: &'a [process_mining::event_log::Trace],
+    traces: &'a [process_mining::core::event_data::case_centric::Trace],
 }
 
 impl<'a> Iterator for ParallelIteratorXes<'a> {

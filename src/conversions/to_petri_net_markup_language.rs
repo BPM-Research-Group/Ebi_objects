@@ -1,11 +1,3 @@
-use std::collections::HashMap;
-
-use anyhow::{Error, anyhow};
-use process_mining::{
-    PetriNet,
-    petri_net::petri_net_struct::{self, ArcType},
-};
-
 use crate::ebi_objects::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton,
     directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
@@ -16,6 +8,12 @@ use crate::ebi_objects::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
+use anyhow::{Error, anyhow};
+use process_mining::{
+    PetriNet,
+    core::process_models::petri_net::{self, ArcType},
+};
+use std::collections::HashMap;
 
 impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
     type Error = anyhow::Error;
@@ -91,7 +89,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
         }
 
         //initial marking
-        let mut new_initial_marking = petri_net_struct::Marking::new();
+        let mut new_initial_marking = petri_net::Marking::new();
         for (place, cardinality) in lpn
             .initial_marking
             .get_place2token()

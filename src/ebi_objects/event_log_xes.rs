@@ -11,9 +11,9 @@ use anyhow::{Context, Result, anyhow};
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
 use intmap::IntMap;
-use process_mining::{
-    XESImportOptions,
-    event_log::{Event, Trace, event_log_struct::EventLogClassifier},
+use process_mining::core::event_data::case_centric::{
+    Event, EventLogClassifier, Trace,
+    xes::{XESImportOptions, export_xes_event_log, import_xes},
 };
 use std::{
     fmt,
@@ -137,8 +137,7 @@ For instance:
     where
         Self: Sized,
     {
-        let log =
-            process_mining::event_log::import_xes::import_xes(reader, XESImportOptions::default());
+        let log = import_xes(reader, XESImportOptions::default());
         let log = match log {
             Ok(l) => l,
             Err(e) => return Err(anyhow!("{}", e)),
@@ -175,7 +174,7 @@ impl Exportable for EventLogXes {
     }
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
-        process_mining::event_log::export_xes::export_xes_event_log(f, &self.rust4pm_log)?;
+        export_xes_event_log(f, &self.rust4pm_log)?;
         Ok(())
     }
 }

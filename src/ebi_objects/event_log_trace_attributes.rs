@@ -22,7 +22,7 @@ use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::{ActivityKey, AttributeKey};
 use intmap::IntMap;
-use process_mining::event_log::AttributeValue;
+use process_mining::core::event_data::case_centric::AttributeValue;
 use std::{
     fmt,
     io::{BufRead, Write},

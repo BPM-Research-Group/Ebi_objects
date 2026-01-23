@@ -1,13 +1,12 @@
+use crate::{Activity, Attribute};
 use ebi_arithmetic::Fraction;
 use intmap::IntMap;
-use process_mining::event_log::AttributeValue;
+use process_mining::core::event_data::case_centric::AttributeValue;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
     plumbing::{Consumer, Producer, ProducerCallback, UnindexedConsumer, bridge},
 };
 use std::collections::{HashMap, HashSet};
-
-use crate::{Activity, Attribute};
 
 /**
  * A parallel iterator over references to traces.

@@ -14,6 +14,9 @@ use crate::{
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 use anyhow::{Result, anyhow};
+use process_mining::core::process_models::petri_net::pnml::{
+    export_petri_net_to_pnml, import_pnml_reader,
+};
 use std::io::{BufRead, Write};
 
 #[derive(Clone)]
@@ -45,7 +48,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
     where
         Self: Sized,
     {
-        match process_mining::petri_net::import_pnml::import_pnml_reader(&mut Box::new(reader)) {
+        match import_pnml_reader(&mut Box::new(reader)) {
             Ok(pnml) => Ok(Self(pnml.try_into()?)),
             Err(e) => Err(anyhow!("{}", e)),
         }
@@ -128,7 +131,7 @@ impl Exportable for PetriNetMarkupLanguage {
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
         let pnml = (&(self.0)).try_into()?;
-        process_mining::petri_net::export_pnml::export_petri_net_to_pnml(&pnml, f)?;
+        export_petri_net_to_pnml(&pnml, f)?;
         Ok(())
     }
 }

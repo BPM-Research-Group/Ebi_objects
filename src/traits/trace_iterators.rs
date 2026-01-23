@@ -9,7 +9,7 @@ use crate::{
 };
 use ebi_arithmetic::Fraction;
 use intmap::IntMap;
-use process_mining::event_log::AttributeValue;
+use process_mining::core::event_data::case_centric::AttributeValue;
 use std::collections::HashMap;
 
 pub trait IntoRefTraceIterator: Sync {

@@ -1,12 +1,14 @@
 use crate::{
-    AttributeKey, CompressedEventLog, CompressedEventLogXes, EventLog, EventLogTraceAttributes, EventLogXes, ebi_objects::{
+    AttributeKey, CompressedEventLog, CompressedEventLogXes, EventLog, EventLogTraceAttributes,
+    EventLogXes,
+    ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
         event_log_csv::{self, DEFAULT_QUOTE_CHARACTER, DEFAULT_SEPARATOR, EventLogCsv},
-    }
+    },
 };
 use anyhow::{Error, anyhow};
 use intmap::IntMap;
-use process_mining::event_log::{AttributeValue, XESEditableAttribute};
+use process_mining::core::event_data::case_centric::{AttributeValue, XESEditableAttribute};
 
 impl TryFrom<EventLog> for EventLogCsv {
     type Error = Error;
@@ -138,7 +140,7 @@ impl TryFrom<EventLogXes> for EventLogCsv {
 
 impl TryFrom<CompressedEventLogXes> for EventLogCsv {
     type Error = Error;
-    
+
     fn try_from(value: CompressedEventLogXes) -> Result<Self, Self::Error> {
         let xes: EventLogXes = value.into();
         xes.try_into()

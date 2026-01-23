@@ -1,7 +1,7 @@
 use crate::{Activity, Attribute};
 use ebi_arithmetic::Fraction;
 use intmap::IntMap;
-use process_mining::event_log::AttributeValue;
+use process_mining::core::event_data::case_centric::AttributeValue;
 use std::collections::HashMap;
 
 /// Iterator over references to traces.

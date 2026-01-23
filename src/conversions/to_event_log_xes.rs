@@ -3,8 +3,8 @@ use crate::{
     ebi_objects::{event_log_python::EventLogPython, event_log_xes::EventLogXes},
 };
 use anyhow::{Error, anyhow};
-use process_mining::event_log::{
-    Attribute, AttributeValue, Event, Trace, event_log_struct::EventLogClassifier,
+use process_mining::core::event_data::case_centric::{
+    Attribute, AttributeValue, Event, EventLogClassifier, Trace,
 };
 
 impl From<CompressedEventLogXes> for EventLogXes {

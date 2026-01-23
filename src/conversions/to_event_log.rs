@@ -7,7 +7,7 @@ use crate::{
         event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython,
     },
 };
-use process_mining::event_log::event_log_struct::EventLogClassifier;
+use process_mining::core::event_data::case_centric::EventLogClassifier;
 
 impl From<CompressedEventLog> for EventLog {
     fn from(value: CompressedEventLog) -> Self {

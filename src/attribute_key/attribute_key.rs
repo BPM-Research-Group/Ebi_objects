@@ -1,5 +1,5 @@
 use crate::{Attribute, DataType, Infoable};
-use process_mining::event_log::AttributeValue;
+use process_mining::core::event_data::case_centric::AttributeValue;
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator};
 use std::{borrow::Borrow, collections::HashMap};
 
