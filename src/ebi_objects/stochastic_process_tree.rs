@@ -791,3 +791,64 @@ impl IndexMut<usize> for TreeMarking {
         self.states.index_mut(index)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        HasActivityKey, StochasticProcessTree,
+        ebi_objects::stochastic_process_tree::{
+            execute_transition, get_enabled_transitions, get_initial_state,
+            get_total_weight_of_enabled_transitions, get_transition_activity,
+        },
+    };
+    use ebi_arithmetic::Fraction;
+    use std::fs;
+
+    #[test]
+    fn sptree_invalid_execution() {
+        let fin1 =
+            fs::read_to_string("testfiles/seq(a,xor(seq(f,and(c,b)),seq(f,loop(d,e))).sptree")
+                .unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tf1 = 1;
+        let tf2 = 4;
+        let td = 5;
+        let te = 6;
+        let tfin = 7;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, td).unwrap()),
+            "d"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, te).unwrap()),
+            "e"
+        );
+        assert!(get_transition_activity(&tree, tfin).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        execute_transition(&tree, &mut state, ta).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [tf1, tf2]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(4)
+        );
+
+        execute_transition(&tree, &mut state, tf2).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [td]);
+
+        execute_transition(&tree, &mut state, td).unwrap();
+        assert_eq!(get_total_weight_of_enabled_transitions(&tree, &state), Fraction::from(2));
+        assert_eq!(get_enabled_transitions(&tree, &state), [te, tfin]);
+    }
+}

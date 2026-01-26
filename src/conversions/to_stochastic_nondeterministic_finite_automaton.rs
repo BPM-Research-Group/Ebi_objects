@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn dfg_to_snfa() {
         let fin1 = fs::read_to_string("testfiles/aa-ab-ba.dfg").unwrap();
-        let mut dfg: DirectlyFollowsGraph = fin1.parse::<DirectlyFollowsGraph>().unwrap();
+        let mut dfg = fin1.parse::<DirectlyFollowsGraph>().unwrap();
 
         let a = dfg.activity_key_mut().process_activity("a");
         let b = dfg.activity_key_mut().process_activity("b");
