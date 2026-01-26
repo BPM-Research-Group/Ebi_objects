@@ -4,7 +4,7 @@ use crate::{
     EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
     StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton,
 };
-use ebi_arithmetic::{Fraction, One, Signed, Zero};
+use ebi_arithmetic::{Fraction, Signed, Zero};
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
@@ -27,9 +27,9 @@ impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomato
                 }
 
                 match final_states.entry(state) {
-                    Entry::Occupied(mut e) => *e.get_mut() += Fraction::one(),
+                    Entry::Occupied(mut e) => *e.get_mut() += probability,
                     Entry::Vacant(e) => {
-                        e.insert(Fraction::one());
+                        e.insert(probability.clone());
                     }
                 }
             }
@@ -181,7 +181,8 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 #[cfg(test)]
 mod tests {
     use crate::{
-        DirectlyFollowsGraph, EventLog, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
+        DirectlyFollowsGraph, FiniteStochasticLanguage, HasActivityKey,
+        StochasticNondeterministicFiniteAutomaton,
     };
     use ebi_arithmetic::{Fraction, Zero, f0};
     use std::fs;
@@ -218,10 +219,23 @@ mod tests {
     }
 
     #[test]
-    fn log_to_snfa() {
-        let fin = fs::read_to_string("testfiles/simple_log_markovian_abstraction.xes").unwrap();
-        let dfm = fin.parse::<EventLog>().unwrap();
+    fn log_to_sdfa() {
+        let fin1 = fs::read_to_string("testfiles/acb-abc-ad-aded-adeded-adededed.slang").unwrap();
+        let slang = fin1.parse::<FiniteStochasticLanguage>().unwrap();
 
-        let _snfa = StochasticNondeterministicFiniteAutomaton::from(dfm);
+        let sdfa = StochasticNondeterministicFiniteAutomaton::from(slang);
+
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((8, 15)))
+        );
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((2, 3)))
+        );
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((4, 7)))
+        );
     }
 }
