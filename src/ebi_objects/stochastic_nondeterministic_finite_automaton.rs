@@ -627,6 +627,7 @@ impl Exportable for StochasticNondeterministicFiniteAutomaton {
                 Into::<Self>::into(sdfa).export(f)
             }
             EbiObject::FiniteStochasticLanguage(slang) => Into::<Self>::into(slang).export(f),
+            EbiObject::StochasticProcessTree(sptree) => Into::<Self>::into(sptree).export(f),
             EbiObject::EventLog(log) => Into::<Self>::into(log).export(f),
             EbiObject::EventLogTraceAttributes(log) => Into::<Self>::into(log).export(f),
             EbiObject::EventLogXes(log) => Into::<Self>::into(log).export(f),

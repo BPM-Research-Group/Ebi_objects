@@ -1,6 +1,7 @@
 use super::process_tree::{Node, Operator};
 use crate::{
-    ActivityKey, EbiObject, Exportable, Importable,
+    Activity, ActivityKey, EbiObject, Exportable, Importable,
+    ebi_objects::labelled_petri_net::TransitionIndex,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -8,10 +9,13 @@ use crate::{
     },
 };
 use anyhow::{Context, Result, anyhow};
-use ebi_arithmetic::{Fraction, Signed};
+use ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 pub const HEADER: &str = "stochastic process tree";
 
@@ -292,30 +296,6 @@ impl StochasticProcessTree {
     }
 }
 
-impl From<(ActivityKey, Vec<Node>, Vec<Fraction>, Fraction)> for StochasticProcessTree {
-    fn from(value: (ActivityKey, Vec<Node>, Vec<Fraction>, Fraction)) -> Self {
-        let (activity_key, tree, weights, termination_weight) = value;
-
-        let mut transition2node = vec![];
-        for (node_index, node) in tree.iter().enumerate() {
-            match node {
-                Node::Tau | Node::Activity(_) => {
-                    transition2node.push(node_index);
-                }
-                Node::Operator(_, _) => {}
-            }
-        }
-
-        Self {
-            activity_key: activity_key,
-            tree: tree,
-            transition2node: transition2node,
-            weights: weights,
-            termination_weight: termination_weight,
-        }
-    }
-}
-
 impl Display for StochasticProcessTree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
@@ -419,5 +399,395 @@ impl Exportable for StochasticProcessTree {
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
         Ok(write!(f, "{}", self)?)
+    }
+}
+
+// Semantics belong in the Ebi crate, not here in Ebi_objects,
+// however we use them to create a state space in several conversions.
+// As such, it is here.
+pub fn get_initial_state(tree: &StochasticProcessTree) -> Option<TreeMarking> {
+    if tree.tree.is_empty() {
+        None
+    } else {
+        let mut state = TreeMarking {
+            states: vec![NodeState::Closed; tree.get_number_of_nodes()],
+            terminated: false,
+        };
+        enable_node(tree, &mut state, tree.root());
+        Some(state)
+    }
+}
+
+pub fn execute_transition(
+    tree: &StochasticProcessTree,
+    state: &mut TreeMarking,
+    transition: TransitionIndex,
+) -> Result<()> {
+    if transition >= tree.transition2node.len() {
+        state.terminated = true;
+        state.states.fill(NodeState::Closed);
+    } else {
+        let node = tree
+            .transition2node
+            .get(transition)
+            .ok_or_else(|| anyhow!("transition does not exist"))?;
+        start_node(tree, state, *node, None);
+        // log::debug!("execute node {}", node);
+        close_node(tree, state, *node);
+    }
+    // log::debug!("state after execution {}", state);
+    Ok(())
+}
+
+pub fn is_final_state(_tree: &StochasticProcessTree, state: &TreeMarking) -> bool {
+    state.terminated
+}
+
+pub fn get_transition_activity(
+    tree: &StochasticProcessTree,
+    transition: TransitionIndex,
+) -> Option<Activity> {
+    let node = tree.transition2node.get(transition)?;
+    match tree.tree[*node] {
+        Node::Tau => None,
+        Node::Activity(activity) => Some(activity),
+        Node::Operator(_, _) => None,
+    }
+}
+
+pub fn get_enabled_transitions(
+    tree: &StochasticProcessTree,
+    state: &TreeMarking,
+) -> Vec<TransitionIndex> {
+    let mut result = vec![];
+
+    for (transition_index, node) in tree.transition2node.iter().enumerate() {
+        if can_execute(tree, state, *node) {
+            result.push(transition_index);
+        }
+    }
+
+    if !state.terminated && can_terminate(tree, state, tree.root()) {
+        result.push(tree.transition2node.len());
+    }
+
+    result
+}
+
+pub fn get_number_of_transitions(tree: &StochasticProcessTree) -> usize {
+    tree.tree.iter().filter(|node| node.is_leaf()).count() + 1 //the last transition is explicit termination, which is required by the semantics of Ebi
+}
+
+/**
+ * Start executing a node.
+ */
+fn start_node(
+    tree: &StochasticProcessTree,
+    state: &mut TreeMarking,
+    node: usize,
+    child: Option<usize>,
+) {
+    if state[node] != NodeState::Started {
+        // log::debug!("start node {} from child {:?}", node, child);
+        state[node] = NodeState::Started;
+
+        match tree.tree[node] {
+            Node::Tau => {}
+            Node::Activity(_) => {}
+            Node::Operator(Operator::Concurrent, _) => {}
+            Node::Operator(Operator::Interleaved, _) => {}
+            Node::Operator(Operator::Loop, _) => {}
+            Node::Operator(Operator::Or, _) => {}
+            Node::Operator(Operator::Sequence, _) => {}
+            Node::Operator(Operator::Xor, _) => {
+                //for an xor, the siblings of the child must be withdrawn
+                for child2 in tree.get_children(node) {
+                    if let Some(child) = child {
+                        if child2 != child {
+                            withdraw_enablement(tree, state, child2);
+                        }
+                    }
+                }
+            }
+        }
+
+        //recurse to parent
+        if let Some((parent, _)) = tree.get_parent(node) {
+            start_node(tree, state, parent, Some(node));
+        }
+    }
+}
+
+fn withdraw_enablement(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
+    // log::debug!("withdraw enablement of node {}", node);
+    for grandchild in node..tree.traverse(node) {
+        state[grandchild] = NodeState::Closed;
+    }
+}
+
+fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
+    // log::debug!("close node {}", node);
+
+    //close this node and all of its children
+    for grandchild in node..tree.traverse(node) {
+        state[grandchild] = NodeState::Closed;
+    }
+
+    //this may open another node, based on the operator of the parent
+    if let Some((parent, child_rank)) = tree.get_parent(node) {
+        match tree.tree[parent] {
+            Node::Tau => unreachable!(),
+            Node::Activity(_) => unreachable!(),
+            Node::Operator(Operator::Sequence, number_of_children) => {
+                //for a sequence parent, we enable the next child
+                // log::debug!("close node {}, parent is sequence node {}", node, parent);
+                if child_rank < number_of_children - 1 {
+                    let next_child = tree.get_child(parent, child_rank + 1);
+                    enable_node(tree, state, next_child);
+                } else {
+                    //if there is no next child, we recurse on the parent
+                    close_node(tree, state, parent);
+                }
+            }
+            Node::Operator(Operator::Concurrent, _)
+            | Node::Operator(Operator::Or, _)
+            | Node::Operator(Operator::Interleaved, _) => {
+                //for a concurrent or or parent, the parent can be closed if all of its children have been closed
+                if tree
+                    .get_children(parent)
+                    .all(|child| state[child] == NodeState::Closed)
+                {
+                    //close the parent
+                    close_node(tree, state, parent);
+                }
+            }
+            Node::Operator(Operator::Xor, _) => {
+                //for a xor parent, the parent can be closed as we executed one of its children
+                close_node(tree, state, parent);
+            }
+            Node::Operator(Operator::Loop, number_of_children) => {
+                //for a loop parent, we open the next child(ren)
+                if child_rank == 0 {
+                    //enable the siblings
+                    for child_rank in 1..number_of_children {
+                        enable_node(tree, state, tree.get_child(parent, child_rank));
+                    }
+                } else {
+                    //enable the first child
+                    enable_node(tree, state, tree.get_child(parent, 0));
+                }
+            }
+        }
+    }
+}
+
+fn enable_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
+    state[node] = NodeState::Enabled;
+
+    match tree.tree[node] {
+        Node::Tau => {}
+        Node::Activity(_) => {}
+        Node::Operator(Operator::Concurrent, _)
+        | Node::Operator(Operator::Interleaved, _)
+        | Node::Operator(Operator::Or, _)
+        | Node::Operator(Operator::Xor, _) => {
+            //enable all children
+            for child in tree.get_children(node) {
+                enable_node(tree, state, child);
+            }
+        }
+        Node::Operator(Operator::Sequence, _) | Node::Operator(Operator::Loop, _) => {
+            //enable the first child
+            enable_node(tree, state, tree.get_child(node, 0));
+        }
+    }
+}
+
+pub(crate) fn can_execute(tree: &StochasticProcessTree, state: &TreeMarking, node: usize) -> bool {
+    if let Some(NodeState::Closed) = state.get(node) {
+        return false;
+    }
+    if let Some(NodeState::Started) = state.get(node) {
+        return false;
+    }
+
+    //for every interleaved parent, check whether we're not executing two nodes concurrently
+    let mut previous_parent = node;
+    for (parent, _) in tree.get_parents(node) {
+        if let Some(Node::Operator(Operator::Interleaved, _)) = tree.tree.get(parent) {
+            //count the number of started children
+            let started_children = tree.get_children(parent).fold(0, |count, child| {
+                if state[child] == NodeState::Started {
+                    count + 1
+                } else {
+                    count
+                }
+            });
+
+            if started_children == 0 {
+                //this is the first starting child; no problem
+            } else if started_children == 1 {
+                //there is already a child of this interleaved parent started
+                if state[previous_parent] != NodeState::Started {
+                    //another child already started; this node cannot fire now
+                    return false;
+                }
+            } else {
+                unreachable!()
+            }
+        }
+
+        previous_parent = parent;
+    }
+
+    true
+}
+
+/**
+ * Returns whether it is possible to withdraw the enablement.
+ */
+fn can_withdraw_enablement(
+    _tree: &StochasticProcessTree,
+    state: &TreeMarking,
+    node: usize,
+) -> bool {
+    state[node] == NodeState::Enabled
+}
+
+/**
+ * Returns whether it is possible that this node now terminates, or that a leaf has to be executed first.
+ */
+pub(crate) fn can_terminate(
+    tree: &StochasticProcessTree,
+    state: &TreeMarking,
+    node: usize,
+) -> bool {
+    match tree.tree[node] {
+        Node::Tau => state[node] == NodeState::Closed,
+        Node::Activity(_) => state[node] == NodeState::Closed,
+        Node::Operator(Operator::Concurrent, _) | Node::Operator(Operator::Interleaved, _) => {
+            //these nodes can terminate if all of their children are either closed or can terminate
+            tree.get_children(node)
+                .all(|child| state[child] == NodeState::Closed || can_terminate(tree, state, child))
+        }
+        Node::Operator(Operator::Or, _) => {
+            //an or can terminate if at least one child has been closed, and the others can be withdrawn
+            let mut one_child_closed = false;
+            for child in tree.get_children(node) {
+                if let Some(NodeState::Closed) = state.get(child) {
+                    one_child_closed = true;
+                } else if !can_withdraw_enablement(tree, state, child) {
+                    //if there is one child that is not closed and not withdrawn, we cannot terminate the or
+                    return false;
+                }
+            }
+
+            one_child_closed
+        }
+        Node::Operator(Operator::Loop, number_of_children) => {
+            let body_child = tree.get_child(node, 0);
+            if state[node] == NodeState::Closed {
+                //if the loop is closed, it can terminate
+                return true;
+            }
+            if state[body_child] == NodeState::Enabled {
+                //the first child is enabled, which means that the loop cannot terminate in this state
+                return false;
+            }
+
+            for child_rank in 1..number_of_children {
+                let redo_child = tree.get_child(node, child_rank);
+                //all the redo children must be able to withdraw enablement
+                if !can_withdraw_enablement(tree, state, redo_child) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        Node::Operator(Operator::Sequence, number_of_children) => {
+            //a sequence node can terminate if all its non-last children are closed and the last child can terminate
+            for child in 0..number_of_children - 1 {
+                if state[child] != NodeState::Closed {
+                    return false;
+                }
+            }
+            can_terminate(tree, state, tree.get_child(node, number_of_children - 1))
+        }
+        Node::Operator(Operator::Xor, _) => {
+            //an xor can terminate if all of its children are closed or can terminate
+            tree.get_children(node)
+                .all(|child| state[child] == NodeState::Closed || can_terminate(tree, state, child))
+        }
+    }
+}
+
+pub fn get_transition_weight<'a>(
+    tree: &'a StochasticProcessTree,
+    _state: &TreeMarking,
+    transition: TransitionIndex,
+) -> &'a Fraction {
+    if transition < tree.transition2node.len() {
+        &tree.weights[transition]
+    } else {
+        &tree.termination_weight
+    }
+}
+
+pub fn get_total_weight_of_enabled_transitions(
+    tree: &StochasticProcessTree,
+    state: &TreeMarking,
+) -> Fraction {
+    let mut sum = if !state.terminated && can_terminate(tree, state, tree.root()) {
+        tree.termination_weight.clone()
+    } else {
+        Fraction::zero()
+    };
+
+    for (transition, node) in tree.transition2node.iter().enumerate() {
+        if can_execute(tree, state, *node) {
+            sum += &tree.weights[transition];
+        }
+    }
+
+    sum
+}
+
+#[derive(Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash)]
+pub enum NodeState {
+    Enabled,
+    Started,
+    Closed,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct TreeMarking {
+    pub(crate) terminated: bool,
+    pub(crate) states: Vec<NodeState>,
+}
+
+impl TreeMarking {
+    pub fn get(&self, index: usize) -> Option<&NodeState> {
+        self.states.get(index)
+    }
+}
+
+impl Display for TreeMarking {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.states)
+    }
+}
+
+impl Index<usize> for TreeMarking {
+    type Output = NodeState;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.states.index(index)
+    }
+}
+
+impl IndexMut<usize> for TreeMarking {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.states.index_mut(index)
     }
 }
