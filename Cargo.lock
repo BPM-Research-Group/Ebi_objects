@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.98"
+version = "0.3.99"
 dependencies = [
  "anyhow",
  "chrono",
