@@ -1,0 +1,16 @@
+stochastic process tree
+sequence
+2
+	activity a
+	1
+	concurrent
+	2
+		activity b
+		2
+		loop
+		2
+			activity c
+			3
+			activity d
+			4
+5

@@ -432,7 +432,7 @@ pub fn execute_transition(
             .get(transition)
             .ok_or_else(|| anyhow!("transition does not exist"))?;
         start_node(tree, state, *node, None);
-        // log::debug!("execute node {}", node);
+        println!("state in between {}", state);
         close_node(tree, state, *node);
     }
     // log::debug!("state after execution {}", state);
@@ -478,28 +478,86 @@ pub fn get_number_of_transitions(tree: &StochasticProcessTree) -> usize {
     tree.tree.iter().filter(|node| node.is_leaf()).count() + 1 //the last transition is explicit termination, which is required by the semantics of Ebi
 }
 
-/**
- * Start executing a node.
- */
+/// Starts executing a node.
+/// Recurses upwards to adjust enablement.
 fn start_node(
     tree: &StochasticProcessTree,
     state: &mut TreeMarking,
     node: usize,
     child: Option<usize>,
 ) {
-    if state[node] != NodeState::Started {
-        // log::debug!("start node {} from child {:?}", node, child);
-        state[node] = NodeState::Started;
+    println!("start node {} from child {:?}", node, child);
+    match tree.tree[node] {
+        Node::Tau
+        | Node::Activity(_)
+        | Node::Operator(Operator::Concurrent, _)
+        | Node::Operator(Operator::Or, _)
+        | Node::Operator(Operator::Sequence, _) => {
+            if state[node] != NodeState::Started {
+                state[node] = NodeState::Started;
 
-        match tree.tree[node] {
-            Node::Tau => {}
-            Node::Activity(_) => {}
-            Node::Operator(Operator::Concurrent, _) => {}
-            Node::Operator(Operator::Interleaved, _) => {}
-            Node::Operator(Operator::Loop, _) => {}
-            Node::Operator(Operator::Or, _) => {}
-            Node::Operator(Operator::Sequence, _) => {}
-            Node::Operator(Operator::Xor, _) => {
+                //recurse to parent
+                if let Some((parent, _)) = tree.get_parent(node) {
+                    start_node(tree, state, parent, Some(node));
+                }
+            }
+        }
+        Node::Operator(Operator::Interleaved, _) => {
+            if state[node] != NodeState::Started {
+                state[node] = NodeState::Started;
+
+                //recurse to parent
+                if let Some((parent, _)) = tree.get_parent(node) {
+                    start_node(tree, state, parent, Some(node));
+                }
+            } else if let Some(from_child) = child {
+                //we are starting a non-first child of an interleaved node: withdraw enablement in all grand children
+                println!("\tstart node interleaved non-first");
+                for child in tree.get_children(node) {
+                    if child != from_child {
+                        withdraw_enablement(tree, state, child);
+                    }
+                }
+            } else {
+                unreachable!()
+            }
+        }
+        Node::Operator(Operator::Loop, number_of_children) => {
+            if state[node] != NodeState::Started {
+                state[node] = NodeState::Started;
+
+                //recurse to parent
+                if let Some((parent, _)) = tree.get_parent(node) {
+                    start_node(tree, state, parent, Some(node));
+                }
+            } else {
+                //for a loop, even though it started before, we may need to withdraw enablement of next sequential nodes
+
+                if let Some(child) = child
+                    && child > node + 1
+                {
+                    //we are in a redo child: withdraw the next sequential node, which cannot fire now
+                    println!("\tstart a redo child");
+                    withdraw_enablement_next_sequential_nodes(tree, state, node);
+                    withdraw_enablement(tree, state, tree.get_child(node, 0));
+                } else {
+                    //we are in a body child; withdraw the enablement of the redo children
+                    for child_rank in 1..number_of_children {
+                        withdraw_enablement(tree, state, tree.get_child(node, child_rank));
+                    }
+                }
+
+                //recurse to parent
+                if let Some((parent, _)) = tree.get_parent(node) {
+                    start_node(tree, state, parent, Some(node));
+                }
+            }
+        }
+
+        Node::Operator(Operator::Xor, _) => {
+            if state[node] != NodeState::Started {
+                state[node] = NodeState::Started;
+
                 //for an xor, the siblings of the child must be withdrawn
                 for child2 in tree.get_children(node) {
                     if let Some(child) = child {
@@ -508,25 +566,24 @@ fn start_node(
                         }
                     }
                 }
+                //recurse to parent
+                if let Some((parent, _)) = tree.get_parent(node) {
+                    start_node(tree, state, parent, Some(node));
+                }
             }
-        }
-
-        //recurse to parent
-        if let Some((parent, _)) = tree.get_parent(node) {
-            start_node(tree, state, parent, Some(node));
         }
     }
 }
 
 fn withdraw_enablement(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
-    // log::debug!("withdraw enablement of node {}", node);
+    println!("withdraw enablement of node {}", node);
     for grandchild in node..tree.traverse(node) {
         state[grandchild] = NodeState::Closed;
     }
 }
 
 fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
-    // log::debug!("close node {}", node);
+    println!("close node {}", node);
 
     //close this node and all of its children
     for grandchild in node..tree.traverse(node) {
@@ -549,10 +606,8 @@ fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize
                     close_node(tree, state, parent);
                 }
             }
-            Node::Operator(Operator::Concurrent, _)
-            | Node::Operator(Operator::Or, _)
-            | Node::Operator(Operator::Interleaved, _) => {
-                //for a concurrent or or parent, the parent can be closed if all of its children have been closed
+            Node::Operator(Operator::Concurrent, _) | Node::Operator(Operator::Interleaved, _) => {
+                //for a concurrent or interleaved parent, the parent can be closed if all of its children have been closed
                 if tree
                     .get_children(parent)
                     .all(|child| state[child] == NodeState::Closed)
@@ -560,6 +615,19 @@ fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize
                     //close the parent
                     close_node(tree, state, parent);
                 }
+            }
+            Node::Operator(Operator::Or, _) => {
+                //for an or parent, the parent can be closed if all of its children have been closed
+                if tree
+                    .get_children(parent)
+                    .all(|child| state[child] == NodeState::Closed)
+                {
+                    //close the parent
+                    close_node(tree, state, parent);
+                }
+
+                //furthermore, we may continue with the next sequential sibling of the parent
+                enable_next_sequential_nodes(tree, state, parent);
             }
             Node::Operator(Operator::Xor, _) => {
                 //for a xor parent, the parent can be closed as we executed one of its children
@@ -572,6 +640,8 @@ fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize
                     for child_rank in 1..number_of_children {
                         enable_node(tree, state, tree.get_child(parent, child_rank));
                     }
+                    //enable the exit
+                    enable_next_sequential_nodes(tree, state, parent);
                 } else {
                     //enable the first child
                     enable_node(tree, state, tree.get_child(parent, 0));
@@ -581,7 +651,108 @@ fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize
     }
 }
 
+/// withdraws the enablement of the next sequential nodes
+fn withdraw_enablement_next_sequential_nodes(
+    tree: &StochasticProcessTree,
+    state: &mut TreeMarking,
+    node: usize,
+) {
+    println!(
+        "withdraw enablement of next sequential nodes of node {}",
+        node
+    );
+    if let Some((parent, child_rank)) = tree.get_parent(node) {
+        match tree.tree[parent] {
+            Node::Tau => unreachable!(),
+            Node::Activity(_) => unreachable!(),
+            Node::Operator(Operator::Sequence, number_of_children) => {
+                if child_rank < number_of_children - 1 {
+                    //we were a non-last child; withdraw the enablement of our next sibling
+                    withdraw_enablement(tree, state, tree.get_child(parent, child_rank + 1));
+                } else {
+                    //we are the last child; recurse upwards
+                    withdraw_enablement_next_sequential_nodes(tree, state, parent);
+                }
+            }
+            Node::Operator(Operator::Concurrent, _)
+            | Node::Operator(Operator::Or, _)
+            | Node::Operator(Operator::Interleaved, _) => {
+                //propagate to parent
+                withdraw_enablement_next_sequential_nodes(tree, state, parent);
+            }
+            Node::Operator(Operator::Loop, number_of_children) => {
+                if child_rank == 0 {
+                    //we were the body child, withdraw redo children
+                    for child_rank in 1..number_of_children {
+                        withdraw_enablement(tree, state, tree.get_child(parent, child_rank));
+                    }
+                } else {
+                    //we were a redo child, withdraw the body child
+                    withdraw_enablement(tree, state, tree.get_child(parent, 0));
+
+                    //propagate to parent
+                    withdraw_enablement_next_sequential_nodes(tree, state, parent);
+                }
+            }
+            _ => todo!(),
+        }
+    }
+}
+
+/// enable the nodes that are sequentially next from this node
+fn enable_next_sequential_nodes(
+    tree: &StochasticProcessTree,
+    state: &mut TreeMarking,
+    node: usize,
+) {
+    println!("enable next sequential node {}", node);
+    if let Some((parent, child_rank)) = tree.get_parent(node) {
+        match tree.tree[parent] {
+            Node::Tau => unreachable!(),
+            Node::Activity(_) => unreachable!(),
+            Node::Operator(Operator::Xor, _) => {
+                //propagate to parent
+                enable_next_sequential_nodes(tree, state, parent);
+            }
+            Node::Operator(Operator::Concurrent, _)
+            | Node::Operator(Operator::Or, _)
+            | Node::Operator(Operator::Interleaved, _) => {
+                if can_terminate(tree, state, parent) {
+                    //this parent can terminate, so we propagate to parent
+                    println!("\t\tparent can terminate");
+                    enable_next_sequential_nodes(tree, state, parent);
+                } else {
+                    //this parent cannot yet terminate, so there is nothing to enable
+                    println!("\t\tparent cannot terminate");
+                }
+            }
+            Node::Operator(Operator::Loop, number_of_children) => {
+                if child_rank == 0 {
+                    //enable the redo children and the next sequential node
+                    for child_rank in 1..number_of_children {
+                        enable_node(tree, state, tree.get_child(parent, child_rank));
+                    }
+                    enable_next_sequential_nodes(tree, state, parent);
+                } else {
+                    //we were a redo child, enable the body child
+                    enable_node(tree, state, tree.get_child(parent, 0));
+                }
+            }
+            Node::Operator(Operator::Sequence, number_of_children) => {
+                if child_rank == number_of_children - 1 {
+                    //this was the last child, the sequence would end here; propagate to parent
+                    enable_next_sequential_nodes(tree, state, parent);
+                } else {
+                    //enable the next child
+                    enable_node(tree, state, tree.get_child(parent, child_rank + 1));
+                }
+            }
+        }
+    }
+}
+
 fn enable_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
+    println!("enable node {}", node);
     state[node] = NodeState::Enabled;
 
     match tree.tree[node] {
@@ -604,6 +775,12 @@ fn enable_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usiz
 }
 
 pub(crate) fn can_execute(tree: &StochasticProcessTree, state: &TreeMarking, node: usize) -> bool {
+    match tree.tree.get(node) {
+        Some(Node::Activity(_)) => {}
+        Some(Node::Tau) => {}
+        _ => return false,
+    }
+
     if let Some(NodeState::Closed) = state.get(node) {
         return false;
     }
@@ -617,12 +794,14 @@ pub(crate) fn can_execute(tree: &StochasticProcessTree, state: &TreeMarking, nod
         if let Some(Node::Operator(Operator::Interleaved, _)) = tree.tree.get(parent) {
             //count the number of started children
             let started_children = tree.get_children(parent).fold(0, |count, child| {
-                if state[child] == NodeState::Started {
+                if state[child] == NodeState::Started && !can_terminate(tree, state, child) {
                     count + 1
                 } else {
                     count
                 }
             });
+
+            println!("\tstarted children {}", started_children);
 
             if started_children == 0 {
                 //this is the first starting child; no problem
@@ -655,13 +834,14 @@ fn can_withdraw_enablement(
 }
 
 /**
- * Returns whether it is possible that this node now terminates, or that a leaf has to be executed first.
+ * Returns whether it is possible that this node now terminates (true), or that a leaf has to be executed first (false).
  */
 pub(crate) fn can_terminate(
     tree: &StochasticProcessTree,
     state: &TreeMarking,
     node: usize,
 ) -> bool {
+    println!("\tcan terminate? node {} ", node);
     match tree.tree[node] {
         Node::Tau => state[node] == NodeState::Closed,
         Node::Activity(_) => state[node] == NodeState::Closed,
@@ -671,13 +851,15 @@ pub(crate) fn can_terminate(
                 .all(|child| state[child] == NodeState::Closed || can_terminate(tree, state, child))
         }
         Node::Operator(Operator::Or, _) => {
-            //an or can terminate if at least one child has been closed, and the others can be withdrawn
+            //an or can terminate if at least one child can terminate, and the others can be withdrawn
             let mut one_child_closed = false;
             for child in tree.get_children(node) {
-                if let Some(NodeState::Closed) = state.get(child) {
+                if can_terminate(tree, state, child) {
+                    println!("\tone child {} closed", child);
                     one_child_closed = true;
                 } else if !can_withdraw_enablement(tree, state, child) {
                     //if there is one child that is not closed and not withdrawn, we cannot terminate the or
+                    println!("\tcannot terminate OR child node {}", child);
                     return false;
                 }
             }
@@ -699,6 +881,10 @@ pub(crate) fn can_terminate(
                 let redo_child = tree.get_child(node, child_rank);
                 //all the redo children must be able to withdraw enablement
                 if !can_withdraw_enablement(tree, state, redo_child) {
+                    println!(
+                        "\tcannot withdraw enablement loop child node {}",
+                        redo_child
+                    );
                     return false;
                 }
             }
@@ -707,8 +893,8 @@ pub(crate) fn can_terminate(
         }
         Node::Operator(Operator::Sequence, number_of_children) => {
             //a sequence node can terminate if all its non-last children are closed and the last child can terminate
-            for child in 0..number_of_children - 1 {
-                if state[child] != NodeState::Closed {
+            for child_rank in 0..number_of_children - 1 {
+                if state[tree.get_child(node, child_rank)] != NodeState::Closed {
                     return false;
                 }
             }
@@ -774,7 +960,7 @@ impl TreeMarking {
 
 impl Display for TreeMarking {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.states)
+        write!(f, "{:?}, terminated: {}", self.states, self.terminated)
     }
 }
 
@@ -797,7 +983,7 @@ mod tests {
     use crate::{
         HasActivityKey, StochasticProcessTree,
         ebi_objects::stochastic_process_tree::{
-            execute_transition, get_enabled_transitions, get_initial_state,
+            can_execute, execute_transition, get_enabled_transitions, get_initial_state,
             get_total_weight_of_enabled_transitions, get_transition_activity,
         },
     };
@@ -805,7 +991,7 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn sptree_invalid_execution() {
+    fn sptree_semantics_loop() {
         let fin1 =
             fs::read_to_string("testfiles/seq(a,xor(seq(f,and(c,b)),seq(f,loop(d,e))).sptree")
                 .unwrap();
@@ -816,8 +1002,542 @@ mod tests {
         let tf2 = 4;
         let td = 5;
         let te = 6;
-        let tfin = 7;
+        let ttau = 7;
+        let tfin = 8;
 
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, td).unwrap()),
+            "d"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, te).unwrap()),
+            "e"
+        );
+        assert!(get_transition_activity(&tree, ttau).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tf1, tf2]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(4)
+        );
+
+        println!("execute f2 {}", tf2);
+        execute_transition(&tree, &mut state, tf2).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [td]);
+
+        println!("execute d {}", td);
+        execute_transition(&tree, &mut state, td).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [te, ttau]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(2)
+        );
+
+        println!("execute e {}", te);
+        execute_transition(&tree, &mut state, te).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [td]);
+
+        println!("execute d {}", td);
+        execute_transition(&tree, &mut state, td).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [te, ttau]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(2)
+        );
+
+        println!("execute tau {}", ttau);
+        execute_transition(&tree, &mut state, ttau).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("terminate {}", tfin);
+        execute_transition(&tree, &mut state, tfin).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state).len(), 0);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(0)
+        );
+    }
+
+    #[test]
+    fn sptree_semantics_concurrent_loop_termination() {
+        let fin1 = fs::read_to_string("testfiles/seq(a,and(b,loop(c,d))).sptree").unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let td = 3;
+        let tfin = 4;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, ta).unwrap()),
+            "a"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tb).unwrap()),
+            "b"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tc).unwrap()),
+            "c"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, td).unwrap()),
+            "d"
+        );
+        assert!(get_transition_activity(&tree, tfin).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tc]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(5)
+        );
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, td]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(6)
+        );
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [td, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(9)
+        );
+
+        println!("execute d {}", td);
+        execute_transition(&tree, &mut state, td).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tc]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(3)
+        );
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [td, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(9)
+        );
+
+        println!("terminate {}", tfin);
+        execute_transition(&tree, &mut state, tfin).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state).len(), 0);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(0)
+        );
+    }
+
+    #[test]
+    fn sptree_semantics_loop_loop_termination() {
+        let fin1 = fs::read_to_string("testfiles/loop(a,loop(b,c)).sptree").unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let tfin = 3;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, ta).unwrap()),
+            "a"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tb).unwrap()),
+            "b"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tc).unwrap()),
+            "c"
+        );
+        assert!(get_transition_activity(&tree, tfin).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(6)
+        );
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tc]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(4)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(6)
+        );
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tc]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(4)
+        );
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(2)
+        );
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tc]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(4)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(6)
+        );
+
+        println!("terminate {}", tfin);
+        execute_transition(&tree, &mut state, tfin).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state).len(), 0);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(0)
+        );
+    }
+
+    #[test]
+    fn sptree_semantics_loop_right_loop_termination() {
+        let fin1 = fs::read_to_string("testfiles/loop(loop(a,b),c).sptree").unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let tfin = 3;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, ta).unwrap()),
+            "a"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tb).unwrap()),
+            "b"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tc).unwrap()),
+            "c"
+        );
+        assert!(get_transition_activity(&tree, tfin).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tc, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(9)
+        );
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tc, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(9)
+        );
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(1)
+        );
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb, tc, tfin]);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(9)
+        );
+
+        println!("terminate {}", tfin);
+        execute_transition(&tree, &mut state, tfin).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state).len(), 0);
+        assert_eq!(
+            get_total_weight_of_enabled_transitions(&tree, &state),
+            Fraction::from(0)
+        );
+    }
+
+    macro_rules! assert_execute_expect {
+        ($tree:ident, $state:ident, $t:ident, $e:expr) => {
+            println!("execute {} {}", ::std::stringify!($t), $t);
+            assert!(can_execute(&$tree, &$state, $tree.transition2node[$t]));
+            execute_transition(&$tree, &mut $state, $t).unwrap();
+            println!("{}\n", $state);
+            assert_eq!(get_enabled_transitions(&$tree, &$state), $e);
+        };
+    }
+
+    macro_rules! assert_terminate {
+        ($tree:ident, $state:ident, $tfin:ident) => {
+            println!("terminate {}", $tfin);
+            execute_transition(&$tree, &mut $state, $tfin).unwrap();
+            println!("{}\n", $state);
+            assert_eq!(get_enabled_transitions(&$tree, &$state).len(), 0);
+            assert_eq!(
+                get_total_weight_of_enabled_transitions(&$tree, &$state),
+                Fraction::from(0)
+            );
+        };
+    }
+
+    #[test]
+    fn sptree_semantics_xor_loop_termination() {
+        let fin1 = fs::read_to_string("testfiles/loop(xor(a,loop(b,c),d).sptree").unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let td = 3;
+        let tfin = 4;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, ta).unwrap()),
+            "a"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tb).unwrap()),
+            "b"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tc).unwrap()),
+            "c"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, td).unwrap()),
+            "d"
+        );
+        assert!(get_transition_activity(&tree, tfin).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tb]);
+
+        assert_execute_expect!(tree, state, ta, [td, tfin]);
+
+        assert_execute_expect!(tree, state, td, [ta, tb]);
+
+        assert_execute_expect!(tree, state, tb, [tc, td, tfin]);
+
+        assert_execute_expect!(tree, state, td, [ta, tb]);
+
+        assert_execute_expect!(tree, state, ta, [td, tfin]);
+
+        assert_terminate!(tree, state, tfin);
+    }
+
+    #[test]
+    fn sptree_semantics_or_loop_termination() {
+        let fin1 = fs::read_to_string("testfiles/loop(or(a,loop(b,c),d).sptree").unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let td = 3;
+        let tfin = 4;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, ta).unwrap()),
+            "a"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tb).unwrap()),
+            "b"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tc).unwrap()),
+            "c"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, td).unwrap()),
+            "d"
+        );
+        assert!(get_transition_activity(&tree, tfin).is_none());
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tb]);
+
+        assert_execute_expect!(tree, state, ta, [tb, td, tfin]);
+
+        assert_execute_expect!(tree, state, td, [ta, tb]);
+
+        assert_execute_expect!(tree, state, ta, [tb, td, tfin]);
+
+        assert_execute_expect!(tree, state, tb, [tc, td, tfin]);
+
+        assert_execute_expect!(tree, state, tc, [tb]);
+
+        assert_execute_expect!(tree, state, tb, [tc, td, tfin]);
+
+        assert_execute_expect!(tree, state, td, [ta, tb]);
+
+        assert_execute_expect!(tree, state, tb, [ta, tc, td, tfin]);
+
+        assert_execute_expect!(tree, state, tc, [ta, tb]);
+
+        assert_execute_expect!(tree, state, tb, [ta, tc, td, tfin]);
+
+        assert_execute_expect!(tree, state, ta, [tc, td, tfin]);
+
+        assert_terminate!(tree, state, tfin);
+    }
+
+    #[test]
+    fn sptree_semantics_interleaved_loop_termination() {
+        let fin1 =
+            fs::read_to_string("testfiles/loop(interleaved(seq(a,b),loop(c,d),e).sptree").unwrap();
+        let tree = fin1.parse::<StochasticProcessTree>().unwrap();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let td = 3;
+        let te = 4;
+        let tfin = 5;
+
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, ta).unwrap()),
+            "a"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tb).unwrap()),
+            "b"
+        );
+        assert_eq!(
+            tree.activity_key()
+                .deprocess_activity(&get_transition_activity(&tree, tc).unwrap()),
+            "c"
+        );
         assert_eq!(
             tree.activity_key()
                 .deprocess_activity(&get_transition_activity(&tree, td).unwrap()),
@@ -831,24 +1551,31 @@ mod tests {
         assert!(get_transition_activity(&tree, tfin).is_none());
 
         let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [ta]);
-        assert_eq!(
-            get_total_weight_of_enabled_transitions(&tree, &state),
-            Fraction::from(1)
-        );
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tc]);
 
-        execute_transition(&tree, &mut state, ta).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [tf1, tf2]);
-        assert_eq!(
-            get_total_weight_of_enabled_transitions(&tree, &state),
-            Fraction::from(4)
-        );
+        assert_execute_expect!(tree, state, ta, [tb]);
 
-        execute_transition(&tree, &mut state, tf2).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [td]);
+        assert_execute_expect!(tree, state, tb, [tc]);
 
-        execute_transition(&tree, &mut state, td).unwrap();
-        assert_eq!(get_total_weight_of_enabled_transitions(&tree, &state), Fraction::from(2));
-        assert_eq!(get_enabled_transitions(&tree, &state), [te, tfin]);
+        assert_execute_expect!(tree, state, tc, [td, te, tfin]);
+
+        assert_execute_expect!(tree, state, td, [tc]);
+
+        assert_execute_expect!(tree, state, tc, [td, te, tfin]);
+
+        assert_execute_expect!(tree, state, te, [ta, tc]); //reset
+
+        assert_execute_expect!(tree, state, tc, [ta, td]);
+
+        assert_execute_expect!(tree, state, td, [tc]);
+
+        assert_execute_expect!(tree, state, tc, [td, te, tfin]);
+
+        assert_execute_expect!(tree, state, td, [tc]);
+
+        assert_execute_expect!(tree, state, tc, [td, te, tfin]);
+
+        assert_terminate!(tree, state, tfin);
     }
 }

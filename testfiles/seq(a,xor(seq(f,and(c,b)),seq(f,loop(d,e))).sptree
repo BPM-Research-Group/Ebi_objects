@@ -7,14 +7,14 @@ sequence
 	2
 		sequence
 		2
-		activity f
-		1
-		concurrent
-		2
-			activity c
-			3
-			activity b
+			activity f
+			1
+			concurrent
 			2
+				activity c
+				3
+				activity b
+				2
 		sequence
 		3
 			activity f
