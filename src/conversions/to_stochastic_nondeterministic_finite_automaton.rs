@@ -313,4 +313,12 @@ mod tests {
         );
         assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
     }
+
+    #[test]
+    fn sptree_to_snfa_all_operators() {
+        let fin = fs::read_to_string("testfiles/all_operators.sptree").unwrap();
+        let tree = fin.parse::<StochasticProcessTree>().unwrap();
+
+        let _snfa = StochasticNondeterministicFiniteAutomaton::from(tree);
+    }
 }
