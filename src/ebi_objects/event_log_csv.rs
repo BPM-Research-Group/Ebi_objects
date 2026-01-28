@@ -535,26 +535,4 @@ mod tests {
         let fin = fs::read_to_string("testfiles/a-b.exs").unwrap();
         assert!(fin.parse::<EventLogCsv>().is_err());
     }
-
-    // #[test]
-    // fn csv_headers() {
-    //     let mut parameter_values = EventLogCsv::default_importer_parameter_values();
-    //     parameter_values.insert(
-    //         CSV_IMPORTER_PARAMETER_SEPARATOR,
-    //         ImporterParameterValue::String(";".to_string()),
-    //     );
-    //     let csv = EventLogCsv::import(
-    //         &mut BufReader::new(File::open("testfiles/courses.csv").unwrap()),
-    //         &parameter_values,
-    //     )
-    //     .unwrap();
-
-    //     let mut f: Vec<u8> = vec![];
-    //     csv.info(&mut f).unwrap();
-    //     println!("{}", String::from_utf8(f).unwrap());
-
-    //     println!("{:?}", csv.activity_key.activity2name);
-
-    //     assert_eq!(csv.activity_key().activity2name.len(), 2);
-    // }
 }

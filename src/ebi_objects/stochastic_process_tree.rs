@@ -432,7 +432,6 @@ pub fn execute_transition(
             .get(transition)
             .ok_or_else(|| anyhow!("transition does not exist"))?;
         start_node(tree, state, *node, None);
-        println!("state in between {}", state);
         close_node(tree, state, *node);
     }
     // log::debug!("state after execution {}", state);
@@ -486,7 +485,6 @@ fn start_node(
     node: usize,
     child: Option<usize>,
 ) {
-    println!("start node {} from child {:?}", node, child);
     match tree.tree[node] {
         Node::Tau
         | Node::Activity(_)
@@ -512,7 +510,6 @@ fn start_node(
                 }
             } else if let Some(from_child) = child {
                 //we are starting a non-first child of an interleaved node: withdraw enablement in all grand children
-                println!("\tstart node interleaved non-first");
                 for child in tree.get_children(node) {
                     if child != from_child {
                         withdraw_enablement(tree, state, child);
@@ -537,7 +534,6 @@ fn start_node(
                     && child > node + 1
                 {
                     //we are in a redo child: withdraw the next sequential node, which cannot fire now
-                    println!("\tstart a redo child");
                     withdraw_enablement_next_sequential_nodes(tree, state, node);
                     withdraw_enablement(tree, state, tree.get_child(node, 0));
                 } else {
@@ -576,15 +572,12 @@ fn start_node(
 }
 
 fn withdraw_enablement(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
-    println!("withdraw enablement of node {}", node);
     for grandchild in node..tree.traverse(node) {
         state[grandchild] = NodeState::Closed;
     }
 }
 
 fn close_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
-    println!("close node {}", node);
-
     //close this node and all of its children
     for grandchild in node..tree.traverse(node) {
         state[grandchild] = NodeState::Closed;
@@ -657,10 +650,6 @@ fn withdraw_enablement_next_sequential_nodes(
     state: &mut TreeMarking,
     node: usize,
 ) {
-    println!(
-        "withdraw enablement of next sequential nodes of node {}",
-        node
-    );
     if let Some((parent, child_rank)) = tree.get_parent(node) {
         match tree.tree[parent] {
             Node::Tau => unreachable!(),
@@ -676,7 +665,8 @@ fn withdraw_enablement_next_sequential_nodes(
             }
             Node::Operator(Operator::Concurrent, _)
             | Node::Operator(Operator::Or, _)
-            | Node::Operator(Operator::Interleaved, _) => {
+            | Node::Operator(Operator::Interleaved, _)
+            | Node::Operator(Operator::Xor, _) => {
                 //propagate to parent
                 withdraw_enablement_next_sequential_nodes(tree, state, parent);
             }
@@ -694,7 +684,6 @@ fn withdraw_enablement_next_sequential_nodes(
                     withdraw_enablement_next_sequential_nodes(tree, state, parent);
                 }
             }
-            _ => todo!(),
         }
     }
 }
@@ -705,7 +694,6 @@ fn enable_next_sequential_nodes(
     state: &mut TreeMarking,
     node: usize,
 ) {
-    println!("enable next sequential node {}", node);
     if let Some((parent, child_rank)) = tree.get_parent(node) {
         match tree.tree[parent] {
             Node::Tau => unreachable!(),
@@ -719,11 +707,9 @@ fn enable_next_sequential_nodes(
             | Node::Operator(Operator::Interleaved, _) => {
                 if can_terminate(tree, state, parent) {
                     //this parent can terminate, so we propagate to parent
-                    println!("\t\tparent can terminate");
                     enable_next_sequential_nodes(tree, state, parent);
                 } else {
                     //this parent cannot yet terminate, so there is nothing to enable
-                    println!("\t\tparent cannot terminate");
                 }
             }
             Node::Operator(Operator::Loop, number_of_children) => {
@@ -752,7 +738,6 @@ fn enable_next_sequential_nodes(
 }
 
 fn enable_node(tree: &StochasticProcessTree, state: &mut TreeMarking, node: usize) {
-    println!("enable node {}", node);
     state[node] = NodeState::Enabled;
 
     match tree.tree[node] {
@@ -801,8 +786,6 @@ pub(crate) fn can_execute(tree: &StochasticProcessTree, state: &TreeMarking, nod
                 }
             });
 
-            println!("\tstarted children {}", started_children);
-
             if started_children == 0 {
                 //this is the first starting child; no problem
             } else if started_children == 1 {
@@ -841,7 +824,6 @@ pub(crate) fn can_terminate(
     state: &TreeMarking,
     node: usize,
 ) -> bool {
-    println!("\tcan terminate? node {} ", node);
     match tree.tree[node] {
         Node::Tau => state[node] == NodeState::Closed,
         Node::Activity(_) => state[node] == NodeState::Closed,
@@ -855,11 +837,9 @@ pub(crate) fn can_terminate(
             let mut one_child_closed = false;
             for child in tree.get_children(node) {
                 if can_terminate(tree, state, child) {
-                    println!("\tone child {} closed", child);
                     one_child_closed = true;
                 } else if !can_withdraw_enablement(tree, state, child) {
                     //if there is one child that is not closed and not withdrawn, we cannot terminate the or
-                    println!("\tcannot terminate OR child node {}", child);
                     return false;
                 }
             }
@@ -881,10 +861,6 @@ pub(crate) fn can_terminate(
                 let redo_child = tree.get_child(node, child_rank);
                 //all the redo children must be able to withdraw enablement
                 if !can_withdraw_enablement(tree, state, redo_child) {
-                    println!(
-                        "\tcannot withdraw enablement loop child node {}",
-                        redo_child
-                    );
                     return false;
                 }
             }
@@ -983,8 +959,8 @@ mod tests {
     use crate::{
         HasActivityKey, StochasticProcessTree,
         ebi_objects::stochastic_process_tree::{
-            can_execute, execute_transition, get_enabled_transitions, get_initial_state,
-            get_total_weight_of_enabled_transitions, get_transition_activity,
+            can_execute, can_terminate, execute_transition, get_enabled_transitions,
+            get_initial_state, get_total_weight_of_enabled_transitions, get_transition_activity,
         },
     };
     use ebi_arithmetic::Fraction;
@@ -1388,6 +1364,7 @@ mod tests {
     macro_rules! assert_terminate {
         ($tree:ident, $state:ident, $tfin:ident) => {
             println!("terminate {}", $tfin);
+            assert!(can_terminate(&$tree, &$state, $tree.root()));
             execute_transition(&$tree, &mut $state, $tfin).unwrap();
             println!("{}\n", $state);
             assert_eq!(get_enabled_transitions(&$tree, &$state).len(), 0);
@@ -1444,6 +1421,14 @@ mod tests {
         assert_execute_expect!(tree, state, td, [ta, tb]);
 
         assert_execute_expect!(tree, state, ta, [td, tfin]);
+
+        assert_execute_expect!(tree, state, td, [ta, tb]); //reset
+
+        assert_execute_expect!(tree, state, tb, [tc, td, tfin]);
+
+        assert_execute_expect!(tree, state, tc, [tb]);
+
+        assert_execute_expect!(tree, state, tb, [tc, td, tfin]);
 
         assert_terminate!(tree, state, tfin);
     }
