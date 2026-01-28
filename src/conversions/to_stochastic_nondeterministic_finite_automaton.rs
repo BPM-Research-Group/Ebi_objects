@@ -9,7 +9,7 @@ use crate::{
         get_total_weight_of_enabled_transitions, get_transition_activity, get_transition_weight,
     },
 };
-use ebi_arithmetic::{Fraction, One, Signed, Zero};
+use ebi_arithmetic::{Fraction, Signed, Zero};
 use std::collections::{HashMap, VecDeque, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
@@ -32,9 +32,9 @@ impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomato
                 }
 
                 match final_states.entry(state) {
-                    Entry::Occupied(mut e) => *e.get_mut() += Fraction::one(),
+                    Entry::Occupied(mut e) => *e.get_mut() += probability,
                     Entry::Vacant(e) => {
-                        e.insert(Fraction::one());
+                        e.insert(probability.clone());
                     }
                 }
             }
@@ -254,8 +254,8 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
 #[cfg(test)]
 mod tests {
     use crate::{
-        DirectlyFollowsGraph, EventLog, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
-        StochasticProcessTree,
+        DirectlyFollowsGraph, FiniteStochasticLanguage, HasActivityKey,
+        StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     };
     use ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn dfg_to_snfa() {
         let fin1 = fs::read_to_string("testfiles/aa-ab-ba.dfg").unwrap();
-        let mut dfg: DirectlyFollowsGraph = fin1.parse::<DirectlyFollowsGraph>().unwrap();
+        let mut dfg = fin1.parse::<DirectlyFollowsGraph>().unwrap();
 
         let a = dfg.activity_key_mut().process_activity("a");
         let b = dfg.activity_key_mut().process_activity("b");
@@ -292,11 +292,24 @@ mod tests {
     }
 
     #[test]
-    fn log_to_snfa() {
-        let fin = fs::read_to_string("testfiles/simple_log_markovian_abstraction.xes").unwrap();
-        let dfm = fin.parse::<EventLog>().unwrap();
+    fn log_to_sdfa() {
+        let fin1 = fs::read_to_string("testfiles/acb-abc-ad-aded-adeded-adededed.slang").unwrap();
+        let slang = fin1.parse::<FiniteStochasticLanguage>().unwrap();
 
-        let _snfa = StochasticNondeterministicFiniteAutomaton::from(dfm);
+        let sdfa = StochasticNondeterministicFiniteAutomaton::from(slang);
+
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((8, 15)))
+        );
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((2, 3)))
+        );
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((4, 7)))
+        );
     }
 
     #[test]

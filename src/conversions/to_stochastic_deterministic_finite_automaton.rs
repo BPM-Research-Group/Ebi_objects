@@ -31,9 +31,9 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
                 }
 
                 match final_states.entry(state) {
-                    Entry::Occupied(mut e) => *e.get_mut() += Fraction::one(),
+                    Entry::Occupied(mut e) => *e.get_mut() += probability,
                     Entry::Vacant(e) => {
-                        e.insert(Fraction::one());
+                        e.insert(probability.clone());
                     }
                 }
             }
@@ -264,6 +264,27 @@ mod tests {
         assert_eq!(
             snfa.terminating_probabilities,
             [f0!(), Fraction::from((2, 3)), Fraction::from((1, 4))]
+        );
+    }
+
+    #[test]
+    fn log_to_sdfa() {
+        let fin1 = fs::read_to_string("testfiles/acb-abc-ad-aded-adeded-adededed.slang").unwrap();
+        let slang = fin1.parse::<FiniteStochasticLanguage>().unwrap();
+
+        let sdfa = StochasticDeterministicFiniteAutomaton::from(slang);
+
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((8, 15)))
+        );
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((2, 3)))
+        );
+        assert!(
+            sdfa.terminating_probabilities
+                .contains(&Fraction::from((4, 7)))
         );
     }
 }
