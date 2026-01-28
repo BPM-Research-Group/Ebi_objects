@@ -2,7 +2,8 @@ use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 use crate::{
     ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes, EventLogCsv,
-    EventLogTraceAttributes, EventLogXes, NumberOfTraces, ProcessTree, StochasticProcessTree,
+    EventLogTraceAttributes, EventLogXes, NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage,
+    StochasticProcessTree,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
@@ -175,6 +176,13 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
 
 impl From<StochasticProcessTree> for DeterministicFiniteAutomaton {
     fn from(value: StochasticProcessTree) -> Self {
+        let tree = ProcessTree::from(value);
+        tree.into()
+    }
+}
+
+impl From<ProcessTreeMarkupLanguage> for DeterministicFiniteAutomaton {
+    fn from(value: ProcessTreeMarkupLanguage) -> Self {
         let tree = ProcessTree::from(value);
         tree.into()
     }
