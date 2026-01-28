@@ -191,13 +191,18 @@ mod tests {
         let tree: ProcessTree = fin.parse::<StochasticProcessTree>().unwrap().into();
 
         let dfa = DeterministicFiniteAutomaton::from(tree);
-        println!("{}", dfa);
-        // assert_eq!(snfa.sources, [0, 1, 1, 2]);
-        // assert_eq!(snfa.targets, [1, 2, 2, 3]);
-        // assert_eq!(
-        //     snfa.probabilities,
-        //     [f1!(), Fraction::from((1, 3)), Fraction::from((2, 3)), f1!()]
-        // );
-        // assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
+        assert_eq!(
+            format!("{}", dfa),
+            "{
+\"initialState\": 0,
+\"transitions\": [
+{\"from\":0,\"to\":1,\"label\":\"a\"},
+{\"from\":1,\"to\":2,\"label\":\"b\"},
+{\"from\":1,\"to\":2,\"label\":\"c\"}
+], \"finalStates\": [
+2
+]}
+"
+        );
     }
 }
