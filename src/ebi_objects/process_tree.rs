@@ -655,14 +655,14 @@ impl FromStr for Operator {
 // however we use them to create a state space in several conversions.
 // As such, its bases functions are here.
 
-#[derive(Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum NodeState {
     Enabled,
     Started,
     Closed,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct TreeMarking {
     pub(crate) terminated: bool,
     pub(crate) states: Vec<NodeState>,

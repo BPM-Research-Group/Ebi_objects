@@ -1,12 +1,20 @@
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+
 use crate::{
-    CompressedEventLog, CompressedEventLogXes, EventLogCsv, EventLogTraceAttributes, EventLogXes,
-    NumberOfTraces,
+    ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes, EventLogCsv,
+    EventLogTraceAttributes, EventLogXes, NumberOfTraces, ProcessTree, StochasticProcessTree,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        deterministic_finite_automaton::DeterministicFiniteAutomaton, event_log::EventLog,
-        event_log_python::EventLogPython, finite_language::FiniteLanguage,
+        deterministic_finite_automaton::DeterministicFiniteAutomaton,
+        event_log::EventLog,
+        event_log_python::EventLogPython,
+        finite_language::FiniteLanguage,
         finite_stochastic_language::FiniteStochasticLanguage,
+        process_tree::{
+            execute_transition, get_enabled_transitions, get_initial_state,
+            get_transition_activity, is_final_state,
+        },
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
 };
@@ -80,3 +88,116 @@ via_lang!(EventLogPython);
 via_lang!(CompressedEventLog);
 via_lang!(CompressedEventLogTraceAttributes);
 via_lang!(CompressedEventLogXes);
+
+impl From<ProcessTree> for DeterministicFiniteAutomaton {
+    fn from(tree: ProcessTree) -> Self {
+        log::info!("convert (stochastic) process tree to DFA");
+
+        let initial_marking = if let Some(marking) = get_initial_state(&tree) {
+            marking
+        } else {
+            //empty language
+            return Self {
+                activity_key: ActivityKey::new(),
+                initial_state: None,
+                sources: vec![],
+                targets: vec![],
+                activities: vec![],
+                final_states: vec![],
+            };
+        };
+
+        let mut result = DeterministicFiniteAutomaton::new();
+        let translator = ActivityKeyTranslator::new(tree.activity_key(), result.activity_key_mut());
+
+        let mut markingset2node = HashMap::new();
+
+        //initial state
+        let source_node = result.initial_state.unwrap(); //exists by contract of new()
+        let initial_markingset = BTreeSet::from([initial_marking]);
+        markingset2node.insert(initial_markingset.clone(), source_node);
+        let mut queue = VecDeque::new();
+        queue.push_back(initial_markingset);
+
+        while let Some(markingset) = queue.pop_front() {
+            let node = markingset2node[&markingset];
+
+            //gather activity -> marking set (for each activity, the set of markings that can be reached with that activity)
+            let mut activity2markings = HashMap::new();
+            {
+                let mut inner_queue = VecDeque::new();
+                let mut inner_visited = HashSet::new();
+                inner_queue.extend(markingset.clone());
+                inner_visited.extend(markingset);
+
+                //walk through all markings
+                while let Some(marking) = inner_queue.pop_front() {
+                    if is_final_state(&tree, &marking) {
+                        result.set_final_state(node, true);
+                    } else {
+                        for transition in get_enabled_transitions(&tree, &marking) {
+                            let mut target_marking = marking.clone();
+                            execute_transition(&tree, &mut target_marking, transition).unwrap(); //by construction, transition is enabled
+
+                            if let Some(activity) = get_transition_activity(&tree, transition) {
+                                //labelled activity: insert into resulting map
+                                activity2markings
+                                    .entry(translator.translate_activity(&activity))
+                                    .or_insert_with(|| BTreeSet::new())
+                                    .insert(target_marking);
+                            } else {
+                                //silent step: add to queue
+                                if inner_visited.insert(target_marking.clone()) {
+                                    inner_queue.push_back(target_marking);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            //add the activity -> marking set mapping to the automaton
+            for (activity, markingset) in activity2markings {
+                let target_node = markingset2node
+                    .entry(markingset.clone())
+                    .or_insert_with(|| {
+                        queue.push_back(markingset);
+                        result.add_state()
+                    });
+
+                result.add_transition(node, activity, *target_node).unwrap(); //by construction, this should not fail.
+            }
+        }
+
+        result
+    }
+}
+
+impl From<StochasticProcessTree> for DeterministicFiniteAutomaton {
+    fn from(value: StochasticProcessTree) -> Self {
+        let tree = ProcessTree::from(value);
+        tree.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{DeterministicFiniteAutomaton, ProcessTree, StochasticProcessTree};
+    use std::fs;
+
+    #[test]
+    fn tree_to_dfa() {
+        let fin = fs::read_to_string("testfiles/seq(a-xor(b-c)).sptree").unwrap();
+        let tree: ProcessTree = fin.parse::<StochasticProcessTree>().unwrap().into();
+
+        let dfa = DeterministicFiniteAutomaton::from(tree);
+        println!("{}", dfa);
+        // assert_eq!(snfa.sources, [0, 1, 1, 2]);
+        // assert_eq!(snfa.targets, [1, 2, 2, 3]);
+        // assert_eq!(
+        //     snfa.probabilities,
+        //     [f1!(), Fraction::from((1, 3)), Fraction::from((2, 3)), f1!()]
+        // );
+        // assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
+    }
+}

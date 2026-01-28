@@ -185,7 +185,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 
 impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
     fn from(tree: StochasticProcessTree) -> Self {
-        log::info!("convert (stochastic) process tree to LPN");
+        log::info!("convert (stochastic) process tree to SNFA");
 
         let initial_marking = if let Some(marking) = get_initial_state(&tree) {
             marking
