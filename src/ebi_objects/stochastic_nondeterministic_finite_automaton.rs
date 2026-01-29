@@ -545,8 +545,14 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
                 let label = label_line.trim_start()[6..].to_string();
                 let activity = result.activity_key.process_activity(&label);
                 Some(activity)
-            } else {
+            } else if label_line.trim_start().starts_with("silent") {
                 None
+            } else {
+                return Err(anyhow!(
+                    "could not read label of transition {}: expected 'silent' or 'label ', but found '{}'",
+                    transition,
+                    label_line
+                ));
             };
 
             result
