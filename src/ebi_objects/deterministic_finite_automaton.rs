@@ -1,8 +1,10 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json, traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
+    Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
+    traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    }
+    },
 };
 use anyhow::{Context, Result, anyhow};
 use ebi_derive::ActivityKey;
@@ -272,6 +274,10 @@ impl Exportable for DeterministicFiniteAutomaton {
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
                 Into::<Self>::into(sdfa).export(f)
             }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(snfa) => {
+                Into::<Self>::into(snfa).export(f)
+            }
+            EbiObject::StochasticDirectlyFollowsModel(sdfm) => Into::<Self>::into(sdfm).export(f),
             _ => Err(anyhow!("Cannot export to DFA.")),
         }
     }

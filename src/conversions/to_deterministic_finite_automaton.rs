@@ -1,8 +1,7 @@
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
-
 use crate::{
-    ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes, EventLogCsv,
-    EventLogTraceAttributes, EventLogXes, NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage,
+    ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes,
+    DirectlyFollowsModel, EventLogCsv, EventLogTraceAttributes, EventLogXes, NumberOfTraces,
+    ProcessTree, ProcessTreeMarkupLanguage, StochasticDirectlyFollowsModel,
     StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
@@ -20,6 +19,7 @@ use crate::{
     },
 };
 use ebi_arithmetic::ebi_number::{Signed, Zero};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 impl From<FiniteLanguage> for DeterministicFiniteAutomaton {
     fn from(value: FiniteLanguage) -> Self {
@@ -62,6 +62,72 @@ impl From<StochasticDeterministicFiniteAutomaton> for DeterministicFiniteAutomat
             activities: value.activities,
             final_states: final_states,
         }
+    }
+}
+
+impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
+    fn from(value: DirectlyFollowsModel) -> Self {
+        log::info!("convert DFM into DFA");
+
+        if value.node_2_activity.is_empty() && !value.has_empty_traces() {
+            //empty language
+            return Self {
+                activity_key: ActivityKey::new(),
+                initial_state: None,
+                sources: vec![],
+                targets: vec![],
+                activities: vec![],
+                final_states: vec![],
+            };
+        }
+
+        let number_of_nodes = value.node_2_activity.len();
+
+        //copy the edges, as they did not change; just make the labels explicit
+        let DirectlyFollowsModel {
+            sources,
+            targets,
+            node_2_activity,
+            empty_traces,
+            start_nodes,
+            end_nodes,
+            ..
+        } = value;
+        let activities = targets
+            .iter()
+            .map(|target| node_2_activity[*target])
+            .collect();
+
+        //prepare final states: initial state is final if empty traces are present
+        let mut final_states = end_nodes;
+        final_states.push(empty_traces);
+
+        //construct result
+        let mut result = Self {
+            activity_key: value.activity_key,
+            initial_state: Some(number_of_nodes),
+            sources,
+            targets,
+            activities,
+            final_states,
+        };
+
+        //add the start activities
+        for start_node in 0..number_of_nodes {
+            if start_nodes[start_node] {
+                result
+                    .add_transition(number_of_nodes, node_2_activity[start_node], start_node)
+                    .unwrap(); //by construction, determinism is guaranteed
+            }
+        }
+
+        result
+    }
+}
+
+impl From<StochasticDirectlyFollowsModel> for DeterministicFiniteAutomaton {
+    fn from(value: StochasticDirectlyFollowsModel) -> Self {
+        Into::<DirectlyFollowsModel>::into(value).into()
     }
 }
 
@@ -272,8 +338,8 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
 #[cfg(test)]
 mod tests {
     use crate::{
-        DeterministicFiniteAutomaton, ProcessTree, StochasticNondeterministicFiniteAutomaton,
-        StochasticProcessTree,
+        DeterministicFiniteAutomaton, ProcessTree, StochasticDirectlyFollowsModel,
+        StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     };
     use std::fs;
 
@@ -309,5 +375,16 @@ mod tests {
 
         assert_eq!(dfa.number_of_states(), 4);
         assert_eq!(dfa.get_sources().len(), 5);
+    }
+
+    #[test]
+    fn dfm_to_dfa() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.sdfm").unwrap();
+        let sdfm = fin.parse::<StochasticDirectlyFollowsModel>().unwrap();
+
+        let dfa = DeterministicFiniteAutomaton::from(sdfm);
+
+        assert_eq!(dfa.number_of_states(), 3);
+        assert_eq!(dfa.sources.len(), 5);
     }
 }

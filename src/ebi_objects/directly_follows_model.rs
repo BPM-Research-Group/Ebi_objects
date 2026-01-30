@@ -1,9 +1,3 @@
-use anyhow::{Context, Result, anyhow};
-use ebi_derive::ActivityKey;
-use itertools::Itertools;
-use layout::topo::layout::VisualGraph;
-use std::{cmp::Ordering, fmt::Display, io::Write};
-
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -14,6 +8,11 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
+use anyhow::{Context, Result, anyhow};
+use ebi_derive::ActivityKey;
+use itertools::Itertools;
+use layout::topo::layout::VisualGraph;
+use std::{cmp::Ordering, fmt::Display, io::Write};
 
 use super::stochastic_directly_follows_model::NodeIndex;
 
