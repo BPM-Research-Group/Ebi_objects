@@ -326,6 +326,7 @@ impl StochasticNondeterministicFiniteAutomaton {
     }
 
     /// Returns an iterator over the outgoing edges of `source`.
+    /// That is, (source, target, label, probaiblity)
     pub fn outgoing_edges(
         &'_ self,
         source: usize,

@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use crate::{
     ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes, EventLogCsv,
     EventLogTraceAttributes, EventLogXes, NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage,
-    StochasticProcessTree,
+    StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
@@ -92,7 +92,7 @@ via_lang!(CompressedEventLogXes);
 
 impl From<ProcessTree> for DeterministicFiniteAutomaton {
     fn from(tree: ProcessTree) -> Self {
-        log::info!("convert (stochastic) process tree to DFA");
+        log::info!("convert process tree to DFA");
 
         let initial_marking = if let Some(marking) = get_initial_state(&tree) {
             marking
@@ -174,23 +174,107 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
     }
 }
 
-impl From<StochasticProcessTree> for DeterministicFiniteAutomaton {
-    fn from(value: StochasticProcessTree) -> Self {
-        let tree = ProcessTree::from(value);
-        tree.into()
-    }
+macro_rules! via_tree {
+    ($t:ident) => {
+        impl From<$t> for DeterministicFiniteAutomaton {
+            fn from(value: $t) -> Self {
+                let tree = ProcessTree::from(value);
+                tree.into()
+            }
+        }
+    };
 }
 
-impl From<ProcessTreeMarkupLanguage> for DeterministicFiniteAutomaton {
-    fn from(value: ProcessTreeMarkupLanguage) -> Self {
-        let tree = ProcessTree::from(value);
-        tree.into()
+via_tree!(StochasticProcessTree);
+via_tree!(ProcessTreeMarkupLanguage);
+
+impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAutomaton {
+    fn from(snfa: StochasticNondeterministicFiniteAutomaton) -> Self {
+        log::info!("convert SNFA to DFA");
+
+        let initial_marking = if let Some(marking) = snfa.initial_state {
+            marking
+        } else {
+            //empty language
+            return Self {
+                activity_key: ActivityKey::new(),
+                initial_state: None,
+                sources: vec![],
+                targets: vec![],
+                activities: vec![],
+                final_states: vec![],
+            };
+        };
+
+        let mut result = DeterministicFiniteAutomaton::new();
+        let translator = ActivityKeyTranslator::new(snfa.activity_key(), result.activity_key_mut());
+
+        let mut markingset2node = HashMap::new();
+
+        //initial state
+        let source_node = result.initial_state.unwrap(); //exists by contract of new()
+        let initial_markingset = BTreeSet::from([initial_marking]);
+        markingset2node.insert(initial_markingset.clone(), source_node);
+        let mut queue = VecDeque::new();
+        queue.push_back(initial_markingset);
+
+        while let Some(markingset) = queue.pop_front() {
+            let node = markingset2node[&markingset];
+
+            //gather activity -> marking set (for each activity, the set of markings that can be reached with that activity)
+            let mut activity2markings = HashMap::new();
+            {
+                let mut inner_queue = VecDeque::new();
+                let mut inner_visited = HashSet::new();
+                inner_queue.extend(markingset.clone());
+                inner_visited.extend(markingset);
+
+                //walk through all markings
+                while let Some(marking) = inner_queue.pop_front() {
+                    if snfa.get_termination_probability(marking).is_positive() {
+                        result.set_final_state(node, true);
+                    } else {
+                        for (_, target_marking, label, _) in snfa.outgoing_edges(marking) {
+                            if let Some(activity) = label {
+                                //labelled activity: insert into resulting map
+                                activity2markings
+                                    .entry(translator.translate_activity(&activity))
+                                    .or_insert_with(|| BTreeSet::new())
+                                    .insert(*target_marking);
+                            } else {
+                                //silent step: add to queue
+                                if inner_visited.insert(target_marking.clone()) {
+                                    inner_queue.push_back(*target_marking);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            //add the activity -> marking set mapping to the automaton
+            for (activity, markingset) in activity2markings {
+                let target_node = markingset2node
+                    .entry(markingset.clone())
+                    .or_insert_with(|| {
+                        queue.push_back(markingset);
+                        result.add_state()
+                    });
+
+                result.add_transition(node, activity, *target_node).unwrap(); //by construction, this should not fail.
+            }
+        }
+
+        result
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{DeterministicFiniteAutomaton, ProcessTree, StochasticProcessTree};
+    use crate::{
+        DeterministicFiniteAutomaton, ProcessTree, StochasticNondeterministicFiniteAutomaton,
+        StochasticProcessTree,
+    };
     use std::fs;
 
     #[test]
@@ -212,5 +296,18 @@ mod tests {
 ]}
 "
         );
+    }
+
+    #[test]
+    fn snfa_to_dfa() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.snfa").unwrap();
+        let snfa = fin
+            .parse::<StochasticNondeterministicFiniteAutomaton>()
+            .unwrap();
+
+        let dfa = DeterministicFiniteAutomaton::from(snfa);
+
+        assert_eq!(dfa.number_of_states(), 4);
+        assert_eq!(dfa.get_sources().len(), 5);
     }
 }
