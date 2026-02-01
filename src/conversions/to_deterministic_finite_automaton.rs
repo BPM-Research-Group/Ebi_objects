@@ -1,7 +1,7 @@
 use crate::{
     ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes,
-    DirectlyFollowsModel, EventLogCsv, EventLogTraceAttributes, EventLogXes, NumberOfTraces,
-    ProcessTree, ProcessTreeMarkupLanguage, StochasticDirectlyFollowsModel,
+    DirectlyFollowsGraph, DirectlyFollowsModel, EventLogCsv, EventLogTraceAttributes, EventLogXes,
+    NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage, StochasticDirectlyFollowsModel,
     StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
@@ -134,6 +134,12 @@ impl From<StochasticDirectlyFollowsModel> for DeterministicFiniteAutomaton {
 impl From<FiniteStochasticLanguage> for DeterministicFiniteAutomaton {
     fn from(value: FiniteStochasticLanguage) -> Self {
         Into::<FiniteLanguage>::into(value).into()
+    }
+}
+
+impl From<DirectlyFollowsGraph> for DeterministicFiniteAutomaton {
+    fn from(value: DirectlyFollowsGraph) -> Self {
+        StochasticNondeterministicFiniteAutomaton::from(value).into()
     }
 }
 
