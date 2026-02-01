@@ -632,6 +632,7 @@ impl Exportable for StochasticNondeterministicFiniteAutomaton {
             EbiObject::EventLogTraceAttributes(log) => Into::<Self>::into(log).export(f),
             EbiObject::EventLogXes(log) => Into::<Self>::into(log).export(f),
             EbiObject::EventLogCsv(log) => Into::<Self>::into(log).export(f),
+            EbiObject::StochasticDirectlyFollowsModel(slang) => Into::<Self>::into(slang).export(f),
             _ => Err(anyhow!(
                 "Cannot export {} {} as an SNFA.",
                 object.get_type().get_article(),
