@@ -2,8 +2,8 @@ use crate::{
     ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogTraceAttributes,
     CompressedEventLogXes, DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogPython,
     EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
-    StochasticDeterministicFiniteAutomaton, StochasticNondeterministicFiniteAutomaton,
-    StochasticProcessTree,
+    StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
+    StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::stochastic_process_tree::{
         execute_transition, get_enabled_transitions, get_initial_state,
         get_total_weight_of_enabled_transitions, get_transition_activity, get_transition_weight,
@@ -183,6 +183,89 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
     }
 }
 
+impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAutomaton {
+    fn from(value: StochasticDirectlyFollowsModel) -> Self {
+        let mut result = Self::new();
+
+        if value.node_2_activity.is_empty() && !value.has_empty_traces() {
+            //empty language
+            result.initial_state = None;
+            return result;
+        }
+
+        let initial_state = 0;
+        result.initial_state = Some(initial_state);
+
+        //add states
+        for _ in 0..value.start_node_weights.len() {
+            result.add_state(); //we do not keep a map, as we can predict the numbers: 0 = initial state, 1..=n = activity states.
+        }
+
+        //start activities
+        {
+            let mut sum_of_start_activities: Fraction = value.start_node_weights.iter().sum();
+            sum_of_start_activities += &value.empty_traces_weight;
+            for (node, weight) in value.start_node_weights.iter().enumerate() {
+                if weight.is_positive() {
+                    result
+                        .add_transition(
+                            initial_state,
+                            Some(value.node_2_activity[node]),
+                            node + 1,
+                            weight / &sum_of_start_activities,
+                        )
+                        .unwrap(); //by construction, outgoing probability cannot become lower than 0
+                }
+            }
+
+            //empty traces are captured by termination probability of initial state
+        }
+
+        //edges
+        {
+            for source in 0..value.start_node_weights.len() {
+                //gather the outgoing sum
+                let mut sum = Fraction::zero();
+                {
+                    let (_, mut i) = value.binary_search(source, 0);
+                    while i < value.sources.len() && value.sources[i] == source {
+                        if value.weights[i].is_positive() {
+                            sum += &value.weights[i];
+                        }
+                        i += 1;
+                    }
+
+                    if value.end_node_weights[source].is_positive() {
+                        sum += &value.end_node_weights[source];
+                    }
+                }
+
+                // add the edges
+                let (_, mut i) = value.binary_search(source, 0);
+                while i < value.sources.len() && value.sources[i] == source {
+                    if value.weights[i].is_positive() {
+                        result
+                            .add_transition(
+                                source + 1,
+                                Some(value.node_2_activity[value.targets[i]]),
+                                value.targets[i] + 1,
+                                &value.weights[i] / &sum,
+                            )
+                            .unwrap(); //by construction, remaining outgoing probability cannot become negative
+                    }
+                    i += 1;
+                }
+
+                // termination is implied
+            }
+        }
+
+        result.activity_key = value.activity_key;
+
+        result
+    }
+}
+
 impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
     fn from(tree: StochasticProcessTree) -> Self {
         log::info!("convert (stochastic) process tree to SNFA");
@@ -255,7 +338,8 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
 mod tests {
     use crate::{
         DirectlyFollowsGraph, FiniteStochasticLanguage, HasActivityKey,
-        StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
+        StochasticDirectlyFollowsModel, StochasticNondeterministicFiniteAutomaton,
+        StochasticProcessTree,
     };
     use ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
@@ -333,5 +417,34 @@ mod tests {
         let tree = fin.parse::<StochasticProcessTree>().unwrap();
 
         let _snfa = StochasticNondeterministicFiniteAutomaton::from(tree);
+    }
+
+    #[test]
+    fn sdfm_to_snfa() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.sdfm").unwrap();
+        let sdfm = fin.parse::<StochasticDirectlyFollowsModel>().unwrap();
+
+        let snfa = StochasticNondeterministicFiniteAutomaton::from(sdfm);
+
+        assert_eq!(snfa.sources, [0, 0, 1, 1, 2]);
+        assert_eq!(snfa.targets, [1, 2, 1, 2, 1]);
+        assert_eq!(
+            snfa.probabilities,
+            [
+                Fraction::from((2, 5)),
+                Fraction::from((3, 5)),
+                Fraction::from((1, 6)),
+                Fraction::from((1, 6)),
+                Fraction::from((3, 4))
+            ]
+        );
+        assert_eq!(
+            snfa.terminating_probabilities,
+            [
+                Fraction::zero(),
+                Fraction::from((2, 3)),
+                Fraction::from((1, 4))
+            ]
+        );
     }
 }
