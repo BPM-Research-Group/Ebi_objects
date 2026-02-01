@@ -279,7 +279,8 @@ impl Exportable for DeterministicFiniteAutomaton {
             }
             EbiObject::StochasticDirectlyFollowsModel(sdfm) => Into::<Self>::into(sdfm).export(f),
             EbiObject::StochasticProcessTree(sdfm) => Into::<Self>::into(sdfm).export(f),
-            EbiObject::DirectlyFollowsModel(sdfm) => Into::<Self>::into(sdfm).export(f),
+            EbiObject::DirectlyFollowsModel(dfm) => Into::<Self>::into(dfm).export(f),
+            EbiObject::DirectlyFollowsGraph(dfg) => Into::<Self>::into(dfg).export(f),
             _ => Err(anyhow!("Cannot export {} to DFA.", object.get_type())),
         }
     }
