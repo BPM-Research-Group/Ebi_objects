@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.112"
+version = "0.3.113"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1056,9 +1056,9 @@ dependencies = [
 
 [[package]]
 name = "process_mining"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ef4e914752e323ebf94ee413eb45a3253552a5f397eea62cdd905697d39190b"
+checksum = "45328e0d6838f1b07e35ef3461faca9a02d023457b005708ae22300d5365a3bd"
 dependencies = [
  "chrono",
  "flate2",

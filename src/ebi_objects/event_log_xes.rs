@@ -138,7 +138,7 @@ For instance:
     where
         Self: Sized,
     {
-        let log = import_xes(reader, XESImportOptions::default());
+        let log = import_xes(reader, XESImportOptions {verbose: false, ..Default::default()});
         let log = match log {
             Ok(l) => l,
             Err(e) => return Err(anyhow!("{}", e)),
