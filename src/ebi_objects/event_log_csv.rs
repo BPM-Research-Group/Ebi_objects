@@ -2,6 +2,7 @@ use crate::{
     Activity, ActivityKey, Attribute, AttributeKey, EbiObject, Exportable, HasActivityKey,
     Importable, Infoable, IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
+    log_infoable_startend, log_infoable_stats,
     traits::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
         start_end_activities::StartEndActivities,
@@ -327,63 +328,13 @@ impl TranslateActivityKey for EventLogCsv {
 
 impl Infoable for EventLogCsv {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
-        writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
-        writeln!(f, "Number of events\t{}", self.number_of_events())?;
-
         let lengths = self.traces.iter().map(|t| t.1.len());
-        writeln!(
-            f,
-            "Minimum number of events per trace\t{}",
-            lengths
-                .clone()
-                .min()
-                .map_or("n/a".to_string(), |l| l.to_string())
-        )?;
-        if self.number_of_traces() > 0 {
-            writeln!(
-                f,
-                "Average number of events per trace\t{}",
-                Fraction::from(lengths.clone().sum::<usize>())
-                    / Fraction::from(self.number_of_traces())
-            )?;
-        } else {
-            writeln!(f, "Average number of events per trace\tn/a")?;
-        }
-        writeln!(
-            f,
-            "Maximum number of events per trace\t{}",
-            lengths.max().map_or("n/a".to_string(), |l| l.to_string())
-        )?;
+        log_infoable_stats!(f, self, lengths);
 
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        writeln!(f, "")?;
-        writeln!(f, "Start activities")?;
-        for (activity, cardinality) in self.start_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
-
-        writeln!(f, "")?;
-        writeln!(f, "End activities")?;
-        for (activity, cardinality) in self.end_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
+        log_infoable_startend!(f, self);
 
         Ok(writeln!(f, "")?)
     }
@@ -406,7 +357,7 @@ impl NumberOfTraces for EventLogCsv {
 }
 
 impl StartEndActivities for EventLogCsv {
-    fn start_activites(&self) -> IntMap<Activity, Fraction> {
+    fn start_activities(&self) -> IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for (_, trace) in self.traces.iter() {
             if let Some(event) = trace.iter().next() {
@@ -429,7 +380,7 @@ impl StartEndActivities for EventLogCsv {
         result
     }
 
-    fn end_activites(&self) -> IntMap<crate::Activity, Fraction> {
+    fn end_activities(&self) -> IntMap<crate::Activity, Fraction> {
         let mut result = IntMap::new();
         for (_, trace) in self.traces.iter() {
             if let Some(event) = trace.iter().last() {

@@ -1,21 +1,16 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Attribute, AttributeKey, EventLogXes, Exportable,
-    HasActivityKey, Importable, Infoable, IntoAttributeIterator, IntoAttributeTraceIterator,
-    IntoRefTraceIterator, TranslateActivityKey,
-    constants::ebi_object::EbiObject,
-    iterators::{
+    Activity, ActivityKey, ActivityKeyTranslator, Attribute, AttributeKey, EventLogXes, Exportable, HasActivityKey, Importable, Infoable, IntoAttributeIterator, IntoAttributeTraceIterator, IntoRefTraceIterator, TranslateActivityKey, constants::ebi_object::EbiObject, iterators::{
         attribute_iterator::{
             CategoricalAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
         ref_trace_iterator::RefTraceIterator,
-    },
-    traits::{
+    }, log_infoable_startend, log_infoable_stats, traits::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
         number_of_traces::NumberOfTraces,
         start_end_activities::StartEndActivities,
         trace_attributes::TraceAttributes,
-    },
+    }
 };
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, FixedOffset};
@@ -211,38 +206,13 @@ impl fmt::Display for EventLogTraceAttributes {
 
 impl Infoable for EventLogTraceAttributes {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
-        writeln!(f, "Number of events\t{}", self.number_of_events())?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
+        let lengths = self.traces.iter().map(|t| t.0.len());
+        log_infoable_stats!(f, self, lengths);
 
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        writeln!(f, "")?;
-        writeln!(f, "Start activities")?;
-        for (activity, cardinality) in self.start_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
-
-        writeln!(f, "")?;
-        writeln!(f, "End activities")?;
-        for (activity, cardinality) in self.end_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
+        log_infoable_startend!(f, self);
 
         writeln!(f, "")?;
         writeln!(f, "Trace attributes:")?;
@@ -263,7 +233,7 @@ impl NumberOfTraces for EventLogTraceAttributes {
 }
 
 impl StartEndActivities for EventLogTraceAttributes {
-    fn start_activites(&self) -> IntMap<Activity, Fraction> {
+    fn start_activities(&self) -> IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for (trace, _) in self.traces.iter() {
             if let Some(activity) = trace.iter().next() {
@@ -278,7 +248,7 @@ impl StartEndActivities for EventLogTraceAttributes {
         result
     }
 
-    fn end_activites(&self) -> IntMap<Activity, Fraction> {
+    fn end_activities(&self) -> IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for (trace, _) in self.traces.iter() {
             if let Some(activity) = trace.iter().last() {

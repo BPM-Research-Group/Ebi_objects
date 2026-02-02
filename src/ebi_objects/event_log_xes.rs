@@ -2,6 +2,7 @@ use crate::{
     Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
+    log_infoable_startend, log_infoable_stats,
     traits::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
         start_end_activities::StartEndActivities,
@@ -187,62 +188,13 @@ impl fmt::Display for EventLogXes {
 
 impl Infoable for EventLogXes {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
-        writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
-        writeln!(f, "Number of events\t{}", self.number_of_events())?;
-
         let lengths = self.rust4pm_log.traces.iter().map(|t| t.events.len());
-        writeln!(
-            f,
-            "Minimum number of events per trace\t{}",
-            lengths
-                .clone()
-                .min()
-                .map_or("n/a".to_string(), |l| l.to_string())
-        )?;
-        if self.number_of_traces() > 0 {
-            writeln!(
-                f,
-                "Average number of events per trace\t{}",
-                Fraction::from(self.number_of_events()) / Fraction::from(self.number_of_traces())
-            )?;
-        } else {
-            writeln!(f, "Average number of events per trace\tn/a")?;
-        }
-        writeln!(
-            f,
-            "Maximum number of events per trace\t{}",
-            lengths.max().map_or("n/a".to_string(), |l| l.to_string())
-        )?;
+        log_infoable_stats!(f, self, lengths);
 
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        writeln!(f, "")?;
-        writeln!(f, "Start activities")?;
-        for (activity, cardinality) in self.start_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
-
-        writeln!(f, "")?;
-        writeln!(f, "End activities")?;
-        for (activity, cardinality) in self.end_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
+        log_infoable_startend!(f, self);
 
         Ok(writeln!(f, "")?)
     }
@@ -259,7 +211,7 @@ impl NumberOfTraces for EventLogXes {
 }
 
 impl StartEndActivities for EventLogXes {
-    fn start_activites(&self) -> intmap::IntMap<Activity, Fraction> {
+    fn start_activities(&self) -> intmap::IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for trace in self.rust4pm_log.traces.iter() {
             if let Some(event) = trace.events.iter().next() {
@@ -280,7 +232,7 @@ impl StartEndActivities for EventLogXes {
         result
     }
 
-    fn end_activites(&self) -> intmap::IntMap<Activity, Fraction> {
+    fn end_activities(&self) -> intmap::IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for trace in self.rust4pm_log.traces.iter() {
             if let Some(event) = trace.events.iter().last() {

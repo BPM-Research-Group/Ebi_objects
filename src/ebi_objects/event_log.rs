@@ -136,64 +136,83 @@ impl fmt::Display for EventLog {
     }
 }
 
-impl Infoable for EventLog {
-    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of traces\t{}", self.number_of_traces())?;
-        writeln!(f, "Number of events\t{}", self.number_of_events())?;
+#[macro_export]
+macro_rules! log_infoable_stats {
+    ($f:ident, $self:ident, $lengths:expr) => {
         writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
+            $f,
+            "Number of activities\t\t\t{}",
+            $self.activity_key().get_number_of_activities()
         )?;
-
-        let lengths = self.traces.iter().map(|t| t.len());
+        writeln!($f, "Number of traces\t\t\t{}", $self.number_of_traces())?;
+        writeln!($f, "Number of events\t\t\t{}", $self.number_of_events())?;
         writeln!(
-            f,
+            $f,
+            "Number of activities\t\t\t{}",
+            $self.activity_key().get_number_of_activities()
+        )?;
+        writeln!(
+            $f,
             "Minimum number of events per trace\t{}",
-            lengths
+            $lengths
                 .clone()
                 .min()
                 .map_or("n/a".to_string(), |l| l.to_string())
         )?;
-        if self.number_of_traces() > 0 {
+        if $self.number_of_traces() > 0 {
             writeln!(
-                f,
+                $f,
                 "Average number of events per trace\t{}",
-                Fraction::from(self.number_of_events()) / Fraction::from(self.number_of_traces())
+                Fraction::from($self.number_of_events()) / Fraction::from($self.number_of_traces())
             )?;
         } else {
-            writeln!(f, "Average number of events per trace\tn/a")?;
+            writeln!($f, "Average number of events per trace\tn/a")?;
         }
         writeln!(
-            f,
+            $f,
             "Maximum number of events per trace\t{}",
-            lengths.max().map_or("n/a".to_string(), |l| l.to_string())
+            $lengths.max().map_or("n/a".to_string(), |l| l.to_string())
         )?;
+    };
+}
+
+#[macro_export]
+macro_rules! log_infoable_startend {
+    ($f:ident, $self:ident) => {
+        writeln!($f, "")?;
+        writeln!($f, "Start activities")?;
+        for (activity, cardinality) in $self.start_activities() {
+            writeln!(
+                $f,
+                "\t{}: {}",
+                $self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+
+        writeln!($f, "")?;
+        writeln!($f, "End activities")?;
+        for (activity, cardinality) in $self.end_activities() {
+            writeln!(
+                $f,
+                "\t{}: {}",
+                $self.activity_key.get_activity_label(&activity),
+                cardinality
+            )?;
+        }
+    };
+}
+
+impl Infoable for EventLog {
+    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
+        let lengths = self.traces.iter().map(|t| t.len());
+
+        log_infoable_stats!(f, self, lengths);
 
         writeln!(f, "")?;
         self.activity_key().info(f)?;
 
-        writeln!(f, "")?;
-        writeln!(f, "Start activities")?;
-        for (activity, cardinality) in self.start_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
-
-        writeln!(f, "")?;
-        writeln!(f, "End activities")?;
-        for (activity, cardinality) in self.end_activites() {
-            writeln!(
-                f,
-                " {}: {}",
-                self.activity_key.get_activity_label(&activity),
-                cardinality
-            )?;
-        }
+        log_infoable_startend!(f, self);
 
         Ok(writeln!(f, "")?)
     }
@@ -210,7 +229,7 @@ impl NumberOfTraces for EventLog {
 }
 
 impl StartEndActivities for EventLog {
-    fn start_activites(&self) -> IntMap<Activity, Fraction> {
+    fn start_activities(&self) -> IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for trace in self.traces.iter() {
             if let Some(activity) = trace.iter().next() {
@@ -225,7 +244,7 @@ impl StartEndActivities for EventLog {
         result
     }
 
-    fn end_activites(&self) -> IntMap<Activity, Fraction> {
+    fn end_activities(&self) -> IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for trace in self.traces.iter() {
             if let Some(activity) = trace.iter().last() {
