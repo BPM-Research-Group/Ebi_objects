@@ -1,4 +1,6 @@
 use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
@@ -631,5 +633,12 @@ impl Display for PTMLTag {
                 PTMLTag::DefLoop => "defLoop",
             }
         )
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for ProcessTreeMarkupLanguage {
+    fn test_activity_key(&self) {
+        self.tree.test_activity_key();
     }
 }

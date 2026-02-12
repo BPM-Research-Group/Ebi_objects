@@ -403,12 +403,23 @@ impl<'a> IntoParallelIterator for &'a FiniteStochasticLanguage {
 #[cfg(test)]
 mod tests {
     use crate::{
-        StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton,
+        HasActivityKey, StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton,
+        activity_key::has_activity_key::TestActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
         traits::number_of_traces::NumberOfTraces,
     };
     use ebi_arithmetic::{Fraction, Zero};
     use std::fs;
+
+    impl TestActivityKey for FiniteStochasticLanguage {
+        fn test_activity_key(&self) {
+            self.traces.iter().for_each(|(trace, _)| {
+                trace
+                    .iter()
+                    .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+            });
+        }
+    }
 
     #[test]
     fn empty_slang() {

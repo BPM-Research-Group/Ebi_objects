@@ -440,13 +440,28 @@ pub fn get_total_weight_of_enabled_transitions(
 mod tests {
     use crate::{
         HasActivityKey, StochasticProcessTree,
-        ebi_objects::stochastic_process_tree::{
-            can_execute, can_terminate, execute_transition, get_enabled_transitions,
-            get_initial_state, get_total_weight_of_enabled_transitions, get_transition_activity,
+        activity_key::has_activity_key::TestActivityKey,
+        ebi_objects::{
+            process_tree::Node,
+            stochastic_process_tree::{
+                can_execute, can_terminate, execute_transition, get_enabled_transitions,
+                get_initial_state, get_total_weight_of_enabled_transitions,
+                get_transition_activity,
+            },
         },
     };
     use ebi_arithmetic::Fraction;
     use std::fs;
+
+    impl TestActivityKey for StochasticProcessTree {
+        fn test_activity_key(&self) {
+            self.tree.iter().for_each(|node| {
+                if let Node::Activity(a) = node {
+                    self.activity_key().assert_activity_is_of_key(a);
+                }
+            });
+        }
+    }
 
     #[test]
     fn sptree_semantics_loop() {

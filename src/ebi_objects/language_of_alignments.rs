@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
     TranslateActivityKey,
@@ -329,5 +331,23 @@ impl Move {
             | Move::SilentMove(transition)
             | Move::SynchronousMove(_, transition) => Some(*transition),
         }
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for LanguageOfAlignments {
+    fn test_activity_key(&self) {
+        self.alignments.iter().for_each(|alignment| {
+            alignment.iter().for_each(|activity| match activity {
+                Move::SynchronousMove(activity, _)
+                | Move::LogMove(activity)
+                | Move::ModelMove(activity, _) => {
+                    use crate::HasActivityKey;
+
+                    self.activity_key().assert_activity_is_of_key(activity)
+                }
+                Move::SilentMove(_) => {}
+            })
+        });
     }
 }

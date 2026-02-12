@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, TranslateActivityKey,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -66,5 +68,12 @@ impl HasActivityKey for CompressedEventLogXes {
 impl TranslateActivityKey for CompressedEventLogXes {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut crate::ActivityKey) {
         self.log.translate_using_activity_key(to_activity_key)
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for CompressedEventLogXes {
+    fn test_activity_key(&self) {
+        self.log.test_activity_key();
     }
 }

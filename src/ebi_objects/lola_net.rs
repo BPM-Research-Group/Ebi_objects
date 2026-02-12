@@ -7,6 +7,8 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
     TranslateActivityKey,
@@ -625,5 +627,12 @@ impl<'a> Tokeniser<'a> {
         } else {
             Err(anyhow!("Transition not properly terminated with ';'."))
         }
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for LolaNet {
+    fn test_activity_key(&self) {
+        self.0.test_activity_key();
     }
 }

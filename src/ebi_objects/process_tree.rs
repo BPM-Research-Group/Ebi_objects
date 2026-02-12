@@ -1172,11 +1172,22 @@ tree_semantics!(ProcessTree);
 mod tests {
     use crate::{
         HasActivityKey, ProcessTree, StochasticProcessTree,
+        activity_key::has_activity_key::TestActivityKey,
         ebi_objects::process_tree::{
-            execute_transition, get_enabled_transitions, get_initial_state, get_transition_activity,
+            Node, execute_transition, get_enabled_transitions, get_initial_state, get_transition_activity
         },
     };
     use std::fs;
+
+    impl TestActivityKey for ProcessTree {
+        fn test_activity_key(&self) {
+            self.tree.iter().for_each(|node| {
+                if let Node::Activity(a) = node {
+                    self.activity_key().assert_activity_is_of_key(a);
+                }
+            });
+        }
+    }
 
     #[test]
     fn ptree_semantics_loop() {

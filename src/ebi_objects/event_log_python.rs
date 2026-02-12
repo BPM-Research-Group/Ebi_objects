@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, Infoable,
     NumberOfTraces, TranslateActivityKey,
@@ -84,5 +86,12 @@ impl HasActivityKey for EventLogPython {
 impl TranslateActivityKey for EventLogPython {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         self.log.translate_using_activity_key(to_activity_key);
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for EventLogPython {
+    fn test_activity_key(&self) {
+        self.log.test_activity_key();
     }
 }

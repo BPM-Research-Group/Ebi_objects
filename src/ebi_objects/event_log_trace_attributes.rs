@@ -1,16 +1,22 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Attribute, AttributeKey, EventLogXes, Exportable, HasActivityKey, Importable, Infoable, IntoAttributeIterator, IntoAttributeTraceIterator, IntoRefTraceIterator, TranslateActivityKey, constants::ebi_object::EbiObject, iterators::{
+    Activity, ActivityKey, ActivityKeyTranslator, Attribute, AttributeKey, EventLogXes, Exportable,
+    HasActivityKey, Importable, Infoable, IntoAttributeIterator, IntoAttributeTraceIterator,
+    IntoRefTraceIterator, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    iterators::{
         attribute_iterator::{
             CategoricalAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
         ref_trace_iterator::RefTraceIterator,
-    }, log_infoable_startend, log_infoable_stats, traits::{
+    },
+    log_infoable_startend, log_infoable_stats,
+    traits::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
         number_of_traces::NumberOfTraces,
         start_end_activities::StartEndActivities,
         trace_attributes::TraceAttributes,
-    }
+    },
 };
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, FixedOffset};
@@ -375,14 +381,23 @@ impl TraceAttributes for EventLogTraceAttributes {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
+    use super::EventLogTraceAttributes;
     use crate::{
-        ActivityKey, NumberOfTraces, TranslateActivityKey,
+        ActivityKey, HasActivityKey, NumberOfTraces, TranslateActivityKey,
+        activity_key::has_activity_key::TestActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
     };
+    use std::fs;
 
-    use super::EventLogTraceAttributes;
+    impl TestActivityKey for EventLogTraceAttributes {
+        fn test_activity_key(&self) {
+            self.traces.iter().for_each(|(trace, _)| {
+                trace
+                    .iter()
+                    .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+            });
+        }
+    }
 
     #[test]
     fn log_to_slang() {

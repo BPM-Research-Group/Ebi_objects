@@ -375,9 +375,16 @@ impl Graphable for DeterministicFiniteAutomaton {
 
 #[cfg(test)]
 mod tests {
-    use crate::HasActivityKey;
-
     use super::DeterministicFiniteAutomaton;
+    use crate::{HasActivityKey, activity_key::has_activity_key::TestActivityKey};
+
+    impl TestActivityKey for DeterministicFiniteAutomaton {
+        fn test_activity_key(&self) {
+            self.activities
+                .iter()
+                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
+        }
+    }
 
     #[test]
     fn insert_wrong_edge() {

@@ -1,7 +1,5 @@
-use anyhow::{Context, Result, anyhow};
-use flate2::{Compression, write::GzEncoder};
-use std::io::{BufRead, Write};
-
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, CompressedEventLogXes, EventLog, EventLogXes, HasActivityKey,
     TranslateActivityKey,
@@ -11,6 +9,9 @@ use crate::{
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
     },
 };
+use anyhow::{Context, Result, anyhow};
+use flate2::{Compression, write::GzEncoder};
+use std::io::{BufRead, Write};
 
 pub struct CompressedEventLog {
     pub log: EventLog,
@@ -87,5 +88,12 @@ impl HasActivityKey for CompressedEventLog {
 impl TranslateActivityKey for CompressedEventLog {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         self.log.translate_using_activity_key(to_activity_key)
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for CompressedEventLog {
+    fn test_activity_key(&self) {
+        self.log.test_activity_key();
     }
 }

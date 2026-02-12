@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey, dfg_format_comparison,
@@ -488,5 +490,14 @@ impl Infoable for StochasticDirectlyFollowsModel {
         self.activity_key().info(f)?;
 
         Ok(writeln!(f, "")?)
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for StochasticDirectlyFollowsModel {
+    fn test_activity_key(&self) {
+        self.node_2_activity
+            .iter()
+            .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
     }
 }

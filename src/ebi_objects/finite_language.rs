@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
     IntoRefTraceIterator, NumberOfTraces, TranslateActivityKey,
@@ -261,5 +263,16 @@ impl<'a> IntoParallelIterator for &'a FiniteLanguage {
 
     fn into_par_iter(self) -> Self::Iter {
         self.traces.par_iter()
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for FiniteLanguage {
+    fn test_activity_key(&self) {
+        self.traces.iter().for_each(|trace| {
+            trace
+                .iter()
+                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+        });
     }
 }

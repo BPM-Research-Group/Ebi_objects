@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
     TranslateActivityKey,
@@ -595,5 +597,23 @@ impl Graphable for DirectlyFollowsGraph {
         }
 
         Ok(graph)
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for DirectlyFollowsGraph {
+    fn test_activity_key(&self) {
+        self.sources
+            .iter()
+            .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
+        self.targets
+            .iter()
+            .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
+        self.start_activities
+            .iter()
+            .for_each(|(activity, _)| self.activity_key().assert_activity_is_of_key(activity));
+        self.end_activities
+            .iter()
+            .for_each(|(activity, _)| self.activity_key().assert_activity_is_of_key(activity));
     }
 }

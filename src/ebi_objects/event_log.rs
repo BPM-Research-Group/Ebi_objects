@@ -326,14 +326,23 @@ impl<'a> IntoParallelIterator for &'a mut EventLog {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
+    use super::EventLog;
     use crate::{
-        ActivityKey, TranslateActivityKey,
+        ActivityKey, HasActivityKey, TranslateActivityKey,
+        activity_key::has_activity_key::TestActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
     };
+    use std::fs;
 
-    use super::EventLog;
+    impl TestActivityKey for EventLog {
+        fn test_activity_key(&self) {
+            self.traces.iter().for_each(|trace| {
+                trace
+                    .iter()
+                    .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+            });
+        }
+    }
 
     #[test]
     fn log_to_slang() {

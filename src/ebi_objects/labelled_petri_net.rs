@@ -1,11 +1,14 @@
-use anyhow::{Context, Ok, Result, anyhow};
-use ebi_derive::ActivityKey;
-use layout::topo::layout::VisualGraph;
-use std::{
-    fmt::{self, Debug},
-    io::BufRead,
+use super::{
+    deterministic_finite_automaton::DeterministicFiniteAutomaton,
+    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
+    process_tree::ProcessTree,
+    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
+    stochastic_process_tree::StochasticProcessTree,
 };
-
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, StochasticNondeterministicFiniteAutomaton, TranslateActivityKey,
@@ -17,15 +20,12 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-
-use super::{
-    deterministic_finite_automaton::DeterministicFiniteAutomaton,
-    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
-    process_tree::ProcessTree,
-    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
-    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
-    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
-    stochastic_process_tree::StochasticProcessTree,
+use anyhow::{Context, Ok, Result, anyhow};
+use ebi_derive::ActivityKey;
+use layout::topo::layout::VisualGraph;
+use std::{
+    fmt::{self, Debug},
+    io::BufRead,
 };
 
 pub type TransitionIndex = usize;
@@ -613,5 +613,16 @@ impl Graphable for LabelledPetriNet {
         }
 
         Ok(graph)
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for LabelledPetriNet {
+    fn test_activity_key(&self) {
+        self.labels.iter().for_each(|activity| {
+            if let Some(a) = activity {
+                self.activity_key().assert_activity_is_of_key(a);
+            }
+        });
     }
 }

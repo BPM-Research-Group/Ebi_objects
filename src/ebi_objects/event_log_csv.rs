@@ -418,6 +418,7 @@ impl IntoTraceIterator for EventLogCsv {
 mod tests {
     use crate::{
         Importable, NumberOfTraces,
+        activity_key::has_activity_key::TestActivityKey,
         ebi_objects::event_log_csv::{
             CSV_IMPORTER_PARAMETER_SEPARATOR, CSV_IMPORTER_PARAMETER_TRACE_ID, EventLogCsv,
         },
@@ -427,6 +428,12 @@ mod tests {
         fs::{self, File},
         io::BufReader,
     };
+
+    impl TestActivityKey for EventLogCsv {
+        fn test_activity_key(&self) {
+            //no activities are stored; nothing to test
+        }
+    }
 
     #[test]
     fn csv_parameters() {

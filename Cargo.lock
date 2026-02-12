@@ -19,9 +19,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.100"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
+checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 
 [[package]]
 name = "arrayref"
@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.113"
+version = "0.3.114"
 dependencies = [
  "anyhow",
  "chrono",
@@ -335,13 +335,13 @@ dependencies = [
  "process_mining",
  "quick-xml 0.39.0",
  "rayon",
- "resvg 0.46.0",
+ "resvg 0.47.0",
  "serde",
  "serde_json",
  "strum",
  "strum_macros",
  "svg2pdf",
- "tiny-skia",
+ "tiny-skia 0.12.0",
  "uuid",
 ]
 
@@ -405,9 +405,9 @@ checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
 
 [[package]]
 name = "flate2"
-version = "1.1.8"
+version = "1.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b375d6465b98090a5f25b1c7703f3859783755aa9a80433b36e0379a3ec2f369"
+checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -802,9 +802,9 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "macros_process_mining"
-version = "0.1.0"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9463e97d987c52f370700b8bf6ab6dabeb3f9b70ee7388e1419b4cfa41842f28"
+checksum = "70e97f813a115904d1d0a4d9aca16cf251f5e280f0dad4a55d76439e9f26640d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1056,11 +1056,12 @@ dependencies = [
 
 [[package]]
 name = "process_mining"
-version = "0.4.1"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45328e0d6838f1b07e35ef3461faca9a02d023457b005708ae22300d5365a3bd"
+checksum = "0b0ff1bf966a0779757680d60aefd3281e3d0be352c9a2dd2d6b8b2b04df21d6"
 dependencies = [
  "chrono",
+ "csv",
  "flate2",
  "itertools",
  "macros_process_mining",
@@ -1250,16 +1251,16 @@ dependencies = [
  "pico-args",
  "rgb",
  "svgtypes 0.15.3",
- "tiny-skia",
+ "tiny-skia 0.11.4",
  "usvg 0.45.1",
  "zune-jpeg 0.4.21",
 ]
 
 [[package]]
 name = "resvg"
-version = "0.46.0"
+version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b563218631706d614e23059436526d005b50ab5f2d506b55a17eb65c5eb83419"
+checksum = "9be183ad6a216aa96f33e4c8033b0988b8b3ea6fd2359d19af5bac4643fd8e81"
 dependencies = [
  "gif 0.14.1",
  "image-webp",
@@ -1267,8 +1268,8 @@ dependencies = [
  "pico-args",
  "rgb",
  "svgtypes 0.16.1",
- "tiny-skia",
- "usvg 0.46.0",
+ "tiny-skia 0.12.0",
+ "usvg 0.47.0",
  "zune-jpeg 0.5.11",
 ]
 
@@ -1653,7 +1654,7 @@ dependencies = [
  "resvg 0.45.1",
  "siphasher",
  "subsetter",
- "tiny-skia",
+ "tiny-skia 0.11.4",
  "ttf-parser",
  "usvg 0.45.1",
 ]
@@ -1745,7 +1746,22 @@ dependencies = [
  "cfg-if",
  "log",
  "png 0.17.16",
- "tiny-skia-path",
+ "tiny-skia-path 0.11.4",
+]
+
+[[package]]
+name = "tiny-skia"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47ffee5eaaf5527f630fb0e356b90ebdec84d5d18d937c5e440350f88c5a91ea"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "bytemuck",
+ "cfg-if",
+ "log",
+ "png 0.18.0",
+ "tiny-skia-path 0.12.0",
 ]
 
 [[package]]
@@ -1753,6 +1769,17 @@ name = "tiny-skia-path"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c9e7fc0c2e86a30b117d0462aa261b72b7a99b7ebd7deb3a14ceda95c5bdc93"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "strict-num",
+]
+
+[[package]]
+name = "tiny-skia-path"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edca365c3faccca67d06593c5980fa6c57687de727a03131735bb85f01fdeeb9"
 dependencies = [
  "arrayref",
  "bytemuck",
@@ -1851,7 +1878,7 @@ dependencies = [
  "siphasher",
  "strict-num",
  "svgtypes 0.15.3",
- "tiny-skia-path",
+ "tiny-skia-path 0.11.4",
  "unicode-bidi",
  "unicode-script",
  "unicode-vo",
@@ -1860,9 +1887,9 @@ dependencies = [
 
 [[package]]
 name = "usvg"
-version = "0.46.0"
+version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e419dff010bb12512b0ae9e3d2f318dfbdf0167fde7eb05465134d4e8756076f"
+checksum = "d46cf96c5f498d36b7a9693bc6a7075c0bb9303189d61b2249b0dc3d309c07de"
 dependencies = [
  "base64",
  "data-url",
@@ -1878,7 +1905,8 @@ dependencies = [
  "siphasher",
  "strict-num",
  "svgtypes 0.16.1",
- "tiny-skia-path",
+ "tiny-skia-path 0.12.0",
+ "ttf-parser",
  "unicode-bidi",
  "unicode-script",
  "unicode-vo",

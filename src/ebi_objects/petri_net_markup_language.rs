@@ -7,6 +7,8 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
     TranslateActivityKey,
@@ -155,5 +157,12 @@ impl HasActivityKey for PetriNetMarkupLanguage {
 impl TranslateActivityKey for PetriNetMarkupLanguage {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut crate::ActivityKey) {
         self.0.translate_using_activity_key(to_activity_key);
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for PetriNetMarkupLanguage {
+    fn test_activity_key(&self) {
+        self.0.test_activity_key();
     }
 }

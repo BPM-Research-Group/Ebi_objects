@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
@@ -261,5 +263,12 @@ impl IntoTraceIterator for EventLogXes {
 
     fn par_iter_traces(&self) -> ParallelTraceIterator<'_> {
         self.into()
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for EventLogXes {
+    fn test_activity_key(&self) {
+        //no activities are stored
     }
 }

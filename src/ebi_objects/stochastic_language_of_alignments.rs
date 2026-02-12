@@ -1,4 +1,6 @@
 use super::language_of_alignments::Move;
+#[cfg(test)]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable,
     Infoable, TranslateActivityKey,
@@ -360,5 +362,23 @@ impl Iterator for StochasticLanguageOfAlignmentsIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         Some((self.moves.next()?, self.probabilities.next()?))
+    }
+}
+
+#[cfg(test)]
+impl TestActivityKey for StochasticLanguageOfAlignments {
+    fn test_activity_key(&self) {
+        self.alignments.iter().for_each(|alignment| {
+            alignment.iter().for_each(|activity| match activity {
+                Move::SynchronousMove(activity, _)
+                | Move::LogMove(activity)
+                | Move::ModelMove(activity, _) => {
+                    use crate::HasActivityKey;
+
+                    self.activity_key().assert_activity_is_of_key(activity)
+                }
+                Move::SilentMove(_) => {}
+            })
+        });
     }
 }

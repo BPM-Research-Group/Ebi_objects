@@ -13,7 +13,7 @@ use crate::{Infoable, activity_key::activity::Activity};
 #[cfg(test)]
 /// An ActivityKey provides a map String -> Activity, which compiles to a usize in release mode.
 /// There are automated tests in place to ensure an Activity is never interacting with an ActivityKey it does not belong to.
-/// ActivityKeys are assumed to reflect the model: each Activity in the ActivityKey should appear in the object, and 
+/// ActivityKeys are assumed to reflect the model: each Activity in the ActivityKey should appear in the object, and
 /// each Activity in an object should appear in its ActivityKey.
 pub struct ActivityKey {
     pub name2activity: HashMap<String, Activity>,
@@ -223,6 +223,14 @@ impl<'a> ActivityKey {
 
     pub fn deprocess_activity(&self, activity: &Activity) -> &str {
         self.get_activity_label(activity)
+    }
+
+    #[cfg(test)]
+    pub fn assert_activity_is_of_key(&self, activity: &Activity) {
+        assert!(
+            self.uuid == activity.activity_key_uuid,
+            "activity does not belong to a different activity key"
+        );
     }
 }
 
