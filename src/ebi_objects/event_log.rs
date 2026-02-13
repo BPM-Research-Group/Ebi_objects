@@ -1,3 +1,5 @@
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EventLogXes, Exportable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -324,25 +326,25 @@ impl<'a> IntoParallelIterator for &'a mut EventLog {
     }
 }
 
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for EventLog {
+    fn test_activity_key(&self) {
+        self.traces.iter().for_each(|trace| {
+            trace
+                .iter()
+                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::EventLog;
     use crate::{
-        ActivityKey, HasActivityKey, TranslateActivityKey,
-        activity_key::has_activity_key::TestActivityKey,
+        ActivityKey, TranslateActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
     };
     use std::fs;
-
-    impl TestActivityKey for EventLog {
-        fn test_activity_key(&self) {
-            self.traces.iter().for_each(|trace| {
-                trace
-                    .iter()
-                    .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
-            });
-        }
-    }
 
     #[test]
     fn log_to_slang() {

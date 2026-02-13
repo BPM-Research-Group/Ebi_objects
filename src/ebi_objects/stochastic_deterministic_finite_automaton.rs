@@ -1,3 +1,5 @@
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
@@ -526,22 +528,22 @@ impl<'a> Iterator for StochasticDeterministicFiniteAutomatonMutIterator<'a> {
     }
 }
 
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for StochasticDeterministicFiniteAutomaton {
+    fn test_activity_key(&self) {
+        self.activities
+            .iter()
+            .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         EventLogXes, HasActivityKey, StochasticDeterministicFiniteAutomaton, TranslateActivityKey,
-        activity_key::has_activity_key::TestActivityKey,
     };
     use itertools::Itertools;
     use std::fs;
-
-    impl TestActivityKey for StochasticDeterministicFiniteAutomaton {
-        fn test_activity_key(&self) {
-            self.activities
-                .iter()
-                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
-        }
-    }
 
     #[test]
     fn sdfa_outgoing_iter() {

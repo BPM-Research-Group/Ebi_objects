@@ -3,6 +3,8 @@ use std::fmt::Display;
 use anyhow::{Result, anyhow};
 use layout::{backends::svg::SVGWriter, topo::layout::VisualGraph};
 
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{EbiObject, Exportable, Graphable, Infoable};
 
 pub const FORMAT_SPECIFICATION: &str = "Ebi does not support importing of SVG files.";
@@ -109,5 +111,12 @@ impl ToSVGMut for VisualGraph {
         let mut svg = SVGWriter::new();
         self.do_it(false, false, false, &mut svg);
         Ok(svg.finalize().into())
+    }
+}
+
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for ScalableVectorGraphics {
+    fn test_activity_key(&self) {
+        //no activities are stored
     }
 }

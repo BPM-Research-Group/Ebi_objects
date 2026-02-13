@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
@@ -493,7 +493,7 @@ impl Infoable for StochasticDirectlyFollowsModel {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for StochasticDirectlyFollowsModel {
     fn test_activity_key(&self) {
         self.node_2_activity

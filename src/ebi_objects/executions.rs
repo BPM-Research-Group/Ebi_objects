@@ -6,6 +6,8 @@ use std::{
     io::BufRead,
 };
 
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Exportable, Importable, Infoable,
     constants::ebi_object::EbiObject,
@@ -95,5 +97,12 @@ impl Display for Execution {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let x = serde_json::to_string(self).unwrap();
         write!(f, "{}", x)
+    }
+}
+
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for Executions {
+    fn test_activity_key(&self) {
+        //no activities are stored
     }
 }

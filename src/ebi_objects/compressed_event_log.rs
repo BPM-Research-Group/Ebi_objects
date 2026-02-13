@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, CompressedEventLogXes, EventLog, EventLogXes, HasActivityKey,
@@ -91,7 +91,7 @@ impl TranslateActivityKey for CompressedEventLog {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for CompressedEventLog {
     fn test_activity_key(&self) {
         self.log.test_activity_key();

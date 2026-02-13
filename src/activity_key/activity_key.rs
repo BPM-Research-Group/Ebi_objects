@@ -4,13 +4,13 @@ use std::{
     fmt::{Debug, Display},
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use uuid::Uuid;
 
 use crate::{Infoable, activity_key::activity::Activity};
 
 #[derive(Clone, Debug)]
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 /// An ActivityKey provides a map String -> Activity, which compiles to a usize in release mode.
 /// There are automated tests in place to ensure an Activity is never interacting with an ActivityKey it does not belong to.
 /// ActivityKeys are assumed to reflect the model: each Activity in the ActivityKey should appear in the object, and
@@ -23,7 +23,7 @@ pub struct ActivityKey {
 }
 
 #[derive(Clone, Debug)]
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "testactivities")))]
 pub struct ActivityKey {
     pub name2activity: HashMap<String, Activity>,
     pub activity2name: Vec<String>,
@@ -31,7 +31,7 @@ pub struct ActivityKey {
 }
 
 impl<'a> ActivityKey {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn new() -> Self {
         Self {
             name2activity: HashMap::new(),
@@ -41,7 +41,7 @@ impl<'a> ActivityKey {
         }
     }
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "testactivities")))]
     pub fn new() -> Self {
         Self {
             name2activity: HashMap::new(),
@@ -58,7 +58,7 @@ impl<'a> ActivityKey {
         self.name2activity.values().collect()
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn process_trace(&mut self, trace: &Vec<String>) -> Vec<Activity> {
         let mut result = vec![];
         for activity in trace {
@@ -79,7 +79,7 @@ impl<'a> ActivityKey {
         return result;
     }
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "testactivities")))]
     pub fn process_trace(&mut self, trace: &Vec<String>) -> Vec<Activity> {
         let mut result = vec![];
         for activity in trace {
@@ -99,7 +99,7 @@ impl<'a> ActivityKey {
         return result;
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn process_trace_ref(&mut self, trace: &Vec<&str>) -> Vec<Activity> {
         let mut result = vec![];
         for activity in trace {
@@ -120,7 +120,7 @@ impl<'a> ActivityKey {
         return result;
     }
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "testactivities")))]
     pub fn process_trace_ref(&mut self, trace: &Vec<&str>) -> Vec<Activity> {
         let mut result = vec![];
         for activity in trace {
@@ -140,7 +140,7 @@ impl<'a> ActivityKey {
         return result;
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn get_activity_label(&self, activity: &Activity) -> &str {
         assert!(
             self.uuid == activity.activity_key_uuid,
@@ -149,12 +149,12 @@ impl<'a> ActivityKey {
         &self.activity2name[activity.id]
     }
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "testactivities")))]
     pub fn get_activity_label(&self, activity: &Activity) -> &str {
         &self.activity2name[activity.id]
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn process_activity(&mut self, activity: &str) -> Activity {
         match self.name2activity.get(activity) {
             Some(index) => return *index,
@@ -171,7 +171,7 @@ impl<'a> ActivityKey {
         }
     }
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "testactivities")))]
     pub fn process_activity(&mut self, activity: &str) -> Activity {
         match self.name2activity.get(activity) {
             Some(index) => return *index,
@@ -191,7 +191,7 @@ impl<'a> ActivityKey {
         self.name2activity.get(activity).copied()
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn get_activity_by_id(&self, activity_id: usize) -> Activity {
         Activity {
             id: activity_id,
@@ -199,7 +199,7 @@ impl<'a> ActivityKey {
         }
     }
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "testactivities")))]
     pub fn get_activity_by_id(&self, activity_id: usize) -> Activity {
         Activity { id: activity_id }
     }
@@ -225,7 +225,7 @@ impl<'a> ActivityKey {
         self.get_activity_label(activity)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testactivities"))]
     pub fn assert_activity_is_of_key(&self, activity: &Activity) {
         assert!(
             self.uuid == activity.activity_key_uuid,

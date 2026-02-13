@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable,
@@ -140,7 +140,13 @@ For instance:
     where
         Self: Sized,
     {
-        let log = import_xes(reader, XESImportOptions {verbose: false, ..Default::default()});
+        let log = import_xes(
+            reader,
+            XESImportOptions {
+                verbose: false,
+                ..Default::default()
+            },
+        );
         let log = match log {
             Ok(l) => l,
             Err(e) => return Err(anyhow!("{}", e)),
@@ -266,7 +272,7 @@ impl IntoTraceIterator for EventLogXes {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for EventLogXes {
     fn test_activity_key(&self) {
         //no activities are stored

@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
@@ -266,7 +266,7 @@ impl<'a> IntoParallelIterator for &'a FiniteLanguage {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for FiniteLanguage {
     fn test_activity_key(&self) {
         self.traces.iter().for_each(|trace| {

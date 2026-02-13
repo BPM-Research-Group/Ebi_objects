@@ -1,3 +1,5 @@
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -599,27 +601,23 @@ impl Graphable for StochasticLabelledPetriNet {
     }
 }
 
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for StochasticLabelledPetriNet {
+    fn test_activity_key(&self) {
+        self.labels.iter().for_each(|activity| {
+            if let Some(a) = activity {
+                use crate::HasActivityKey;
+
+                self.activity_key().assert_activity_is_of_key(a);
+            }
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    #[cfg(test)]
-    use crate::{
-        activity_key::has_activity_key::TestActivityKey,
-        ebi_objects::stochastic_labelled_petri_net::StochasticLabelledPetriNet,
-    };
+    use crate::ebi_objects::stochastic_labelled_petri_net::StochasticLabelledPetriNet;
     use std::fs;
-
-    #[cfg(test)]
-    impl TestActivityKey for StochasticLabelledPetriNet {
-        fn test_activity_key(&self) {
-            self.labels.iter().for_each(|activity| {
-                if let Some(a) = activity {
-                    use crate::HasActivityKey;
-
-                    self.activity_key().assert_activity_is_of_key(a);
-                }
-            });
-        }
-    }
 
     #[test]
     fn empty_slpn() {

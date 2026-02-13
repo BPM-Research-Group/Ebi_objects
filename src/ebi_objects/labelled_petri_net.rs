@@ -7,7 +7,7 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
@@ -616,7 +616,7 @@ impl Graphable for LabelledPetriNet {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for LabelledPetriNet {
     fn test_activity_key(&self) {
         self.labels.iter().for_each(|activity| {

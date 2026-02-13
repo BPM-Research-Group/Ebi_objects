@@ -1,3 +1,5 @@
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     EbiObject, Exportable, Infoable, ScalableVectorGraphics,
     ebi_objects::scalable_vector_graphics::ToSVG,
@@ -100,5 +102,12 @@ impl ToPNG for ScalableVectorGraphics {
         resvg::render(&tree, tiny_skia::Transform::default(), &mut pixmap.as_mut());
 
         Ok(PortableNetworkGraphics(pixmap.encode_png()?))
+    }
+}
+
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for PortableNetworkGraphics {
+    fn test_activity_key(&self) {
+        //no activities are stored
     }
 }

@@ -1,3 +1,5 @@
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceProbabilityIterator, TranslateActivityKey,
@@ -400,26 +402,26 @@ impl<'a> IntoParallelIterator for &'a FiniteStochasticLanguage {
     }
 }
 
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for FiniteStochasticLanguage {
+    fn test_activity_key(&self) {
+        self.traces.iter().for_each(|(trace, _)| {
+            trace
+                .iter()
+                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
-        HasActivityKey, StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton,
-        activity_key::has_activity_key::TestActivityKey,
+        StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
         traits::number_of_traces::NumberOfTraces,
     };
     use ebi_arithmetic::{Fraction, Zero};
     use std::fs;
-
-    impl TestActivityKey for FiniteStochasticLanguage {
-        fn test_activity_key(&self) {
-            self.traces.iter().for_each(|(trace, _)| {
-                trace
-                    .iter()
-                    .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
-            });
-        }
-    }
 
     #[test]
     fn empty_slang() {

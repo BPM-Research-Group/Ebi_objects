@@ -1,5 +1,5 @@
 use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
@@ -636,7 +636,7 @@ impl Display for PTMLTag {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for ProcessTreeMarkupLanguage {
     fn test_activity_key(&self) {
         self.tree.test_activity_key();

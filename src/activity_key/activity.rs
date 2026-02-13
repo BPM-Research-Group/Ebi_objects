@@ -1,5 +1,5 @@
 use intmap::IntKey;
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use uuid::Uuid;
 
 use std::{
@@ -8,13 +8,13 @@ use std::{
 };
 
 #[derive(Clone, Copy, Ord, Eq, PartialEq, PartialOrd)]
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "testactivities")))]
 pub struct Activity {
     pub id: usize,
 }
 
 #[derive(Clone, Copy, Eq)]
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 pub struct Activity {
     pub id: usize,
     pub activity_key_uuid: Uuid, //In testing, an uuid is kept of the activity key.
@@ -60,7 +60,7 @@ impl IntKey for Activity {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl PartialEq for Activity {
     fn eq(&self, other: &Self) -> bool {
         assert!(
@@ -72,7 +72,7 @@ impl PartialEq for Activity {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl Ord for Activity {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         assert!(
@@ -84,7 +84,7 @@ impl Ord for Activity {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl PartialOrd for Activity {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         assert!(

@@ -16,7 +16,7 @@ pub trait HasActivityKey: TranslateActivityKey {
     fn activity_key_mut(&mut self) -> &mut ActivityKey;
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 pub trait TestActivityKey {
     /// The implementation should call self.activity_key().assert_activity_is_of_key() on each activity contained in the object.
     fn test_activity_key(&self);

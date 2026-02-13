@@ -1,5 +1,5 @@
 use super::language_of_alignments::Move;
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable,
@@ -365,7 +365,7 @@ impl Iterator for StochasticLanguageOfAlignmentsIterator {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for StochasticLanguageOfAlignments {
     fn test_activity_key(&self) {
         self.alignments.iter().for_each(|alignment| {

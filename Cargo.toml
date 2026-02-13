@@ -1,6 +1,6 @@
 [package]
 name = "ebi_objects"
-version = "0.3.114"
+version = "0.3.115"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 keywords = ["stochastic-processes", "process-mining", "business-processes"]
@@ -16,7 +16,7 @@ name = "ebi_objects"
 crate-type = ["cdylib", "lib"]
 
 [features]
-default = []
+default = [ ]
 eexactarithmetic = []
 exactarithmetic = ["eexactarithmetic", "ebi_arithmetic/exactarithmetic"]
 approximatearithmetic = [
@@ -24,6 +24,7 @@ approximatearithmetic = [
     "ebi_arithmetic/approximatearithmetic",
 ]
 eapproximatearithmetic = []
+testactivities = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

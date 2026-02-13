@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
@@ -334,7 +334,7 @@ impl Move {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for LanguageOfAlignments {
     fn test_activity_key(&self) {
         self.alignments.iter().for_each(|alignment| {

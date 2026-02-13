@@ -1,3 +1,5 @@
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Attribute, AttributeKey, EventLogXes, Exportable,
     HasActivityKey, Importable, Infoable, IntoAttributeIterator, IntoAttributeTraceIterator,
@@ -379,25 +381,25 @@ impl TraceAttributes for EventLogTraceAttributes {
     }
 }
 
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for EventLogTraceAttributes {
+    fn test_activity_key(&self) {
+        self.traces.iter().for_each(|(trace, _)| {
+            trace
+                .iter()
+                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::EventLogTraceAttributes;
     use crate::{
-        ActivityKey, HasActivityKey, NumberOfTraces, TranslateActivityKey,
-        activity_key::has_activity_key::TestActivityKey,
+        ActivityKey, NumberOfTraces, TranslateActivityKey,
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
     };
     use std::fs;
-
-    impl TestActivityKey for EventLogTraceAttributes {
-        fn test_activity_key(&self) {
-            self.traces.iter().for_each(|(trace, _)| {
-                trace
-                    .iter()
-                    .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
-            });
-        }
-    }
 
     #[test]
     fn log_to_slang() {
