@@ -1,6 +1,8 @@
 use anyhow::Result;
 use std::fmt::Display;
 
+#[cfg(any(test, feature = "testactivities"))]
+use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     EventLogPython, EventLogTraceAttributes, PortableDocumentFormat, PortableNetworkGraphics,
     StochasticNondeterministicFiniteAutomaton,
@@ -145,6 +147,37 @@ impl Infoable for EbiObject {
             EbiObject::ScalableVectorGraphics(o) => o.info(f),
             EbiObject::PortableDocumentFormat(o) => o.info(f),
             EbiObject::PortableNetworkGraphics(o) => o.info(f),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "testactivities"))]
+impl TestActivityKey for EbiObject {
+    fn test_activity_key(&self) {
+        match self {
+            EbiObject::LabelledPetriNet(o) => o.test_activity_key(),
+            EbiObject::StochasticLabelledPetriNet(o) => o.test_activity_key(),
+            EbiObject::FiniteStochasticLanguage(o) => o.test_activity_key(),
+            EbiObject::StochasticDeterministicFiniteAutomaton(o) => o.test_activity_key(),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(o) => o.test_activity_key(),
+            EbiObject::EventLog(o) => o.test_activity_key(),
+            EbiObject::EventLogCsv(o) => o.test_activity_key(),
+            EbiObject::EventLogPython(o) => o.test_activity_key(),
+            EbiObject::EventLogTraceAttributes(o) => o.test_activity_key(),
+            EbiObject::EventLogXes(o) => o.test_activity_key(),
+            EbiObject::FiniteLanguage(o) => o.test_activity_key(),
+            EbiObject::DirectlyFollowsModel(o) => o.test_activity_key(),
+            EbiObject::StochasticDirectlyFollowsModel(o) => o.test_activity_key(),
+            EbiObject::LanguageOfAlignments(o) => o.test_activity_key(),
+            EbiObject::StochasticLanguageOfAlignments(o) => o.test_activity_key(),
+            EbiObject::DeterministicFiniteAutomaton(o) => o.test_activity_key(),
+            EbiObject::ProcessTree(o) => o.test_activity_key(),
+            EbiObject::StochasticProcessTree(o) => o.test_activity_key(),
+            EbiObject::Executions(o) => o.test_activity_key(),
+            EbiObject::DirectlyFollowsGraph(o) => o.test_activity_key(),
+            EbiObject::ScalableVectorGraphics(o) => o.test_activity_key(),
+            EbiObject::PortableNetworkGraphics(o) => o.test_activity_key(),
+            EbiObject::PortableDocumentFormat(o) => o.test_activity_key(),
         }
     }
 }
