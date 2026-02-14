@@ -3,9 +3,13 @@ use std::collections::HashSet;
 use fnv::FnvBuildHasher;
 
 use crate::{
-    Activity, ActivityKey, CompressedEventLog, CompressedEventLogXes, EventLogTraceAttributes, EventLogXes, ebi_objects::{
-        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython, finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage
-    }
+    Activity, ActivityKey, CompressedEventLog, CompressedEventLogXes, EventLogOcel,
+    EventLogTraceAttributes, EventLogXes,
+    ebi_objects::{
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+        event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython,
+        finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage,
+    },
 };
 
 impl From<EventLog> for FiniteLanguage {
@@ -27,14 +31,14 @@ macro_rules! from_via_log {
     ($t:ident) => {
         impl From<$t> for FiniteLanguage {
             fn from(value: $t) -> Self {
-                let log: EventLog = value.into();
-                log.into()
+                EventLog::from(value).into()
             }
         }
     };
 }
 
 from_via_log!(EventLogCsv);
+from_via_log!(EventLogOcel);
 from_via_log!(EventLogXes);
 from_via_log!(EventLogPython);
 from_via_log!(CompressedEventLog);

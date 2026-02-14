@@ -1,8 +1,8 @@
 use crate::{
     ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogTraceAttributes,
-    CompressedEventLogXes, DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogPython,
-    EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
-    StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
+    CompressedEventLogXes, DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogOcel,
+    EventLogPython, EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, HasActivityKey,
+    NumberOfTraces, StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::stochastic_process_tree::{
         execute_transition, get_enabled_transitions, get_initial_state,
@@ -61,8 +61,7 @@ macro_rules! from_via_slang {
     ($t:ident) => {
         impl From<$t> for StochasticNondeterministicFiniteAutomaton {
             fn from(value: $t) -> Self {
-                let log: FiniteStochasticLanguage = value.into();
-                log.into()
+                FiniteStochasticLanguage::from(value).into()
             }
         }
     };
@@ -72,6 +71,7 @@ from_via_slang!(EventLog);
 from_via_slang!(EventLogTraceAttributes);
 from_via_slang!(EventLogXes);
 from_via_slang!(EventLogCsv);
+from_via_slang!(EventLogOcel);
 from_via_slang!(EventLogPython);
 from_via_slang!(CompressedEventLogXes);
 from_via_slang!(CompressedEventLog);

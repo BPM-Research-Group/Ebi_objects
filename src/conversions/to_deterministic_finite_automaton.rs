@@ -1,8 +1,9 @@
 use crate::{
     ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes,
-    DirectlyFollowsGraph, DirectlyFollowsModel, EventLogCsv, EventLogTraceAttributes, EventLogXes,
-    NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage, StochasticDirectlyFollowsModel,
-    StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
+    DirectlyFollowsGraph, DirectlyFollowsModel, EventLogCsv, EventLogOcel, EventLogTraceAttributes,
+    EventLogXes, NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage,
+    StochasticDirectlyFollowsModel, StochasticNondeterministicFiniteAutomaton,
+    StochasticProcessTree,
     activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
@@ -156,6 +157,7 @@ macro_rules! via_lang {
 via_lang!(EventLog);
 via_lang!(EventLogTraceAttributes);
 via_lang!(EventLogCsv);
+via_lang!(EventLogOcel);
 via_lang!(EventLogXes);
 via_lang!(EventLogPython);
 via_lang!(CompressedEventLog);
