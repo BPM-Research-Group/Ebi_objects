@@ -88,7 +88,7 @@ impl Importable for EventLogOcel {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An object-centric event log file follows the Ocel 2.0 format~\\cite{DBLP:journals/corr/abs-2403-01975}. 
 Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 For instance:
-    \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
+    \\lstinputlisting[language=xml, style=boxed]{../testfiles/oc-log.ocel}";
 
     fn import_as_object(
         reader: &mut dyn BufRead,
