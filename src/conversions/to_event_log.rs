@@ -4,10 +4,12 @@ use crate::{
     ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython,
+        event_log::EventLog, event_log_csv::EventLogCsv, event_log_ocel::EventLogOcel,
+        event_log_python::EventLogPython,
     },
 };
-use process_mining::core::event_data::case_centric::EventLogClassifier;
+use process_mining::{OCEL, core::event_data::case_centric::EventLogClassifier};
+use std::collections::HashMap;
 
 impl From<CompressedEventLog> for EventLog {
     fn from(value: CompressedEventLog) -> Self {
@@ -39,6 +41,44 @@ impl From<EventLogXes> for EventLog {
         Self {
             activity_key: value.activity_key,
             traces,
+        }
+    }
+}
+
+impl From<EventLogOcel> for EventLog {
+    fn from(value: EventLogOcel) -> Self {
+        log::info!("Convert OCEL event log into event log.");
+        let EventLogOcel {
+            mut activity_key,
+            rust4pm_log,
+            object_type,
+        } = value;
+        let OCEL {
+            event_types: _,
+            object_types: _,
+            events,
+            objects,
+        } = rust4pm_log;
+
+        //gather list of objects
+        let objects = EventLogOcel::get_relevant_objects(&objects, &object_type);
+
+        //gather traces
+        let mut object_id2trace = HashMap::new();
+        for event in events {
+            for relation in event.relationships {
+                if objects.contains(&relation.object_id) {
+                    object_id2trace
+                        .entry(relation.object_id)
+                        .or_insert_with(|| vec![])
+                        .push(activity_key.process_activity(&event.event_type));
+                }
+            }
+        }
+
+        Self {
+            activity_key,
+            traces: object_id2trace.into_values().collect(),
         }
     }
 }

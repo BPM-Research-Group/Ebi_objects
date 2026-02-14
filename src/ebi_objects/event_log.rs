@@ -91,6 +91,7 @@ impl Exportable for EventLog {
         match object {
             EbiObject::EventLog(log) => log.export(f),
             EbiObject::EventLogCsv(log) => Into::<Self>::into(log).export(f),
+            EbiObject::EventLogOcel(log) => Into::<Self>::into(log).export(f),
             EbiObject::EventLogXes(log) => Into::<Self>::into(log).export(f),
             EbiObject::EventLogTraceAttributes(log) => Into::<Self>::into(log).export(f),
             _ => Err(anyhow!("Cannot export as event log.")),

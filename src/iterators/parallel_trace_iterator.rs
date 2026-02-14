@@ -1,6 +1,6 @@
 use crate::{
-    Activity, Attribute, EventLogXes, FiniteStochasticLanguage, NumberOfTraces,
-    ebi_objects::event_log_csv::EventLogCsv,
+    Activity, Attribute, EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
+    ebi_objects::{event_log_csv::EventLogCsv, event_log_ocel::EventLogOcel},
 };
 use ebi_arithmetic::Fraction;
 use intmap::IntMap;
@@ -13,6 +13,7 @@ use rayon::iter::{
 pub enum ParallelTraceIterator<'a> {
     Csv { log: &'a EventLogCsv },
     Xes { log: &'a EventLogXes },
+    Ocel { log: &'a EventLogOcel },
 }
 
 impl<'a> ParallelIterator for ParallelTraceIterator<'a> {
@@ -35,6 +36,7 @@ impl<'a> IndexedParallelIterator for ParallelTraceIterator<'a> {
         match self {
             ParallelTraceIterator::Csv { log } => log.number_of_traces(),
             ParallelTraceIterator::Xes { log } => log.number_of_traces(),
+            ParallelTraceIterator::Ocel { log } => log.number_of_traces(),
         }
     }
 
@@ -52,6 +54,10 @@ impl<'a> IndexedParallelIterator for ParallelTraceIterator<'a> {
                 let producer = ParallelTraceIteratorDataProducerXes::from(log);
                 callback.callback(producer)
             }
+            ParallelTraceIterator::Ocel { log } => {
+                let producer = ParallelTraceIteratorDataProducerOcel::from(log);
+                callback.callback(producer)
+            }
         }
     }
 }
@@ -67,6 +73,14 @@ impl<'a> From<&'a EventLogXes> for ParallelTraceIterator<'a> {
         Self::Xes { log: value }
     }
 }
+
+impl<'a> From<&'a EventLogOcel> for ParallelTraceIterator<'a> {
+    fn from(value: &'a EventLogOcel) -> Self {
+        Self::Ocel { log: value }
+    }
+}
+
+// === CSV ===
 
 struct ParallelTraceIteratorDataProducerCsv<'a> {
     log: &'a EventLogCsv,
@@ -179,6 +193,8 @@ impl<'a> ExactSizeIterator for ParallelIteratorCsv<'a> {
     }
 }
 
+// === XES ===
+
 struct ParallelTraceIteratorDataProducerXes<'a> {
     log: &'a EventLogXes,
     traces: &'a [process_mining::core::event_data::case_centric::Trace],
@@ -281,6 +297,135 @@ impl<'a> ExactSizeIterator for ParallelIteratorXes<'a> {
         lower
     }
 }
+
+// === OCEL ===
+
+struct ParallelTraceIteratorDataProducerOcel<'a> {
+    log: &'a EventLogOcel,
+    objects: Vec<String>,
+}
+
+impl<'a> From<&'a EventLogOcel> for ParallelTraceIteratorDataProducerOcel<'a> {
+    fn from(value: &'a EventLogOcel) -> Self {
+        Self {
+            log: value,
+            objects: EventLogOcel::get_relevant_objects(
+                &value.rust4pm_log.objects,
+                &value.object_type,
+            )
+            .into_iter()
+            .collect(),
+        }
+    }
+}
+
+impl<'a> Producer for ParallelTraceIteratorDataProducerOcel<'a> {
+    type Item = Vec<Activity>;
+    type IntoIter = ParallelIteratorOcel<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ParallelIteratorOcel {
+            log: self.log,
+            objects: self.objects,
+        }
+    }
+
+    fn split_at(self, index: usize) -> (Self, Self) {
+        let (left, right) = self.objects.split_at(index);
+        (
+            ParallelTraceIteratorDataProducerOcel {
+                log: self.log,
+                objects: left.to_owned(),
+            },
+            ParallelTraceIteratorDataProducerOcel {
+                log: self.log,
+                objects: right.to_owned(),
+            },
+        )
+    }
+}
+
+struct ParallelIteratorOcel<'a> {
+    log: &'a EventLogOcel,
+    objects: Vec<String>,
+}
+
+impl<'a> Iterator for ParallelIteratorOcel<'a> {
+    type Item = Vec<Activity>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(object_id) = self.objects.pop() {
+            //gather the relevant events
+            Some(
+                self.log
+                    .rust4pm_log
+                    .events
+                    .iter()
+                    .filter(|event| {
+                        event
+                            .relationships
+                            .iter()
+                            .any(|relation| relation.object_id == object_id)
+                    })
+                    .filter_map(|event| {
+                        self.log
+                            .activity_key()
+                            .process_activity_attempt(&event.event_type)
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.objects.len(), Some(self.objects.len()))
+    }
+}
+
+impl<'a> DoubleEndedIterator for ParallelIteratorOcel<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.objects.len() > 0 {
+            let object_id = self.objects.remove(0);
+            //gather the relevant events
+            Some(
+                self.log
+                    .rust4pm_log
+                    .events
+                    .iter()
+                    .filter(|event| {
+                        event
+                            .relationships
+                            .iter()
+                            .any(|relation| relation.object_id == object_id)
+                    })
+                    .filter_map(|event| {
+                        self.log
+                            .activity_key()
+                            .process_activity_attempt(&event.event_type)
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ExactSizeIterator for ParallelIteratorOcel<'a> {
+    fn len(&self) -> usize {
+        let (lower, upper) = self.size_hint();
+        // Note: This assertion is overly defensive, but it checks the invariant
+        // guaranteed by the trait. If this trait were rust-internal,
+        // we could use debug_assert!; assert_eq! will check all Rust user
+        // implementations too.
+        std::assert_eq!(upper, Some(lower));
+        lower
+    }
+}
+
+// === other ===
 
 pub struct ParallelTraceProbabilitiesIterator<'a> {
     slang: &'a FiniteStochasticLanguage,

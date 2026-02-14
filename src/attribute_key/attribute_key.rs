@@ -1,5 +1,7 @@
 use crate::{Attribute, DataType, Infoable};
-use process_mining::core::event_data::case_centric::AttributeValue;
+use process_mining::core::event_data::{
+    case_centric::AttributeValue, object_centric::OCELAttributeValue,
+};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator};
 use std::{borrow::Borrow, collections::HashMap};
 
@@ -105,6 +107,17 @@ impl<'a> AttributeKey {
                 self.attribute2type.push(DataType::init(&attribute_value));
                 return result;
             }
+        }
+    }
+
+    pub fn ocel_attribute_value2attribute_value(ocel_value: OCELAttributeValue) -> AttributeValue {
+        match ocel_value {
+            OCELAttributeValue::Time(d) => AttributeValue::Date(d),
+            OCELAttributeValue::Integer(i) => AttributeValue::Int(i),
+            OCELAttributeValue::Float(f) => AttributeValue::Float(f),
+            OCELAttributeValue::Boolean(b) => AttributeValue::Boolean(b),
+            OCELAttributeValue::String(s) => AttributeValue::String(s),
+            OCELAttributeValue::Null => AttributeValue::None(),
         }
     }
 

@@ -23,6 +23,7 @@ pub mod conversions {
     pub mod to_directly_follows_model;
     pub mod to_event_log;
     pub mod to_event_log_csv;
+    pub mod to_event_log_ocel;
     pub mod to_event_log_python;
     pub mod to_event_log_trace_attributes;
     pub mod to_event_log_xes;
@@ -48,6 +49,7 @@ pub mod ebi_objects {
     pub mod directly_follows_model;
     pub mod event_log;
     pub mod event_log_csv;
+    pub mod event_log_ocel;
     pub mod event_log_python;
     pub mod event_log_trace_attributes;
     pub mod event_log_xes;

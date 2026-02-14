@@ -251,6 +251,7 @@ impl Exportable for LabelledPetriNet {
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as LPN.")),
+            EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogTraceAttributes(_) => {
                 Err(anyhow!("Cannot export event log as LPN."))

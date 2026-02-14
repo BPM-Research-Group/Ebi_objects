@@ -35,6 +35,7 @@ impl Exportable for PortableDocumentFormat {
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_pdf()?.export(f),
             EbiObject::EventLog(_) => Err(anyhow!("cannot export event log as PDF")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("cannot export event log as PDF")),
+            EbiObject::EventLogOcel(_) => Err(anyhow!("cannot export event log as PDF")),
             EbiObject::EventLogPython(_) => Err(anyhow!("cannot export event log as PDF")),
             EbiObject::EventLogTraceAttributes(_) => Err(anyhow!("cannot export event log as PDF")),
             EbiObject::EventLogXes(_) => Err(anyhow!("cannot export event log as PDF")),
@@ -49,7 +50,9 @@ impl Exportable for PortableDocumentFormat {
             }
             EbiObject::ProcessTree(object) => object.to_pdf()?.export(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(object) => object.to_pdf()?.export(f),
-            EbiObject::StochasticNondeterministicFiniteAutomaton(object) => object.to_pdf()?.export(f),
+            EbiObject::StochasticNondeterministicFiniteAutomaton(object) => {
+                object.to_pdf()?.export(f)
+            }
             EbiObject::StochasticLabelledPetriNet(object) => object.to_pdf()?.export(f),
             EbiObject::StochasticLanguageOfAlignments(_) => Err(anyhow!(
                 "cannot export stochastic language of alignments as PDF"
