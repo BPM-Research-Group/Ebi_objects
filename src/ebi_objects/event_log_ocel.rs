@@ -298,3 +298,40 @@ impl TestActivityKey for EventLogOcel {
         //no activities are stored
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        EventLogOcel, Importable, NumberOfTraces,
+        ebi_objects::event_log_ocel::OCEL_IMPORTER_PARAMETER_OBJECT_TYPE,
+        traits::importable::ImporterParameterValue,
+    };
+    use std::{
+        fs::{self, File},
+        io::BufReader,
+    };
+
+    #[test]
+    fn ocel_import() {
+        let fin = fs::read_to_string("testfiles/oc-log.ocel").unwrap();
+        let log = fin.parse::<EventLogOcel>().unwrap();
+        assert_eq!(log.number_of_traces(), 1);
+        assert_eq!(log.number_of_events(), 2);
+        assert_eq!(log.object_type, "Invoice");
+
+        //parse again with a different trace id column
+        let mut parameter_values = EventLogOcel::default_importer_parameter_values();
+        parameter_values.insert(
+            OCEL_IMPORTER_PARAMETER_OBJECT_TYPE,
+            ImporterParameterValue::String("Payment".to_string()),
+        );
+        let log = EventLogOcel::import(
+            &mut BufReader::new(File::open("testfiles/oc-log.ocel").unwrap()),
+            &parameter_values,
+        )
+        .unwrap();
+        assert_eq!(log.number_of_traces(), 1);
+        assert_eq!(log.number_of_events(), 1);
+        assert_eq!(log.object_type, "Payment");
+    }
+}
