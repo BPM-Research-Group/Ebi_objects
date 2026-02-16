@@ -32,11 +32,15 @@ pub const OCEL_DEFAULT_OBJECT_TYPE: &str = "0";
 pub const OCEL_IMPORTER_PARAMETER_OBJECT_TYPE: ImporterParameter = ImporterParameter::String {
     name: "ocel_object_type",
     short_name: "ot",
-    explanation: "The object type that defines what a trace is. May be given as the name of the object-type (which takes preference) or as the index of the object-type in the order of declaration.",
+    explanation: "The object type that defines what a trace is. May be given as the name of the object type (which takes preference) or as the index of the object-type in the order of declaration.",
     allowed_values: None,
     default_value: OCEL_DEFAULT_OBJECT_TYPE,
 };
 
+/// An OCEL event log is a wrapper for a Rust4PM OCEL struct.
+/// It also keeps an `object_type` to allow projection to case-centric event logs.
+/// Pretty much all operations (including extracting a single trace) require a search through all events,
+/// thus it may be advisable to first convert an `EventLogOCEL` to another object before applying operations to it.
 #[derive(Clone, ActivityKey)]
 pub struct EventLogOcel {
     pub(crate) activity_key: ActivityKey,
