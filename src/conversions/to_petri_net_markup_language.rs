@@ -1,12 +1,15 @@
-use crate::ebi_objects::{
-    deterministic_finite_automaton::DeterministicFiniteAutomaton,
-    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
-    labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
-    process_tree::ProcessTree,
-    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
-    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
-    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
-    stochastic_process_tree::StochasticProcessTree,
+use crate::{
+    BusinessProcessModelAndNotation,
+    ebi_objects::{
+        deterministic_finite_automaton::DeterministicFiniteAutomaton,
+        directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
+        labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
+        process_tree::ProcessTree,
+        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+        stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+        stochastic_labelled_petri_net::StochasticLabelledPetriNet,
+        stochastic_process_tree::StochasticProcessTree,
+    },
 };
 use anyhow::{Error, anyhow};
 use process_mining::{
@@ -109,7 +112,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
     }
 }
 
-macro_rules! from {
+macro_rules! via_lpn {
     ($t:ident) => {
         impl TryFrom<$t> for process_mining::PetriNet {
             type Error = Error;
@@ -131,11 +134,12 @@ macro_rules! from {
     };
 }
 
-from!(StochasticLabelledPetriNet);
-from!(DeterministicFiniteAutomaton);
-from!(DirectlyFollowsModel);
-from!(DirectlyFollowsGraph);
-from!(StochasticDirectlyFollowsModel);
-from!(ProcessTree);
-from!(StochasticProcessTree);
-from!(StochasticDeterministicFiniteAutomaton);
+via_lpn!(BusinessProcessModelAndNotation);
+via_lpn!(DeterministicFiniteAutomaton);
+via_lpn!(DirectlyFollowsGraph);
+via_lpn!(DirectlyFollowsModel);
+via_lpn!(ProcessTree);
+via_lpn!(StochasticDeterministicFiniteAutomaton);
+via_lpn!(StochasticDirectlyFollowsModel);
+via_lpn!(StochasticLabelledPetriNet);
+via_lpn!(StochasticProcessTree);

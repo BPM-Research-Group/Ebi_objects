@@ -61,6 +61,9 @@ from_string!(PetriNetMarkupLanguage);
 impl Exportable for PetriNetMarkupLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
+            EbiObject::BusinessProcessModelAndNotation(bpmn) => {
+                PetriNetMarkupLanguage::try_from(bpmn)?.export(f)
+            }
             EbiObject::DeterministicFiniteAutomaton(dfa) => {
                 <DeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(dfa)?
                     .export(f)

@@ -1,4 +1,4 @@
-use crate::{StochasticNondeterministicFiniteAutomaton, ebi_objects::{
+use crate::{BusinessProcessModelAndNotation, StochasticNondeterministicFiniteAutomaton, ebi_objects::{
     deterministic_finite_automaton::DeterministicFiniteAutomaton, directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel, labelled_petri_net::LabelledPetriNet, lola_net::LolaNet, process_tree::ProcessTree, stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton, stochastic_directly_follows_model::StochasticDirectlyFollowsModel, stochastic_labelled_petri_net::StochasticLabelledPetriNet, stochastic_process_tree::StochasticProcessTree
 }};
 
@@ -9,7 +9,7 @@ impl From<LabelledPetriNet> for LolaNet {
     }
 }
 
-macro_rules! from {
+macro_rules! via_lpn {
     ($t:ident) => {
         impl From<$t> for LolaNet {
             fn from(value: $t) -> Self {
@@ -20,12 +20,13 @@ macro_rules! from {
     };
 }
 
-from!(StochasticLabelledPetriNet);
-from!(DeterministicFiniteAutomaton);
-from!(DirectlyFollowsModel);
-from!(DirectlyFollowsGraph);
-from!(StochasticDirectlyFollowsModel);
-from!(ProcessTree);
-from!(StochasticProcessTree);
-from!(StochasticDeterministicFiniteAutomaton);
-from!(StochasticNondeterministicFiniteAutomaton);
+via_lpn!(StochasticLabelledPetriNet);
+via_lpn!(DeterministicFiniteAutomaton);
+via_lpn!(DirectlyFollowsModel);
+via_lpn!(DirectlyFollowsGraph);
+via_lpn!(StochasticDirectlyFollowsModel);
+via_lpn!(ProcessTree);
+via_lpn!(StochasticProcessTree);
+via_lpn!(StochasticDeterministicFiniteAutomaton);
+via_lpn!(StochasticNondeterministicFiniteAutomaton);
+via_lpn!(BusinessProcessModelAndNotation);

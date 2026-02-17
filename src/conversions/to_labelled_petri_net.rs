@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::{Error, Result, anyhow};
 
 use crate::{
-    ActivityKeyTranslator, HasActivityKey, PetriNetMarkupLanguage,
+    ActivityKeyTranslator, BusinessProcessModelAndNotation, HasActivityKey, PetriNetMarkupLanguage,
     StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -606,6 +606,12 @@ impl From<StochasticNondeterministicFiniteAutomaton> for LabelledPetriNet {
 impl From<DirectlyFollowsGraph> for LabelledPetriNet {
     fn from(value: DirectlyFollowsGraph) -> Self {
         <DirectlyFollowsGraph as Into<DirectlyFollowsModel>>::into(value).into()
+    }
+}
+
+impl From<BusinessProcessModelAndNotation> for LabelledPetriNet {
+    fn from(value: BusinessProcessModelAndNotation) -> Self {
+        todo!()
     }
 }
 

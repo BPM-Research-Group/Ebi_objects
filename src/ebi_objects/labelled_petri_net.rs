@@ -218,6 +218,9 @@ impl TranslateActivityKey for LabelledPetriNet {
 impl Exportable for LabelledPetriNet {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
+            EbiObject::BusinessProcessModelAndNotation(bpmn) => {
+                LabelledPetriNet::from(bpmn).export(f)
+            }
             EbiObject::DeterministicFiniteAutomaton(dfa) => {
                 <DeterministicFiniteAutomaton as Into<LabelledPetriNet>>::into(dfa).export(f)
             }
