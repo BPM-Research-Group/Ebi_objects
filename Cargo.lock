@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.119"
+version = "0.3.120"
 dependencies = [
  "anyhow",
  "chrono",
@@ -827,9 +827,9 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "macros_process_mining"
-version = "0.4.4"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e97f813a115904d1d0a4d9aca16cf251f5e280f0dad4a55d76439e9f26640d"
+checksum = "0c92997809fdcf2768e126a6fe1e1fc50f304747d7af98cda19a35ac8dcea54a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1091,9 +1091,9 @@ dependencies = [
 
 [[package]]
 name = "process_mining"
-version = "0.4.4"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b0ff1bf966a0779757680d60aefd3281e3d0be352c9a2dd2d6b8b2b04df21d6"
+checksum = "502242a4ba250d9d4fb3fd2bb9274dd5d4fe2446132ba07ee7128e0b50677544"
 dependencies = [
  "chrono",
  "csv",
