@@ -42,6 +42,7 @@ pub mod conversions {
 }
 pub mod ebi_objects {
     pub mod business_process_model_and_notation;
+    pub mod business_process_model_and_notation_importer;
     pub mod compressed_event_log;
     pub mod compressed_event_log_trace_attributes;
     pub mod compressed_event_log_xes;
