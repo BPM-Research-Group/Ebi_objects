@@ -6,7 +6,6 @@ use crate::{
 };
 use anyhow::{Context, Result, anyhow};
 use ebi_derive::ActivityKey;
-use itertools::Itertools;
 use quick_xml::{
     Reader,
     events::{BytesEnd, BytesStart, Event},
@@ -23,10 +22,16 @@ pub struct BusinessProcessModelAndNotation {
     pub process: BPMNProcess,
 }
 
-type BPMNProcess = Vec<BPMNElement>;
+#[derive(Clone)]
+pub struct BPMNProcess {
+    pub element_id_2_index: HashMap<String, usize>,
+    pub element_index_2_element: Vec<BPMNElement>,
+    pub flow_id_2_index: HashMap<String, usize>,
+    pub flow_index_2_flow: Vec<BPMNFlow>,
+}
 
 #[derive(Clone, Debug)]
-enum BPMNElement {
+pub enum BPMNElement {
     StartEvent,
     EndEvent,
     Task { activity: Activity },
@@ -46,35 +51,29 @@ enum BPMNElementType {
 }
 
 impl BPMNElementType {
-    fn parse(e: &BytesStart) -> Option<Self> {
-        match e.name().as_ref() {
-            b"bpmn:startEvent" => Some(BPMNElementType::StartEvent),
-            b"bpmn:endEvent" => Some(BPMNElementType::EndEvent),
-            b"bpmn:task" => Some(BPMNElementType::Task),
-            b"bpmn:exclusiveGateway" => Some(BPMNElementType::ExclusiveGateway),
-            b"bpmn:inclusiveGateway" => Some(BPMNElementType::InclusiveGateway),
-            _ => None,
-        }
-    }
-
-    fn parse_attribute(e: &BytesStart, attribute_name: &str) -> Option<String> {
-        if let Ok(Some(attribute)) = e.try_get_attribute(attribute_name) {
-            Some(
-                String::from_utf8_lossy(&attribute.value)
-                    .as_ref()
-                    .to_owned(),
-            )
+    fn parse(e: &BytesStart, state: &State) -> Option<Self> {
+        if let Some(open_tag) = state.open_tags.iter().last()
+            && open_tag == b"bpmn:process"
+        {
+            match e.name().as_ref() {
+                b"bpmn:startEvent" => Some(BPMNElementType::StartEvent),
+                b"bpmn:endEvent" => Some(BPMNElementType::EndEvent),
+                b"bpmn:task" => Some(BPMNElementType::Task),
+                b"bpmn:exclusiveGateway" => Some(BPMNElementType::ExclusiveGateway),
+                b"bpmn:inclusiveGateway" => Some(BPMNElementType::InclusiveGateway),
+                _ => None,
+            }
         } else {
             None
         }
     }
 
-    fn to_element(self, e: &BytesStart, state: &mut State) -> Result<BPMNElement> {
+    fn parse_to_element(self, e: &BytesStart, state: &mut State) -> Result<BPMNElement> {
         Ok(match self {
             BPMNElementType::StartEvent => BPMNElement::StartEvent,
             BPMNElementType::EndEvent => BPMNElement::EndEvent,
             BPMNElementType::Task => {
-                if let Some(label) = BPMNElementType::parse_attribute(e, "name") {
+                if let Some(label) = parse_attribute(e, "name") {
                     let activity = state.activity_key.process_activity(&label);
                     BPMNElement::Task { activity }
                 } else {
@@ -87,29 +86,89 @@ impl BPMNElementType {
     }
 }
 
-enum BPMNFlowType {
+#[derive(Clone)]
+pub enum BPMNFlow {
+    SequenceFlow {
+        source_element_index: usize,
+        target_element_index: usize,
+    },
+    MessageFlow {
+        source_element_index: usize,
+        target_element_index: usize,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum BPMNFlowType {
     SequenceFlow,
     MessageFlow,
 }
 
 impl BPMNFlowType {
-    fn from_str(s: &[u8]) -> Option<Self> {
-        match s {
-            b"bpmn:sequenceFlow" => Some(BPMNFlowType::SequenceFlow),
-            b"bpmn:messageFlow" => Some(BPMNFlowType::MessageFlow),
-            _ => None,
+    fn parse(e: &BytesStart, state: &State) -> Option<Self> {
+        if let Some(open_tag) = state.open_tags.iter().last()
+            && open_tag == b"bpmn:process"
+        {
+            match e.name().as_ref() {
+                b"bpmn:sequenceFlow" => Some(BPMNFlowType::SequenceFlow),
+                b"bpmn:messageFlow" => Some(BPMNFlowType::MessageFlow),
+                _ => None,
+            }
+        } else {
+            None
         }
+    }
+
+    fn parse_to_flow(self, e: &BytesStart, state: &mut State) -> Result<BPMNFlow> {
+        //parse source and add if necessary
+        let new_index = state.element_id_2_index.len();
+        let source_ref = parse_attribute(e, "sourceRef")
+            .with_context(|| "flow must have an attribute `sourceRef`")?;
+        let source_element_index =
+            *state
+                .element_id_2_index
+                .entry(source_ref)
+                .or_insert_with(|| {
+                    state.element_index_2_element.push(None);
+                    new_index
+                });
+
+        //parse target and add if necessary
+        let new_index = state.element_id_2_index.len();
+        let target_ref = parse_attribute(e, "sourceRef")
+            .with_context(|| "flow must have an attribute `sourceRef`")?;
+        let target_element_index =
+            *state
+                .element_id_2_index
+                .entry(target_ref)
+                .or_insert_with(|| {
+                    state.element_index_2_element.push(None);
+                    new_index
+                });
+
+        Ok(match self {
+            BPMNFlowType::SequenceFlow => BPMNFlow::SequenceFlow {
+                source_element_index,
+                target_element_index,
+            },
+            BPMNFlowType::MessageFlow => BPMNFlow::MessageFlow {
+                source_element_index,
+                target_element_index,
+            },
+        })
     }
 }
 
 struct State {
     activity_key: ActivityKey,
     open_tags: Vec<Vec<u8>>,
-    open_elements: Vec<BPMNElementType>,
     in_definitions: bool,
     in_process: bool,
-    closed_processes: usize,
-    id_2_element: HashMap<Vec<u8>, BPMNElement>,
+    closed_processes: Vec<BPMNProcess>,
+    element_id_2_index: HashMap<String, usize>,
+    element_index_2_element: Vec<Option<BPMNElement>>,
+    flow_id_2_index: HashMap<String, usize>,
+    flow_index_2_flow: Vec<BPMNFlow>,
 }
 
 impl State {
@@ -117,24 +176,26 @@ impl State {
         Self {
             activity_key: ActivityKey::new(),
             open_tags: vec![],
-            open_elements: vec![],
             in_definitions: false,
             in_process: false,
-            closed_processes: 0,
-            id_2_element: HashMap::new(),
+            closed_processes: vec![],
+            element_id_2_index: HashMap::new(),
+            element_index_2_element: vec![],
+            flow_id_2_index: HashMap::new(),
+            flow_index_2_flow: vec![],
         }
     }
 
-    fn empty_tag(&mut self, e: BytesStart) -> Result<()> {
-        self.open_tag(e.clone())?;
-        self.close_tag(e.to_end())
+    fn empty_tag(&mut self, e: &BytesStart) -> Result<()> {
+        self.open_tag(e)?;
+        self.close_tag(&e.to_end())
     }
 
-    fn open_tag(&mut self, e: BytesStart) -> Result<()> {
+    fn open_tag(&mut self, e: &BytesStart) -> Result<()> {
         match (
             e.name().as_ref(),
-            BPMNElementType::parse(&e),
-            BPMNFlowType::from_str(e.name().as_ref()),
+            BPMNElementType::parse(&e, self),
+            BPMNFlowType::parse(&e, self),
         ) {
             (b"bpmn:definitions", _, _) => {
                 if self.in_definitions {
@@ -150,26 +211,34 @@ impl State {
                     self.in_process = true;
                 }
             }
-            (_, Some(typee), _) => {
-                self.open_element(typee, &e)
-                    .with_context(|| anyhow!("parsing tag `{:?}`", e.name().as_ref()))?;
+            //element tag
+            (_, Some(element_type), _) => {
+                self.open_element(element_type, &e)
+                    .with_context(|| anyhow!("parsing element tag `{:?}`", e.name().as_ref()))?;
+            }
+            //flow tag
+            (_, _, Some(flow_type)) => {
+                self.open_flow(flow_type, &e)
+                    .with_context(|| anyhow!("parsing tag flow `{:?}`", e.name().as_ref()))?;
             }
             _ => {}
         };
 
         self.open_tags.push(e.name().as_ref().to_owned());
 
-        println!("{}", debug(&self.open_tags));
+        // println!("{}", debug(&self.open_tags));
 
         Ok(())
     }
 
-    fn close_tag(&mut self, e: BytesEnd) -> Result<()> {
+    fn close_tag(&mut self, e: &BytesEnd) -> Result<()> {
         if let Some(last_tag) = self.open_tags.pop() {
             if last_tag == e.name().as_ref() {
+                //closing tag matches last remaining opening tag
+
                 match e.name().as_ref() {
                     b"bpmn:process" => {
-                        self.closed_processes += 1;
+                        self.close_process().with_context(|| "close process")?;
                     }
                     _ => {}
                 };
@@ -195,51 +264,147 @@ impl State {
                 "file ended while tag `{}` was still open",
                 String::from_utf8_lossy(&tag)
             ))
-        } else if self.closed_processes < 1 {
-            return Err(anyhow!(
-                "no `bpmn:process` tag found nested in a `bpmn:definitions` tag"
-            ));
         } else {
             Ok(())
         }
     }
 
     fn open_element(&mut self, element_type: BPMNElementType, e: &BytesStart) -> Result<()> {
-        println!("\topen element {:?}", element_type);
+        // println!("\topen element {:?}", element_type);
 
         //create the element
-        let element = element_type.to_element(e, self)?;
+        let element = element_type.parse_to_element(e, self)?;
 
         //read the id
-        if let Ok(Some(attribute)) = e.try_get_attribute("id") {
-            let id = attribute.value;
-            match self.id_2_element.entry(id.to_vec()) {
-                Entry::Occupied(_) => {
-                    return Err(anyhow!(
-                        "two nodes have the id `{}`",
-                        String::from_utf8_lossy(&id)
-                    ));
+        if let Some(id) = parse_attribute(e, "id") {
+            // println!("\t\tread id `{}`", id);
+            let new_index = self.element_id_2_index.len();
+            match self.element_id_2_index.entry(id.clone()) {
+                Entry::Occupied(oe) => {
+                    if let Some(_) = self.element_index_2_element[*oe.get()] {
+                        return Err(anyhow!("two elements have the id `{}`", id));
+                    } else {
+                        //replace the None with the element
+                        self.element_index_2_element[*oe.get()] = Some(element);
+                    }
                 }
                 Entry::Vacant(vacant_entry) => {
-                    vacant_entry.insert(element);
+                    self.element_index_2_element.push(Some(element));
+                    vacant_entry.insert(new_index);
                 }
             }
         } else {
             return Err(anyhow!("element must have an id"));
         }
 
+        // println!("{:?}", self.element_index_2_element);
+
+        Ok(())
+    }
+
+    fn open_flow(&mut self, flow_type: BPMNFlowType, e: &BytesStart) -> Result<()> {
+        // println!("\topen flow {:?}", flow_type);
+
+        let flow = flow_type.parse_to_flow(e, self)?;
+
+        //read the id
+        if let Some(id) = parse_attribute(e, "id") {
+            let new_index = self.flow_index_2_flow.len();
+            match self.flow_id_2_index.entry(id.clone()) {
+                Entry::Occupied(_) => {
+                    return Err(anyhow!("flow with id `{}` is declared twice", id));
+                }
+                Entry::Vacant(vacant_entry) => {
+                    vacant_entry.insert(new_index);
+                    self.flow_index_2_flow.push(flow);
+                }
+            }
+        } else {
+            return Err(anyhow!("flow must have an id"));
+        }
+
+        Ok(())
+    }
+
+    fn close_process(&mut self) -> Result<()> {
+        // println!("\tclose process");
+
+        let mut element_id_2_index = HashMap::new();
+        let mut element_index_2_element = vec![];
+        let mut flow_id_2_index = HashMap::new();
+        let mut flow_index_2_flow = vec![];
+
+        std::mem::swap(&mut self.element_id_2_index, &mut element_id_2_index);
+        std::mem::swap(
+            &mut self.element_index_2_element,
+            &mut element_index_2_element,
+        );
+        std::mem::swap(&mut self.flow_id_2_index, &mut flow_id_2_index);
+        std::mem::swap(&mut self.flow_index_2_flow, &mut flow_index_2_flow);
+
+        //check whether all mentioned elements have been actually declared
+        let mut element_index_2_element_x = Vec::with_capacity(element_index_2_element.len());
+        for (index, element) in element_index_2_element.into_iter().enumerate() {
+            if let Some(element) = element {
+                element_index_2_element_x.push(element);
+            } else {
+                //None value found
+                if let Some((id, _)) = element_id_2_index
+                    .iter()
+                    .find(|(_, indexx)| **indexx == index)
+                {
+                    return Err(anyhow!(
+                        "id `{}` was mentioned but not declared as an element",
+                        id
+                    ));
+                } else {
+                    return Err(anyhow!(
+                        "an id was mentioned but not declared as an element"
+                    ));
+                }
+            }
+        }
+
+        self.closed_processes.push(BPMNProcess {
+            element_id_2_index,
+            element_index_2_element: element_index_2_element_x,
+            flow_id_2_index,
+            flow_index_2_flow,
+        });
+
         Ok(())
     }
 
     fn to_model(self) -> Result<BusinessProcessModelAndNotation> {
-        todo!()
+        if let Some(process) = self.closed_processes.into_iter().next() {
+            Ok(BusinessProcessModelAndNotation {
+                activity_key: self.activity_key,
+                process,
+            })
+        } else {
+            Err(anyhow!(
+                "no `bpmn:process` tag found nested in a `bpmn:definitions` tag"
+            ))
+        }
     }
 }
 
-fn debug(inn: &Vec<Vec<u8>>) -> String {
-    inn.iter()
-        .map(|s| String::from_utf8_lossy(s).to_string())
-        .join(", ")
+// fn debug(inn: &Vec<Vec<u8>>) -> String {
+//     inn.iter()
+//         .map(|s| String::from_utf8_lossy(s).to_string())
+//         .join(", ")
+// }
+
+fn parse_attribute(e: &BytesStart, attribute_name: &str) -> Option<String> {
+    if let Ok(Some(attribute)) = e.try_get_attribute(attribute_name) {
+        Some(
+            String::from_utf8_lossy(&attribute.value)
+                .as_ref()
+                .to_owned(),
+        )
+    } else {
+        None
+    }
 }
 
 impl Importable for BusinessProcessModelAndNotation {
@@ -272,29 +437,42 @@ impl Importable for BusinessProcessModelAndNotation {
         let mut state = State::new();
         loop {
             buf.clear();
-            let e = xml_reader.read_event_into(&mut buf);
-            // log::debug!("xml reads {:?}", e);
+            let e = xml_reader
+                .read_event_into(&mut buf)
+                .with_context(|| "cannot read XML event")?;
             match e {
                 //start tag
-                Ok(Event::Start(e)) => {
-                    state
-                        .open_tag(e)
-                        .with_context(|| format!("at position {}", xml_reader.buffer_position()))?;
+                Event::Start(e) => {
+                    state.open_tag(&e).with_context(|| {
+                        format!(
+                            "start tag `{}` at position {}",
+                            String::from_utf8_lossy(e.name().as_ref()),
+                            xml_reader.buffer_position()
+                        )
+                    })?;
                 }
 
                 //end of tag
-                Ok(Event::End(e)) => state
-                    .close_tag(e)
-                    .with_context(|| format!("at position {}", xml_reader.buffer_position()))?,
+                Event::End(e) => state.close_tag(&e).with_context(|| {
+                    format!(
+                        "close tag `{}` at position {}",
+                        String::from_utf8_lossy(e.name().as_ref()),
+                        xml_reader.buffer_position()
+                    )
+                })?,
 
                 //empty tag
-                Ok(Event::Empty(e)) => state
-                    .empty_tag(e)
-                    .with_context(|| format!("at position {}", xml_reader.buffer_position()))?,
+                Event::Empty(e) => state.empty_tag(&e).with_context(|| {
+                    format!(
+                        "empty tag `{}` at position {}",
+                        String::from_utf8_lossy(e.name().as_ref()),
+                        xml_reader.buffer_position()
+                    )
+                })?,
 
                 //end of file: return the tree if we can finish
-                Ok(Event::Eof) => {
-                    state.can_eof()?;
+                Event::Eof => {
+                    state.can_eof().with_context(|| "unexpected end of file")?;
                     return Ok(state.to_model()?);
                 }
 
@@ -343,7 +521,7 @@ mod tests {
 
     #[test]
     fn bpmn_import() {
-        // let fin = fs::read_to_string("testfiles/model.bpmn").unwrap();
-        // let log = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
+        let fin = fs::read_to_string("testfiles/model.bpmn").unwrap();
+        let log = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
     }
 }
