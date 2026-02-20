@@ -4,6 +4,7 @@
     <participant id="Participant_12vovwk" processRef="Process_1" />
     <participant id="Participant_0my6w4t" processRef="Process_1dmx8wn" />
     <messageFlow id="Flow_0pcnf3g" sourceRef="Task_1hcentk" targetRef="Event_0gubo5k" />
+    <messageFlow id="Flow_0kx5wt8" sourceRef="Event_0ywabyr" targetRef="Task_1hcentk" />
   </collaboration>
   <process id="Process_1" isExecutable="false">
     <startEvent id="StartEvent_1y45yut" name="hunger noticed">
@@ -16,6 +17,7 @@
     <exclusiveGateway id="ExclusiveGateway_15hu1pt" name="desired dish?">
       <incoming>SequenceFlow_0wnb4ke</incoming>
       <outgoing>Flow_00ex9xj</outgoing>
+      <outgoing>Flow_0ecqaoa</outgoing>
     </exclusiveGateway>
     <endEvent id="Event_09p4av3">
       <incoming>Flow_00ex9xj</incoming>
@@ -24,6 +26,10 @@
     <sequenceFlow id="SequenceFlow_0h21x7r" sourceRef="StartEvent_1y45yut" targetRef="Task_1hcentk" />
     <sequenceFlow id="SequenceFlow_0wnb4ke" sourceRef="Task_1hcentk" targetRef="ExclusiveGateway_15hu1pt" />
     <sequenceFlow id="Flow_00ex9xj" sourceRef="ExclusiveGateway_15hu1pt" targetRef="Event_09p4av3" />
+    <sequenceFlow id="Flow_0ecqaoa" sourceRef="ExclusiveGateway_15hu1pt" targetRef="Gateway_10yzasn" />
+    <eventBasedGateway id="Gateway_10yzasn">
+      <incoming>Flow_0ecqaoa</incoming>
+    </eventBasedGateway>
   </process>
   <process id="Process_1dmx8wn">
     <startEvent id="Event_0gubo5k">
@@ -44,7 +50,13 @@
     <sequenceFlow id="Flow_0lag6iu" sourceRef="Event_0ywabyr" targetRef="Event_0nc8rwc" />
     <intermediateCatchEvent id="Event_0nc8rwc">
       <incoming>Flow_0lag6iu</incoming>
+      <outgoing>Flow_1inxsj3</outgoing>
       <messageEventDefinition id="MessageEventDefinition_108yo43" />
+    </intermediateCatchEvent>
+    <sequenceFlow id="Flow_1inxsj3" sourceRef="Event_0nc8rwc" targetRef="Event_06o9jow" />
+    <intermediateCatchEvent id="Event_06o9jow">
+      <incoming>Flow_1inxsj3</incoming>
+      <timerEventDefinition id="TimerEventDefinition_036dejg" />
     </intermediateCatchEvent>
   </process>
   <bpmndi:BPMNDiagram id="BpmnDiagram_1">
@@ -64,11 +76,14 @@
       <bpmndi:BPMNShape id="ExclusiveGateway_15hu1pt_di" bpmnElement="ExclusiveGateway_15hu1pt" isMarkerVisible="true">
         <omgdc:Bounds x="465" y="145" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="458" y="202" width="66" height="14" />
+          <omgdc:Bounds x="457" y="121" width="66" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_04w1af8_di" bpmnElement="Event_09p4av3">
         <omgdc:Bounds x="572" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0hwjo86_di" bpmnElement="Gateway_10yzasn">
+        <omgdc:Bounds x="575" y="255" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="SequenceFlow_0h21x7r_di" bpmnElement="SequenceFlow_0h21x7r">
         <omgdi:waypoint x="258" y="170" />
@@ -81,6 +96,11 @@
       <bpmndi:BPMNEdge id="Flow_00ex9xj_di" bpmnElement="Flow_00ex9xj">
         <omgdi:waypoint x="515" y="170" />
         <omgdi:waypoint x="572" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ecqaoa_di" bpmnElement="Flow_0ecqaoa">
+        <omgdi:waypoint x="490" y="195" />
+        <omgdi:waypoint x="490" y="280" />
+        <omgdi:waypoint x="575" y="280" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Participant_0my6w4t_di" bpmnElement="Participant_0my6w4t" isHorizontal="true">
         <omgdc:Bounds x="160" y="390" width="600" height="250" />
@@ -97,6 +117,9 @@
       <bpmndi:BPMNShape id="Event_0ih4oww_di" bpmnElement="Event_0nc8rwc">
         <omgdc:Bounds x="542" y="492" width="36" height="36" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1t4m2q4_di" bpmnElement="Event_06o9jow">
+        <omgdc:Bounds x="632" y="492" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1c53fac_di" bpmnElement="Flow_1c53fac">
         <omgdi:waypoint x="308" y="510" />
         <omgdi:waypoint x="362" y="510" />
@@ -109,11 +132,21 @@
         <omgdi:waypoint x="488" y="510" />
         <omgdi:waypoint x="542" y="510" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1inxsj3_di" bpmnElement="Flow_1inxsj3">
+        <omgdi:waypoint x="578" y="510" />
+        <omgdi:waypoint x="632" y="510" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0pcnf3g_di" bpmnElement="Flow_0pcnf3g">
-        <omgdi:waypoint x="360" y="210" />
-        <omgdi:waypoint x="360" y="351" />
+        <omgdi:waypoint x="349" y="210" />
+        <omgdi:waypoint x="310" y="351" />
         <omgdi:waypoint x="290" y="351" />
         <omgdi:waypoint x="290" y="492" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0kx5wt8_di" bpmnElement="Flow_0kx5wt8">
+        <omgdi:waypoint x="470" y="492" />
+        <omgdi:waypoint x="470" y="351" />
+        <omgdi:waypoint x="380" y="351" />
+        <omgdi:waypoint x="380" y="210" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

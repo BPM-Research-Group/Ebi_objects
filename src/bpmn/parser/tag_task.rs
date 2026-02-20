@@ -1,9 +1,11 @@
 use crate::bpmn::{
+    element::BPMNElement,
     importer::parse_attribute,
-    objects::BPMNElement,
-    parser_state::ParserState,
-    parser_traits::{Closeable, Openable, Recognisable},
-    tags::{OpenedTag, Tag},
+    parser::{
+        parser_state::ParserState,
+        parser_traits::{Closeable, Openable, Recognisable},
+        tags::{OpenedTag, Tag},
+    },
 };
 use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};

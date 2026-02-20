@@ -1,23 +1,27 @@
 use crate::{
     Activity,
     bpmn::{
-        objects::{BPMNElement, BPMNProcess},
-        parser_state::ParserState,
-        parser_traits::{Closeable, Openable, Recognisable},
-        tag_collaboration::Collaboration,
-        tag_definitions::Definitions,
-        tag_end_event::EndEvent,
-        tag_exclusive_gateway::ExclusiveGateway,
-        tag_inclusive_gateway::InclusiveGateway,
-        tag_intermediate_catch_event::IntermediateCatchEvent,
-        tag_intermediate_throw_event::IntermediateThrowEvent,
-        tag_message_event_definition::MessageEventDefinition,
-        tag_message_flow::{DraftMessageFlow, MessageFlow},
-        tag_parallel_gateway::ParallelGateway,
-        tag_process::Process,
-        tag_sequence_flow::{DraftSequenceFlow, SequenceFlow},
-        tag_start_event::StartEvent,
-        tag_task::Task,
+        element::BPMNElement,
+        parser::{
+            parser_state::ParserState,
+            parser_traits::{Closeable, Openable, Recognisable},
+            tag_collaboration::Collaboration,
+            tag_definitions::Definitions,
+            tag_end_event::EndEvent,
+            tag_event_based_gateway::EventBasedGateway,
+            tag_exclusive_gateway::ExclusiveGateway,
+            tag_inclusive_gateway::InclusiveGateway,
+            tag_intermediate_catch_event::IntermediateCatchEvent,
+            tag_intermediate_throw_event::IntermediateThrowEvent,
+            tag_message_event_definition::MessageEventDefinition,
+            tag_message_flow::{DraftMessageFlow, MessageFlow},
+            tag_parallel_gateway::ParallelGateway,
+            tag_process::Process,
+            tag_sequence_flow::{DraftSequenceFlow, SequenceFlow},
+            tag_start_event::StartEvent,
+            tag_task::Task,
+        },
+        process::BPMNProcess,
     },
 };
 use anyhow::Result;
@@ -30,6 +34,7 @@ pub(crate) enum Tag {
     Collaboration,
     Definitions,
     EndEvent,
+    EventBasedGateway,
     ExclusiveGateway,
     InclusiveGateway,
     IntermediateCatchEvent,
@@ -64,6 +69,7 @@ impl Recognisable for Tag {
                 Tag::IntermediateThrowEvent => IntermediateThrowEvent::recognise_tag(e, state),
                 Tag::IntermediateCatchEvent => IntermediateCatchEvent::recognise_tag(e, state),
                 Tag::ParallelGateway => ParallelGateway::recognise_tag(e, state),
+                Tag::EventBasedGateway => EventBasedGateway::recognise_tag(e, state),
             };
             if x.is_some() {
                 return x;
@@ -93,6 +99,7 @@ impl Openable for Tag {
             Tag::IntermediateThrowEvent => IntermediateThrowEvent::open_tag(tag, e, state),
             Tag::IntermediateCatchEvent => IntermediateCatchEvent::open_tag(tag, e, state),
             Tag::ParallelGateway => ParallelGateway::open_tag(tag, e, state),
+            Tag::EventBasedGateway => EventBasedGateway::open_tag(tag, e, state),
         }
     }
 }
@@ -118,6 +125,10 @@ pub(crate) enum OpenedTag {
         id: String,
         message_index: Option<usize>,
         message_id: Option<String>,
+    },
+    EventBasedGateway {
+        index: usize,
+        id: String,
     },
     ExclusiveGateway {
         index: usize,
@@ -202,6 +213,9 @@ impl Closeable for OpenedTag {
                 IntermediateCatchEvent::close_tag(opened_tag, e, state)
             }
             OpenedTag::ParallelGateway { .. } => ParallelGateway::close_tag(opened_tag, e, state),
+            OpenedTag::EventBasedGateway { .. } => {
+                EventBasedGateway::close_tag(opened_tag, e, state)
+            }
         }
     }
 }

@@ -1,8 +1,10 @@
 use crate::bpmn::{
-    objects::BPMNElement,
-    parser_state::ParserState,
-    parser_traits::{Closeable, Openable, Recognisable},
-    tags::{OpenedTag, Tag},
+    element::BPMNElement,
+    parser::{
+        parser_state::ParserState,
+        parser_traits::{Closeable, Openable, Recognisable},
+        tags::{OpenedTag, Tag},
+    },
 };
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};

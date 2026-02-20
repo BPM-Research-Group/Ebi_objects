@@ -1,8 +1,10 @@
 #[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
-    ActivityKey, ActivityKeyTranslator, Graphable, Infoable, TranslateActivityKey,
-    bpmn::objects::{BPMNElement, BPMNObject, BPMNProcess, MessageFlow},
+    ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable, TranslateActivityKey,
+    bpmn::{
+        element::BPMNElement, message_flow::MessageFlow, objects::BPMNObject, process::BPMNProcess,
+    },
     traits::graphable::{create_edge, create_gateway, create_place, create_transition},
 };
 use anyhow::{Result, anyhow};
@@ -30,6 +32,15 @@ pub struct BusinessProcessModelAndNotation {
     pub message_flows: Vec<MessageFlow>,
 }
 
+impl BusinessProcessModelAndNotation {
+    fn number_of_elements(&self) -> usize {
+        self.processes
+            .iter()
+            .map(|process| process.all_elements_ref().len())
+            .sum()
+    }
+}
+
 impl Display for BusinessProcessModelAndNotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
@@ -38,7 +49,19 @@ impl Display for BusinessProcessModelAndNotation {
 
 impl Infoable for BusinessProcessModelAndNotation {
     fn info(&self, f: &mut impl Write) -> Result<()> {
-        todo!()
+        writeln!(f, "Number of processes (pools)\t{}", self.processes.len())?;
+        writeln!(f, "Number of elements\t\t{}", self.number_of_elements())?;
+        writeln!(f, "Number of message flows\t\t{}", self.message_flows.len())?;
+        writeln!(
+            f,
+            "Number of activities\t\t{}",
+            self.activity_key().get_number_of_activities()
+        )?;
+
+        writeln!(f, "")?;
+        self.activity_key().info(f)?;
+
+        Ok(writeln!(f, "")?)
     }
 }
 
@@ -66,6 +89,7 @@ impl Graphable for BusinessProcessModelAndNotation {
                     BPMNElement::ExclusiveGateway { .. } => create_gateway(&mut graph, "x"),
                     BPMNElement::InclusiveGateway { .. } => create_gateway(&mut graph, "o"),
                     BPMNElement::ParallelGateway { .. } => create_gateway(&mut graph, "+"),
+                    BPMNElement::EventBasedGateway { .. } => create_gateway(&mut graph, "e"),
                     BPMNElement::Task { activity, .. } => create_transition(
                         &mut graph,
                         self.activity_key.deprocess_activity(activity),
@@ -147,7 +171,7 @@ impl TestActivityKey for BusinessProcessModelAndNotation {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BusinessProcessModelAndNotation, Graphable, TranslateActivityKey,
+        BusinessProcessModelAndNotation, Graphable, Infoable, TranslateActivityKey,
         activity_key::has_activity_key::TestActivityKey,
     };
     use std::fs::{self};
@@ -173,5 +197,15 @@ mod tests {
         bpmn.translate_using_activity_key(&mut bpmn2.activity_key);
 
         bpmn.test_activity_key();
+    }
+
+    #[test]
+    fn bpmn_pool_infoable() {
+        let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
+        let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
+
+        let mut f = vec![];
+        bpmn.info(&mut f).unwrap();
+        println!("{}", String::from_utf8_lossy(&f));
     }
 }

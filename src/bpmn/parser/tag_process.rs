@@ -1,9 +1,12 @@
 use crate::bpmn::{
-    objects::{BPMNProcess, SequenceFlow},
-    parser_state::ParserState,
-    parser_traits::{Closeable, Openable, Recognisable},
-    tag_sequence_flow::DraftSequenceFlow,
-    tags::{OpenedTag, Tag},
+    parser::{
+        parser_state::ParserState,
+        parser_traits::{Closeable, Openable, Recognisable},
+        tag_sequence_flow::DraftSequenceFlow,
+        tags::{OpenedTag, Tag},
+    },
+    process::BPMNProcess,
+    sequence_flow::SequenceFlow,
 };
 use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};

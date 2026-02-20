@@ -1,15 +1,17 @@
 use crate::bpmn::{
-    objects::BPMNElement,
-    parser_state::ParserState,
-    parser_traits::{Closeable, Openable, Recognisable},
-    tags::{OpenedTag, Tag},
+    element::BPMNElement,
+    parser::{
+        parser_state::ParserState,
+        parser_traits::{Closeable, Openable, Recognisable},
+        tags::{OpenedTag, Tag},
+    },
 };
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub struct StartEvent {}
+pub struct EndEvent {}
 
-impl Recognisable for StartEvent {
+impl Recognisable for EndEvent {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -18,8 +20,8 @@ impl Recognisable for StartEvent {
             if let Some(OpenedTag::Process { .. }) = state.open_tags.get(state.open_tags.len() - 1)
             {
                 {
-                    if e.local_name().as_ref() == b"startEvent" {
-                        return Some(Tag::StartEvent);
+                    if e.local_name().as_ref() == b"endEvent" {
+                        return Some(Tag::EndEvent);
                     }
                 }
             }
@@ -28,14 +30,14 @@ impl Recognisable for StartEvent {
     }
 }
 
-impl Openable for StartEvent {
+impl Openable for EndEvent {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
     {
         let (index, id) = state.read_and_add_id(e)?;
 
-        Ok(OpenedTag::StartEvent {
+        Ok(OpenedTag::EndEvent {
             index,
             id,
             message_index: None,
@@ -44,11 +46,11 @@ impl Openable for StartEvent {
     }
 }
 
-impl Closeable for StartEvent {
+impl Closeable for EndEvent {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         let index = state.open_tags.len() - 1;
         if let Some(OpenedTag::Process { elements, .. }) = state.open_tags.get_mut(index) {
-            if let OpenedTag::StartEvent {
+            if let OpenedTag::EndEvent {
                 index,
                 id,
                 message_index,
@@ -56,14 +58,14 @@ impl Closeable for StartEvent {
             } = opened_tag
             {
                 if let (Some(message_index), Some(message_id)) = (message_index, message_id) {
-                    elements.push(BPMNElement::MessageStartEvent {
+                    elements.push(BPMNElement::MessageEndEvent {
                         index,
                         id,
                         message_index,
                         message_id,
                     });
                 } else {
-                    elements.push(BPMNElement::StartEvent { index, id });
+                    elements.push(BPMNElement::EndEvent { index, id });
                 }
                 Ok(())
             } else {

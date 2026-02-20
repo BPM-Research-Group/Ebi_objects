@@ -1,4 +1,4 @@
-use crate::bpmn::{
+use crate::bpmn::parser::{
     parser_state::ParserState,
     tags::{OpenedTag, Tag},
 };

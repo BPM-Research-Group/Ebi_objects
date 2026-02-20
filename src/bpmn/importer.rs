@@ -1,6 +1,6 @@
 use crate::{
     BusinessProcessModelAndNotation, EbiObject, Importable,
-    bpmn::{
+    bpmn::parser::{
         parser::{can_eof, close_tag, empty_tag, is_in_namespace, open_tag},
         parser_state::ParserState,
     },
@@ -50,10 +50,10 @@ impl Importable for BusinessProcessModelAndNotation {
             match (in_namespace, xml_event) {
                 //start tag
                 (true, Event::Start(e)) => {
-                    println!(
-                        "start tag {}",
-                        String::from_utf8_lossy(e.local_name().as_ref()),
-                    );
+                    // println!(
+                    //     "start tag {}",
+                    //     String::from_utf8_lossy(e.local_name().as_ref()),
+                    // );
                     open_tag(&mut state, &e).with_context(|| {
                         format!(
                             "start tag `{}` at position {}",
@@ -65,10 +65,10 @@ impl Importable for BusinessProcessModelAndNotation {
 
                 //end of tag
                 (true, Event::End(e)) => {
-                    println!(
-                        "end tag {}",
-                        String::from_utf8_lossy(e.local_name().as_ref()),
-                    );
+                    // println!(
+                    //     "end tag {}",
+                    //     String::from_utf8_lossy(e.local_name().as_ref()),
+                    // );
                     close_tag(&mut state, &e).with_context(|| {
                         format!(
                             "close tag `{}` at position {}",
@@ -132,8 +132,8 @@ mod tests {
 
         assert_eq!(bpmn.processes.len(), 2);
         assert_eq!(bpmn.processes[0].sequence_flows.len(), 3);
-        assert_eq!(bpmn.processes[1].sequence_flows.len(), 3);
-        assert_eq!(bpmn.message_flows.len(), 1);
+        assert_eq!(bpmn.processes[1].sequence_flows.len(), 4);
+        assert_eq!(bpmn.message_flows.len(), 2);
     }
 
     #[test]

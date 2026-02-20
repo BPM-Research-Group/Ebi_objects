@@ -140,11 +140,16 @@ impl Display for EventLogOcel {
 
 impl Infoable for EventLogOcel {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        println!(
+        writeln!(
+            f,
             "Number of unique events\t\t{}",
             self.rust4pm_log.events.len()
-        );
-        println!("Number of objects\t\t\t{}", self.rust4pm_log.objects.len());
+        )?;
+        writeln!(
+            f,
+            "Number of objects\t\t\t{}",
+            self.rust4pm_log.objects.len()
+        )?;
 
         let lengths = self.get_trace_lengths();
         log_infoable_stats!(f, self, lengths.iter());

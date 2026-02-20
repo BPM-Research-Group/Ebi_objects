@@ -1,6 +1,9 @@
 use crate::{
     ActivityKey, BusinessProcessModelAndNotation,
-    bpmn::{importer::parse_attribute, tag_definitions::DraftDefinitions, tags::OpenedTag},
+    bpmn::{
+        importer::parse_attribute,
+        parser::{tag_definitions::DraftDefinitions, tags::OpenedTag},
+    },
 };
 use anyhow::{Context, Result, anyhow};
 use quick_xml::events::BytesStart;

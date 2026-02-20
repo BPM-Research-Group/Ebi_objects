@@ -1,4 +1,4 @@
-use crate::bpmn::{
+use crate::bpmn::parser::{
     parser_state::ParserState,
     parser_traits::{Closeable, Openable, Recognisable},
     tags::{OpenedTag, Tag},
@@ -17,14 +17,16 @@ impl Recognisable for MessageEventDefinition {
         Self: Sized,
     {
         if state.open_tags.len() >= 1 {
-            if let Some(OpenedTag::StartEvent { .. }) =
-                state.open_tags.get(state.open_tags.len() - 1)
-            {
-                {
-                    if e.local_name().as_ref() == b"messageEventDefinition" {
-                        return Some(Tag::MessageEventDefinition);
+            if e.local_name().as_ref() == b"messageEventDefinition" {
+                return match state.open_tags.get(state.open_tags.len() - 1) {
+                    Some(OpenedTag::StartEvent { .. })
+                    | Some(OpenedTag::EndEvent { .. })
+                    | Some(OpenedTag::IntermediateCatchEvent { .. })
+                    | Some(OpenedTag::IntermediateThrowEvent { .. }) => {
+                        Some(Tag::MessageEventDefinition)
                     }
-                }
+                    _ => None,
+                };
             }
         }
         None
@@ -52,6 +54,11 @@ impl Closeable for MessageEventDefinition {
                 ..
             })
             | Some(OpenedTag::EndEvent {
+                message_index,
+                message_id,
+                ..
+            })
+            | Some(OpenedTag::IntermediateCatchEvent {
                 message_index,
                 message_id,
                 ..
