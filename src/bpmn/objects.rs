@@ -1,5 +1,27 @@
 use crate::Activity;
 
+pub trait IdSearchable {
+    /// find an object with the given id, returns (pool rank, element index)
+    fn search_id(&self, id: &str) -> Option<(Option<usize>, usize)>;
+}
+
+pub trait BPMNObject: IdSearchable {
+    /// find an object with the given id
+    fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject>;
+
+    fn index(&self) -> usize;
+
+    fn id(&self) -> &str;
+
+    fn can_catch_message(&self) -> bool;
+
+    fn can_throw_message(&self) -> bool;
+
+    fn all_elements_ref(&self) -> Vec<&BPMNElement>;
+
+    fn element_mut(&mut self, index: usize) -> Option<&mut BPMNElement>;
+}
+
 #[derive(Clone, Debug)]
 pub struct BPMNProcess {
     pub(crate) index: usize,
@@ -55,6 +77,10 @@ pub enum BPMNElement {
         message_index: usize,
         message_id: String,
     },
+    ParallelGateway {
+        index: usize,
+        id: String,
+    },
     StartEvent {
         index: usize,
         id: String,
@@ -82,24 +108,6 @@ pub struct MessageFlow {
     pub source_element_index: usize,
     pub target_process_rank: usize,
     pub target_element_index: usize,
-}
-
-pub trait IdSearchable {
-    /// find an object with the given id, returns (pool rank, element index)
-    fn search_id(&self, id: &str) -> Option<(Option<usize>, usize)>;
-}
-
-pub trait BPMNObject: IdSearchable {
-    /// find an object with the given id
-    fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject>;
-
-    fn index(&self) -> usize;
-
-    fn id(&self) -> &str;
-
-    fn can_catch_message(&self) -> bool;
-
-    fn can_throw_message(&self) -> bool;
 }
 
 impl IdSearchable for MessageFlow {
@@ -136,6 +144,14 @@ impl BPMNObject for MessageFlow {
     fn can_throw_message(&self) -> bool {
         false
     }
+
+    fn all_elements_ref(&self) -> Vec<&BPMNElement> {
+        vec![]
+    }
+
+    fn element_mut(&mut self, _index: usize) -> Option<&mut BPMNElement> {
+        None
+    }
 }
 
 impl IdSearchable for BPMNElement {
@@ -147,7 +163,8 @@ impl IdSearchable for BPMNElement {
             | BPMNElement::EndEvent { index, id }
             | BPMNElement::Task { index, id, .. }
             | BPMNElement::ExclusiveGateway { index, id }
-            | BPMNElement::InclusiveGateway { index, id } => {
+            | BPMNElement::InclusiveGateway { index, id }
+            | BPMNElement::ParallelGateway { index, id } => {
                 if search_id == id {
                     Some((None, *index))
                 } else {
@@ -203,6 +220,7 @@ impl BPMNObject for BPMNElement {
             | BPMNElement::MessageEndEvent { index, .. }
             | BPMNElement::MessageIntermediateCatchEvent { index, .. }
             | BPMNElement::MessageIntermediateThrowEvent { index, .. }
+            | BPMNElement::ParallelGateway { index, .. }
             | BPMNElement::InclusiveGateway { index, .. } => {
                 if search_index == *index {
                     Some(self)
@@ -225,6 +243,7 @@ impl BPMNObject for BPMNElement {
             | BPMNElement::MessageEndEvent { index, .. }
             | BPMNElement::MessageIntermediateCatchEvent { index, .. }
             | BPMNElement::MessageIntermediateThrowEvent { index, .. }
+            | BPMNElement::ParallelGateway { index, .. }
             | BPMNElement::InclusiveGateway { index, .. } => *index,
         }
     }
@@ -241,6 +260,7 @@ impl BPMNObject for BPMNElement {
             | BPMNElement::MessageEndEvent { id, .. }
             | BPMNElement::MessageIntermediateCatchEvent { id, .. }
             | BPMNElement::MessageIntermediateThrowEvent { id, .. }
+            | BPMNElement::ParallelGateway { id, .. }
             | BPMNElement::InclusiveGateway { id, .. } => id,
         }
     }
@@ -260,6 +280,18 @@ impl BPMNObject for BPMNElement {
             | BPMNElement::MessageEndEvent { .. }
             | BPMNElement::Task { .. } => true,
             _ => false,
+        }
+    }
+
+    fn all_elements_ref(&self) -> Vec<&BPMNElement> {
+        vec![self]
+    }
+
+    fn element_mut(&mut self, index: usize) -> Option<&mut BPMNElement> {
+        if self.index() == index {
+            Some(self)
+        } else {
+            None
         }
     }
 }
@@ -297,6 +329,14 @@ impl BPMNObject for SequenceFlow {
 
     fn can_throw_message(&self) -> bool {
         false
+    }
+
+    fn all_elements_ref(&self) -> Vec<&BPMNElement> {
+        vec![]
+    }
+
+    fn element_mut(&mut self, index: usize) -> Option<&mut BPMNElement> {
+        None
     }
 }
 
@@ -355,6 +395,21 @@ impl BPMNObject for BPMNProcess {
 
     fn can_throw_message(&self) -> bool {
         false
+    }
+
+    fn all_elements_ref(&self) -> Vec<&BPMNElement> {
+        self.elements
+            .iter()
+            .map(|element| element.all_elements_ref())
+            .flatten()
+            .collect()
+    }
+
+    fn element_mut(&mut self, index: usize) -> Option<&mut BPMNElement> {
+        self.elements
+            .iter_mut()
+            .filter_map(|element| element.element_mut(index))
+            .next()
     }
 }
 

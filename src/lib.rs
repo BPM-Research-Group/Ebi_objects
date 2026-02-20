@@ -56,6 +56,7 @@ pub mod bpmn {
     pub mod tag_intermediate_throw_event;
     pub mod tag_message_event_definition;
     pub mod tag_message_flow;
+    pub mod tag_parallel_gateway;
     pub mod tag_process;
     pub mod tag_sequence_flow;
     pub mod tag_start_event;

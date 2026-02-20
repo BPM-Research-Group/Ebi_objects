@@ -13,6 +13,7 @@ use crate::{
         tag_intermediate_throw_event::IntermediateThrowEvent,
         tag_message_event_definition::MessageEventDefinition,
         tag_message_flow::{DraftMessageFlow, MessageFlow},
+        tag_parallel_gateway::ParallelGateway,
         tag_process::Process,
         tag_sequence_flow::{DraftSequenceFlow, SequenceFlow},
         tag_start_event::StartEvent,
@@ -35,6 +36,7 @@ pub(crate) enum Tag {
     IntermediateThrowEvent,
     MessageEventDefinition,
     MessageFlow,
+    ParallelGateway,
     Process,
     SequenceFlow,
     StartEvent,
@@ -61,6 +63,7 @@ impl Recognisable for Tag {
                 Tag::InclusiveGateway => InclusiveGateway::recognise_tag(e, state),
                 Tag::IntermediateThrowEvent => IntermediateThrowEvent::recognise_tag(e, state),
                 Tag::IntermediateCatchEvent => IntermediateCatchEvent::recognise_tag(e, state),
+                Tag::ParallelGateway => ParallelGateway::recognise_tag(e, state),
             };
             if x.is_some() {
                 return x;
@@ -89,6 +92,7 @@ impl Openable for Tag {
             Tag::InclusiveGateway => InclusiveGateway::open_tag(tag, e, state),
             Tag::IntermediateThrowEvent => IntermediateThrowEvent::open_tag(tag, e, state),
             Tag::IntermediateCatchEvent => IntermediateCatchEvent::open_tag(tag, e, state),
+            Tag::ParallelGateway => ParallelGateway::open_tag(tag, e, state),
         }
     }
 }
@@ -145,6 +149,16 @@ pub(crate) enum OpenedTag {
         source_ref: String,
         target_ref: String,
     },
+    ParallelGateway {
+        index: usize,
+        id: String,
+    },
+    Process {
+        index: usize,
+        id: String,
+        elements: Vec<BPMNElement>,
+        draft_sequence_flows: Vec<DraftSequenceFlow>,
+    },
     SequenceFlow {
         index: usize,
         id: String,
@@ -156,12 +170,6 @@ pub(crate) enum OpenedTag {
         id: String,
         message_index: Option<usize>,
         message_id: Option<String>,
-    },
-    Process {
-        index: usize,
-        id: String,
-        elements: Vec<BPMNElement>,
-        draft_sequence_flows: Vec<DraftSequenceFlow>,
     },
     Task {
         index: usize,
@@ -193,6 +201,7 @@ impl Closeable for OpenedTag {
             OpenedTag::IntermediateCatchEvent { .. } => {
                 IntermediateCatchEvent::close_tag(opened_tag, e, state)
             }
+            OpenedTag::ParallelGateway { .. } => ParallelGateway::close_tag(opened_tag, e, state),
         }
     }
 }

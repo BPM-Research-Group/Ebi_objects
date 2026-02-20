@@ -1,7 +1,7 @@
 #[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
-    ActivityKey, Graphable, Infoable, TranslateActivityKey,
+    ActivityKey, ActivityKeyTranslator, Graphable, Infoable, TranslateActivityKey,
     bpmn::objects::{BPMNElement, BPMNObject, BPMNProcess, MessageFlow},
     traits::graphable::{create_edge, create_gateway, create_place, create_transition},
 };
@@ -65,6 +65,7 @@ impl Graphable for BusinessProcessModelAndNotation {
                     }
                     BPMNElement::ExclusiveGateway { .. } => create_gateway(&mut graph, "x"),
                     BPMNElement::InclusiveGateway { .. } => create_gateway(&mut graph, "o"),
+                    BPMNElement::ParallelGateway { .. } => create_gateway(&mut graph, "+"),
                     BPMNElement::Task { activity, .. } => create_transition(
                         &mut graph,
                         self.activity_key.deprocess_activity(activity),
@@ -104,27 +105,73 @@ impl Graphable for BusinessProcessModelAndNotation {
 
 impl TranslateActivityKey for BusinessProcessModelAndNotation {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
-        todo!()
+        let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
+
+        for process_rank in 0..self.processes.len() {
+            //gather indices of elements
+            let mut indices = vec![];
+            for element in self.processes[process_rank].all_elements_ref() {
+                if let BPMNElement::Task { index, .. } = element {
+                    indices.push(*index);
+                }
+            }
+
+            //adjust activities
+            for index in indices {
+                if let Some(BPMNElement::Task { activity, .. }) =
+                    self.processes[process_rank].element_mut(index)
+                {
+                    *activity = translator.translate_activity(&activity);
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+        self.activity_key = to_activity_key.clone();
     }
 }
 
 #[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for BusinessProcessModelAndNotation {
     fn test_activity_key(&self) {
-        todo!()
+        for process in &self.processes {
+            for element in process.all_elements_ref() {
+                if let BPMNElement::Task { activity, .. } = element {
+                    self.activity_key.assert_activity_is_of_key(activity);
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{BusinessProcessModelAndNotation, Graphable};
+    use crate::{
+        BusinessProcessModelAndNotation, Graphable, TranslateActivityKey,
+        activity_key::has_activity_key::TestActivityKey,
+    };
     use std::fs::{self};
 
     #[test]
-    fn bpmn_pool_import() {
+    fn bpmn_pool_graphable() {
         let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
-        let dot = bpmn.to_dot().unwrap();
+        bpmn.to_dot().unwrap();
+    }
+
+    #[test]
+    fn bpmn_pool_translate() {
+        let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
+        let mut bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
+
+        bpmn.test_activity_key();
+
+        let fin2 = fs::read_to_string("testfiles/model.bpmn").unwrap();
+        let mut bpmn2 = fin2.parse::<BusinessProcessModelAndNotation>().unwrap();
+
+        bpmn.translate_using_activity_key(&mut bpmn2.activity_key);
+
+        bpmn.test_activity_key();
     }
 }
