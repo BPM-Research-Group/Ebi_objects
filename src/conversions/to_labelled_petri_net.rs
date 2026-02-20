@@ -609,8 +609,10 @@ impl From<DirectlyFollowsGraph> for LabelledPetriNet {
     }
 }
 
-impl From<BusinessProcessModelAndNotation> for LabelledPetriNet {
-    fn from(value: BusinessProcessModelAndNotation) -> Self {
+impl TryFrom<BusinessProcessModelAndNotation> for LabelledPetriNet {
+    type Error = Error;
+
+    fn try_from(value: BusinessProcessModelAndNotation) -> std::result::Result<Self, Self::Error> {
         todo!()
     }
 }

@@ -92,7 +92,7 @@ from_string!(LolaNet);
 impl Exportable for LolaNet {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::BusinessProcessModelAndNotation(bpmn) => LolaNet::from(bpmn).export(f),
+            EbiObject::BusinessProcessModelAndNotation(bpmn) => LolaNet::try_from(bpmn)?.export(f),
             EbiObject::LabelledPetriNet(lpn) => LolaNet::from(lpn).export(f),
             EbiObject::StochasticLabelledPetriNet(slpn) => {
                 <StochasticLabelledPetriNet as Into<LolaNet>>::into(slpn).export(f)

@@ -134,7 +134,6 @@ macro_rules! via_lpn {
     };
 }
 
-via_lpn!(BusinessProcessModelAndNotation);
 via_lpn!(DeterministicFiniteAutomaton);
 via_lpn!(DirectlyFollowsGraph);
 via_lpn!(DirectlyFollowsModel);
@@ -143,3 +142,12 @@ via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticDirectlyFollowsModel);
 via_lpn!(StochasticLabelledPetriNet);
 via_lpn!(StochasticProcessTree);
+
+impl TryFrom<BusinessProcessModelAndNotation> for PetriNetMarkupLanguage {
+    type Error = Error;
+
+    fn try_from(value: BusinessProcessModelAndNotation) -> Result<Self, Self::Error> {
+        let lpn: LabelledPetriNet = value.try_into()?;
+        Ok(Self(lpn))
+    }
+}

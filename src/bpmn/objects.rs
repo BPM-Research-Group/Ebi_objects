@@ -93,6 +93,8 @@ pub trait BPMNObject: IdSearchable {
     /// find an object with the given id
     fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject>;
 
+    fn index(&self) -> usize;
+
     fn id(&self) -> &str;
 
     fn can_catch_message(&self) -> bool;
@@ -121,6 +123,10 @@ impl BPMNObject for MessageFlow {
 
     fn id(&self) -> &str {
         &self.id
+    }
+
+    fn index(&self) -> usize {
+        self.index
     }
 
     fn can_catch_message(&self) -> bool {
@@ -207,6 +213,22 @@ impl BPMNObject for BPMNElement {
         }
     }
 
+    fn index(&self) -> usize {
+        match self {
+            BPMNElement::StartEvent { index, .. }
+            | BPMNElement::IntermediateThrowEvent { index, .. }
+            | BPMNElement::IntermediateCatchEvent { index, .. }
+            | BPMNElement::EndEvent { index, .. }
+            | BPMNElement::Task { index, .. }
+            | BPMNElement::ExclusiveGateway { index, .. }
+            | BPMNElement::MessageStartEvent { index, .. }
+            | BPMNElement::MessageEndEvent { index, .. }
+            | BPMNElement::MessageIntermediateCatchEvent { index, .. }
+            | BPMNElement::MessageIntermediateThrowEvent { index, .. }
+            | BPMNElement::InclusiveGateway { index, .. } => *index,
+        }
+    }
+
     fn id(&self) -> &str {
         match self {
             BPMNElement::StartEvent { id, .. }
@@ -261,6 +283,10 @@ impl BPMNObject for SequenceFlow {
         }
     }
 
+    fn index(&self) -> usize {
+        self.index
+    }
+
     fn id(&self) -> &str {
         &self.id
     }
@@ -313,6 +339,10 @@ impl BPMNObject for BPMNProcess {
             }
         }
         None
+    }
+
+    fn index(&self) -> usize {
+        self.index
     }
 
     fn id(&self) -> &str {
