@@ -1,13 +1,25 @@
 #[cfg(any(test, feature = "testactivities"))]
 use crate::activity_key::has_activity_key::TestActivityKey;
-use crate::{Activity, ActivityKey, Graphable, Infoable, TranslateActivityKey};
+use crate::{
+    ActivityKey, Graphable, Infoable, TranslateActivityKey,
+    bpmn::objects::{BPMNProcess, MessageFlow},
+};
 use anyhow::Result;
 use ebi_derive::ActivityKey;
-use std::{collections::HashMap, fmt::Display};
+use layout::topo::layout::VisualGraph;
+use std::{
+    fmt::{Display, Formatter},
+    io::Write,
+};
 
 #[derive(Clone, ActivityKey)]
 pub struct BusinessProcessModelAndNotation {
     pub(crate) activity_key: ActivityKey,
+
+    pub collaboration_index: Option<usize>,
+    pub collaboration_id: Option<String>,
+    pub definitions_index: usize,
+    pub definitions_id: String,
 
     /// pools
     pub processes: Vec<BPMNProcess>,
@@ -16,52 +28,20 @@ pub struct BusinessProcessModelAndNotation {
     pub message_flows: Vec<MessageFlow>,
 }
 
-#[derive(Clone)]
-pub struct BPMNProcess {
-    pub element_id_2_index: HashMap<String, usize>,
-    pub element_index_2_element: Vec<BPMNElement>,
-    pub flow_id_2_index: HashMap<String, usize>,
-    pub flow_index_2_flow: Vec<SequenceFlow>,
-}
-
-#[derive(Clone, Debug)]
-pub enum BPMNElement {
-    StartEvent,
-    EndEvent,
-    Task { activity: Activity },
-    ExclusiveGateway,
-    InclusiveGateway,
-}
-
-#[derive(Clone)]
-pub struct SequenceFlow {
-    pub(crate) source_element_index: usize,
-    pub(crate) target_element_index: usize,
-}
-
-#[derive(Clone)]
-pub struct MessageFlow {
-    pub(crate) id: String,
-    pub(crate) source_pool: usize,
-    pub(crate) source_element: usize,
-    pub(crate) target_pool: usize,
-    pub(crate) target_element: usize,
-}
-
 impl Display for BusinessProcessModelAndNotation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
 
 impl Infoable for BusinessProcessModelAndNotation {
-    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
+    fn info(&self, f: &mut impl Write) -> Result<()> {
         todo!()
     }
 }
 
 impl Graphable for BusinessProcessModelAndNotation {
-    fn to_dot(&self) -> Result<layout::topo::layout::VisualGraph> {
+    fn to_dot(&self) -> Result<VisualGraph> {
         todo!()
     }
 }

@@ -40,9 +40,30 @@ pub mod conversions {
     pub mod to_stochastic_nondeterministic_finite_automaton;
     pub mod to_stochastic_process_tree;
 }
+pub mod bpmn {
+    pub mod importer;
+    pub mod objects;
+    pub mod parser;
+    pub mod parser_state;
+    pub mod parser_traits;
+    pub mod structure_checker;
+    pub mod tag_collaboration;
+    pub mod tag_definitions;
+    pub mod tag_end_event;
+    pub mod tag_exclusive_gateway;
+    pub mod tag_inclusive_gateway;
+    pub mod tag_intermediate_catch_event;
+    pub mod tag_intermediate_throw_event;
+    pub mod tag_message_event_definition;
+    pub mod tag_message_flow;
+    pub mod tag_process;
+    pub mod tag_sequence_flow;
+    pub mod tag_start_event;
+    pub mod tag_task;
+    pub mod tags;
+}
 pub mod ebi_objects {
     pub mod business_process_model_and_notation;
-    pub mod business_process_model_and_notation_importer;
     pub mod compressed_event_log;
     pub mod compressed_event_log_trace_attributes;
     pub mod compressed_event_log_xes;

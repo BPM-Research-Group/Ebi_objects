@@ -4,6 +4,7 @@
     <participant id="Participant_12vovwk" processRef="Process_1" />
     <participant id="Participant_0my6w4t" processRef="Process_1dmx8wn" />
     <messageFlow id="Flow_0pcnf3g" sourceRef="Task_1hcentk" targetRef="Event_0gubo5k" />
+    <messageFlow id="Flow_0kx5wt8" sourceRef="Event_1utr8xb" targetRef="Task_1hcentk" />
   </collaboration>
   <process id="Process_1" isExecutable="false">
     <startEvent id="StartEvent_1y45yut" name="hunger noticed">
@@ -110,10 +111,14 @@
         <omgdi:waypoint x="542" y="510" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0pcnf3g_di" bpmnElement="Flow_0pcnf3g">
-        <omgdi:waypoint x="360" y="210" />
-        <omgdi:waypoint x="360" y="351" />
+        <omgdi:waypoint x="349" y="210" />
+        <omgdi:waypoint x="310" y="351" />
         <omgdi:waypoint x="290" y="351" />
         <omgdi:waypoint x="290" y="492" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0kx5wt8_di" bpmnElement="Flow_0kx5wt8">
+        <omgdi:waypoint x="380" y="492" />
+        <omgdi:waypoint x="380" y="210" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
