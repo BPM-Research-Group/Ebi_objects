@@ -92,7 +92,6 @@ from_string!(LolaNet);
 impl Exportable for LolaNet {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::BusinessProcessModelAndNotation(bpmn) => LolaNet::try_from(bpmn)?.export(f),
             EbiObject::LabelledPetriNet(lpn) => LolaNet::from(lpn).export(f),
             EbiObject::StochasticLabelledPetriNet(slpn) => {
                 <StochasticLabelledPetriNet as Into<LolaNet>>::into(slpn).export(f)
@@ -120,6 +119,9 @@ impl Exportable for LolaNet {
                 <StochasticProcessTree as Into<LolaNet>>::into(tree).export(f)
             }
 
+            EbiObject::BusinessProcessModelAndNotation(_) => {
+                Err(anyhow!("cannot export BPMN as Lolanet."))
+            }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as Lolanet.")),

@@ -1,15 +1,12 @@
-use crate::{
-    BusinessProcessModelAndNotation,
-    ebi_objects::{
-        deterministic_finite_automaton::DeterministicFiniteAutomaton,
-        directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
-        labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
-        process_tree::ProcessTree,
-        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
-        stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
-        stochastic_labelled_petri_net::StochasticLabelledPetriNet,
-        stochastic_process_tree::StochasticProcessTree,
-    },
+use crate::ebi_objects::{
+    deterministic_finite_automaton::DeterministicFiniteAutomaton,
+    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
+    labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
+    process_tree::ProcessTree,
+    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
+    stochastic_process_tree::StochasticProcessTree,
 };
 use anyhow::{Error, anyhow};
 use process_mining::{
@@ -142,12 +139,3 @@ via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticDirectlyFollowsModel);
 via_lpn!(StochasticLabelledPetriNet);
 via_lpn!(StochasticProcessTree);
-
-impl TryFrom<BusinessProcessModelAndNotation> for PetriNetMarkupLanguage {
-    type Error = Error;
-
-    fn try_from(value: BusinessProcessModelAndNotation) -> Result<Self, Self::Error> {
-        let lpn: LabelledPetriNet = value.try_into()?;
-        Ok(Self(lpn))
-    }
-}

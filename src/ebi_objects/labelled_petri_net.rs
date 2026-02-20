@@ -218,9 +218,6 @@ impl TranslateActivityKey for LabelledPetriNet {
 impl Exportable for LabelledPetriNet {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
-            EbiObject::BusinessProcessModelAndNotation(bpmn) => {
-                LabelledPetriNet::try_from(bpmn)?.export(f)
-            }
             EbiObject::DeterministicFiniteAutomaton(dfa) => {
                 <DeterministicFiniteAutomaton as Into<LabelledPetriNet>>::into(dfa).export(f)
             }
@@ -252,6 +249,9 @@ impl Exportable for LabelledPetriNet {
                 <StochasticLabelledPetriNet as Into<LabelledPetriNet>>::into(slpn).export(f)
             }
 
+            EbiObject::BusinessProcessModelAndNotation(_) => {
+                Err(anyhow!("cannot export BPMN as LPN."))
+            }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as LPN.")),

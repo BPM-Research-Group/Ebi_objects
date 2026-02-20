@@ -131,7 +131,7 @@ mod tests {
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
         assert_eq!(bpmn.processes.len(), 2);
-        assert_eq!(bpmn.processes[0].sequence_flows.len(), 3);
+        assert_eq!(bpmn.processes[0].sequence_flows.len(), 4);
         assert_eq!(bpmn.processes[1].sequence_flows.len(), 4);
         assert_eq!(bpmn.message_flows.len(), 2);
     }

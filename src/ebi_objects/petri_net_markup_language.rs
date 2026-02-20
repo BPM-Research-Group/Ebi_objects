@@ -61,9 +61,6 @@ from_string!(PetriNetMarkupLanguage);
 impl Exportable for PetriNetMarkupLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::BusinessProcessModelAndNotation(bpmn) => {
-                PetriNetMarkupLanguage::try_from(bpmn)?.export(f)
-            }
             EbiObject::DeterministicFiniteAutomaton(dfa) => {
                 <DeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(dfa)?
                     .export(f)
@@ -104,6 +101,9 @@ impl Exportable for PetriNetMarkupLanguage {
                 <StochasticLabelledPetriNet as TryInto<LabelledPetriNet>>::try_into(slpn)?.export(f)
             }
 
+            EbiObject::BusinessProcessModelAndNotation(_) => {
+                Err(anyhow!("Cannot export BPMN as PNML."))
+            }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as PNML.")),

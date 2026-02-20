@@ -43,7 +43,7 @@ impl BusinessProcessModelAndNotation {
 
 impl Display for BusinessProcessModelAndNotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        writeln!(f, "BPMN model with {} elements", self.number_of_elements())
     }
 }
 

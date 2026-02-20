@@ -1,5 +1,5 @@
 use crate::{
-    BusinessProcessModelAndNotation, StochasticNondeterministicFiniteAutomaton,
+    StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
         directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
@@ -10,7 +10,6 @@ use crate::{
         stochastic_process_tree::StochasticProcessTree,
     },
 };
-use anyhow::Error;
 
 impl From<LabelledPetriNet> for LolaNet {
     fn from(value: LabelledPetriNet) -> Self {
@@ -39,12 +38,3 @@ via_lpn!(ProcessTree);
 via_lpn!(StochasticProcessTree);
 via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticNondeterministicFiniteAutomaton);
-
-impl TryFrom<BusinessProcessModelAndNotation> for LolaNet {
-    type Error = Error;
-
-    fn try_from(value: BusinessProcessModelAndNotation) -> Result<Self, Self::Error> {
-        let lpn: LabelledPetriNet = value.try_into()?;
-        Ok(Self(lpn))
-    }
-}
