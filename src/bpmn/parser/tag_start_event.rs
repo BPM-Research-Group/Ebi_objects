@@ -16,15 +16,13 @@ impl Recognisable for StartEvent {
     where
         Self: Sized,
     {
-        if state.open_tags.len() >= 1 {
-            if let Some(OpenedTag::Process { .. }) = state.open_tags.get(state.open_tags.len() - 1)
-            {
-                {
-                    if e.local_name().as_ref() == b"startEvent" {
-                        return Some(Tag::StartEvent);
-                    }
+        match state.open_tags.iter().last() {
+            Some(OpenedTag::Process { .. }) | Some(OpenedTag::SubProcess { .. }) => {
+                if e.local_name().as_ref() == b"startEvent" {
+                    return Some(Tag::StartEvent);
                 }
             }
+            _ => {}
         }
         None
     }
@@ -48,31 +46,32 @@ impl Openable for StartEvent {
 
 impl Closeable for StartEvent {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
-        let index = state.open_tags.len() - 1;
-        if let Some(OpenedTag::Process { elements, .. }) = state.open_tags.get_mut(index) {
-            if let OpenedTag::StartEvent {
-                index,
-                id,
-                message_index,
-                message_id,
-            } = opened_tag
-            {
-                if let (Some(message_index), Some(message_id)) = (message_index, message_id) {
-                    elements.push(BPMNElement::MessageStartEvent {
-                        index,
-                        id,
-                        message_index,
-                        message_id,
-                    });
+        match state.open_tags.iter_mut().last() {
+            Some(OpenedTag::Process { elements, .. })
+            | Some(OpenedTag::SubProcess { elements, .. }) => {
+                if let OpenedTag::StartEvent {
+                    index,
+                    id,
+                    message_index,
+                    message_id,
+                } = opened_tag
+                {
+                    if let (Some(message_index), Some(message_id)) = (message_index, message_id) {
+                        elements.push(BPMNElement::MessageStartEvent {
+                            index,
+                            id,
+                            message_index,
+                            message_id,
+                        });
+                    } else {
+                        elements.push(BPMNElement::StartEvent { index, id });
+                    }
+                    Ok(())
                 } else {
-                    elements.push(BPMNElement::StartEvent { index, id });
+                    unreachable!()
                 }
-                Ok(())
-            } else {
-                unreachable!()
             }
-        } else {
-            unreachable!()
+            _ => unreachable!(),
         }
     }
 }

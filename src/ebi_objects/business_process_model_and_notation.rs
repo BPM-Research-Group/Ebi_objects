@@ -3,7 +3,11 @@ use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable, TranslateActivityKey,
     bpmn::{
-        element::BPMNElement, message_flow::MessageFlow, objects::BPMNObject, process::BPMNProcess,
+        collapsed_pool::BPMNCollapsedPool,
+        element::BPMNElement,
+        message_flow::MessageFlow,
+        objects::{BPMNObject, IdSearchable},
+        process::BPMNProcess,
     },
     traits::graphable::{create_edge, create_gateway, create_place, create_transition},
 };
@@ -16,7 +20,7 @@ use std::{
     io::Write,
 };
 
-#[derive(Clone, ActivityKey)]
+#[derive(Clone, ActivityKey, Debug)]
 pub struct BusinessProcessModelAndNotation {
     pub(crate) activity_key: ActivityKey,
 
@@ -25,11 +29,9 @@ pub struct BusinessProcessModelAndNotation {
     pub definitions_index: usize,
     pub definitions_id: String,
 
-    /// pools
     pub processes: Vec<BPMNProcess>,
-
-    /// messages
     pub message_flows: Vec<MessageFlow>,
+    pub collapsed_pools: Vec<BPMNCollapsedPool>,
 }
 
 impl BusinessProcessModelAndNotation {
@@ -38,6 +40,22 @@ impl BusinessProcessModelAndNotation {
             .iter()
             .map(|process| process.all_elements_ref().len())
             .sum()
+    }
+
+    pub fn number_of_flows(&self) -> usize {
+        self.message_flows.len() + self.processes.number_of_flows()
+    }
+
+    pub fn all_elements_ref(&self) -> Vec<&BPMNElement> {
+        self.processes.all_elements_ref()
+    }
+
+    pub fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
+        let x = self.processes.find_object_with_index(index);
+        if x.is_some() {
+            return x;
+        }
+        self.collapsed_pools.find_object_with_index(index)
     }
 }
 
@@ -85,6 +103,12 @@ impl Graphable for BusinessProcessModelAndNotation {
                     BPMNElement::IntermediateThrowEvent { .. } => create_place(&mut graph, "ti"),
                     BPMNElement::MessageIntermediateThrowEvent { .. } => {
                         create_place(&mut graph, "mti")
+                    }
+                    BPMNElement::CollapsedSubProcess { .. } => {
+                        create_transition(&mut graph, "csp", "")
+                    }
+                    BPMNElement::ExpandedSubProcess { .. } => {
+                        create_transition(&mut graph, "esp", "")
                     }
                     BPMNElement::ExclusiveGateway { .. } => create_gateway(&mut graph, "x"),
                     BPMNElement::InclusiveGateway { .. } => create_gateway(&mut graph, "o"),

@@ -16,16 +16,14 @@ impl Recognisable for MessageFlow {
     where
         Self: Sized,
     {
-        if state.open_tags.len() >= 1 {
-            if let Some(OpenedTag::Collaboration { .. }) =
-                state.open_tags.get(state.open_tags.len() - 1)
-            {
-                {
-                    if e.local_name().as_ref() == b"messageFlow" {
-                        return Some(Tag::MessageFlow);
-                    }
+        match state.open_tags.iter().last() {
+            Some(OpenedTag::Collaboration { .. }) => {
+                if e.local_name().as_ref() == b"messageFlow" {
+                    return Some(Tag::MessageFlow);
                 }
             }
+
+            _ => {}
         }
         None
     }

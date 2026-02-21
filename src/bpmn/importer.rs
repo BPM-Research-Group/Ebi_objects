@@ -50,10 +50,6 @@ impl Importable for BusinessProcessModelAndNotation {
             match (in_namespace, xml_event) {
                 //start tag
                 (true, Event::Start(e)) => {
-                    // println!(
-                    //     "start tag {}",
-                    //     String::from_utf8_lossy(e.local_name().as_ref()),
-                    // );
                     open_tag(&mut state, &e).with_context(|| {
                         format!(
                             "start tag `{}` at position {}",
@@ -64,19 +60,13 @@ impl Importable for BusinessProcessModelAndNotation {
                 }
 
                 //end of tag
-                (true, Event::End(e)) => {
-                    // println!(
-                    //     "end tag {}",
-                    //     String::from_utf8_lossy(e.local_name().as_ref()),
-                    // );
-                    close_tag(&mut state, &e).with_context(|| {
-                        format!(
-                            "close tag `{}` at position {}",
-                            String::from_utf8_lossy(e.local_name().as_ref()),
-                            xml_reader.buffer_position()
-                        )
-                    })?
-                }
+                (true, Event::End(e)) => close_tag(&mut state, &e).with_context(|| {
+                    format!(
+                        "close tag `{}` at position {}",
+                        String::from_utf8_lossy(e.local_name().as_ref()),
+                        xml_reader.buffer_position()
+                    )
+                })?,
 
                 //empty tag
                 (true, Event::Empty(e)) => empty_tag(&mut state, &e).with_context(|| {
@@ -141,5 +131,15 @@ mod tests {
     fn bpmn_message_invalid() {
         let fin = fs::read_to_string("testfiles/invalid-message.bpmn").unwrap();
         fin.parse::<BusinessProcessModelAndNotation>().unwrap();
+    }
+
+    #[test]
+    fn bpmn_lanes_import() {
+        let fin = fs::read_to_string("testfiles/model-lanes.bpmn").unwrap();
+        let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
+
+        assert_eq!(bpmn.processes.len(), 1);
+        assert_eq!(bpmn.collapsed_pools.len(), 1);
+        assert_eq!(bpmn.message_flows.len(), 1);
     }
 }

@@ -7,7 +7,7 @@ use crate::bpmn::{
         tags::{OpenedTag, Tag},
     },
 };
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
 pub struct Task {}
@@ -17,15 +17,13 @@ impl Recognisable for Task {
     where
         Self: Sized,
     {
-        if state.open_tags.len() >= 1 {
-            if let Some(OpenedTag::Process { .. }) = state.open_tags.get(state.open_tags.len() - 1)
-            {
-                {
-                    if e.local_name().as_ref() == b"task" {
-                        return Some(Tag::Task);
-                    }
+        match state.open_tags.iter().last() {
+            Some(OpenedTag::Process { .. }) | Some(OpenedTag::SubProcess { .. }) => {
+                if e.local_name().as_ref() == b"task" {
+                    return Some(Tag::Task);
                 }
             }
+            _ => {}
         }
         None
     }
@@ -38,40 +36,38 @@ impl Openable for Task {
     {
         let (index, id) = state.read_and_add_id(e)?;
 
-        if let Some(label) = parse_attribute(e, "name") {
-            let activity = state.activity_key.process_activity(&label);
-            Ok(OpenedTag::Task {
-                index,
-                id,
-                activity,
-            })
-        } else {
-            Err(anyhow!("task must have a name"))
-        }
+        let label = parse_attribute(e, "name").unwrap_or_else(|| String::new());
+        let activity = state.activity_key.process_activity(&label);
+        Ok(OpenedTag::Task {
+            index,
+            id,
+            activity,
+        })
     }
 }
 
 impl Closeable for Task {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
-        let index = state.open_tags.len() - 1;
-        if let Some(OpenedTag::Process { elements, .. }) = state.open_tags.get_mut(index) {
-            if let OpenedTag::Task {
-                index,
-                id,
-                activity,
-            } = opened_tag
-            {
-                elements.push(BPMNElement::Task {
+        match state.open_tags.iter_mut().last() {
+            Some(OpenedTag::Process { elements, .. })
+            | Some(OpenedTag::SubProcess { elements, .. }) => {
+                if let OpenedTag::Task {
                     index,
                     id,
                     activity,
-                });
-                Ok(())
-            } else {
-                unreachable!()
+                } = opened_tag
+                {
+                    elements.push(BPMNElement::Task {
+                        index,
+                        id,
+                        activity,
+                    });
+                    Ok(())
+                } else {
+                    unreachable!()
+                }
             }
-        } else {
-            unreachable!()
+            _ => unreachable!(),
         }
     }
 }

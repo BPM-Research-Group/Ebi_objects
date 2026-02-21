@@ -13,6 +13,13 @@ pub struct BPMNProcess {
 }
 
 impl IdSearchable for BPMNProcess {
+    fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
+        if self.index == index {
+            return Some(self);
+        }
+        self.elements.find_object_with_index(index)
+    }
+
     fn search_id(&self, id: &str) -> Option<(Option<usize>, usize)> {
         if self.id == id {
             Some((None, self.index))
@@ -24,23 +31,21 @@ impl IdSearchable for BPMNProcess {
             }
         }
     }
+
+    fn number_of_flows(&self) -> usize {
+        self.sequence_flows.len() + self.elements.number_of_flows()
+    }
+
+    fn all_elements_ref(&self) -> Vec<&BPMNElement> {
+        self.elements.all_elements_ref()
+    }
+
+    fn element_mut(&mut self, index: usize) -> Option<&mut BPMNElement> {
+        self.elements.element_mut(index)
+    }
 }
 
 impl BPMNObject for BPMNProcess {
-    fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
-        if self.index == index {
-            return Some(self);
-        } else {
-            for element in &self.elements {
-                let x = element.find_object_with_index(index);
-                if x.is_some() {
-                    return x;
-                }
-            }
-        }
-        None
-    }
-
     fn index(&self) -> usize {
         self.index
     }
@@ -49,26 +54,15 @@ impl BPMNObject for BPMNProcess {
         &self.id
     }
 
+    fn can_have_incoming_sequence_flow(&self) -> bool {
+        false
+    }
+
     fn can_catch_message(&self) -> bool {
         false
     }
 
     fn can_throw_message(&self) -> bool {
         false
-    }
-
-    fn all_elements_ref(&self) -> Vec<&BPMNElement> {
-        self.elements
-            .iter()
-            .map(|element| element.all_elements_ref())
-            .flatten()
-            .collect()
-    }
-
-    fn element_mut(&mut self, index: usize) -> Option<&mut BPMNElement> {
-        self.elements
-            .iter_mut()
-            .filter_map(|element| element.element_mut(index))
-            .next()
     }
 }

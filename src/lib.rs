@@ -42,10 +42,13 @@ pub mod conversions {
 }
 pub mod bpmn {
     pub mod element;
+    pub mod exporter;
     pub mod importer;
     pub mod message_flow;
     pub mod objects;
     pub mod process;
+    // pub mod semantics;
+    pub mod collapsed_pool;
     pub mod sequence_flow;
     pub mod structure_checker;
     pub mod parser {
@@ -63,9 +66,11 @@ pub mod bpmn {
         pub mod tag_message_event_definition;
         pub mod tag_message_flow;
         pub mod tag_parallel_gateway;
+        pub mod tag_participant;
         pub mod tag_process;
         pub mod tag_sequence_flow;
         pub mod tag_start_event;
+        pub mod tag_subprocess;
         pub mod tag_task;
         pub mod tags;
     }

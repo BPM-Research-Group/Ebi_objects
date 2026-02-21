@@ -44,6 +44,7 @@ impl ParserState {
                 collaboration_id,
                 processes,
                 message_flows,
+                collapsed_pools,
             } = draft_definition;
             //construct result
             let result = BusinessProcessModelAndNotation {
@@ -54,6 +55,7 @@ impl ParserState {
                 definitions_id: id,
                 processes: processes,
                 message_flows,
+                collapsed_pools,
             };
 
             //check structural correctness

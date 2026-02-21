@@ -38,6 +38,7 @@ impl Openable for Collaboration {
         Ok(OpenedTag::Collaboration {
             index,
             id,
+            collapsed_pools: vec![],
             message_flows: vec![],
         })
     }
@@ -48,6 +49,7 @@ impl Closeable for Collaboration {
         let index = state.open_tags.len() - 1;
         if let Some(OpenedTag::Definitions {
             draft_message_flows: message_flows,
+            collapsed_pools,
             collaboration_index,
             collaboration_id,
             ..
@@ -56,6 +58,7 @@ impl Closeable for Collaboration {
             if let OpenedTag::Collaboration {
                 index,
                 id,
+                collapsed_pools: sub_collapsed_pools,
                 message_flows: sub_message_flows,
             } = opened_tag
             {
@@ -68,6 +71,7 @@ impl Closeable for Collaboration {
                 *collaboration_id = Some(id);
 
                 message_flows.extend(sub_message_flows);
+                collapsed_pools.extend(sub_collapsed_pools);
                 Ok(())
             } else {
                 unreachable!()

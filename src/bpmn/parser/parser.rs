@@ -27,9 +27,6 @@ pub(crate) fn open_tag(state: &mut ParserState, e: &BytesStart) -> Result<()> {
         .open_tag_names
         .push(e.local_name().as_ref().to_owned());
 
-    // println!("\t{}", debug(&state.open_tag_names));
-    // println!("\t{:?}", &state.open_tags);
-
     Ok(())
 }
 

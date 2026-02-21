@@ -1,4 +1,5 @@
 use crate::bpmn::{
+    collapsed_pool::BPMNCollapsedPool,
     message_flow::MessageFlow,
     objects::IdSearchable,
     parser::{
@@ -15,12 +16,14 @@ use quick_xml::events::{BytesEnd, BytesStart};
 pub struct Definitions {}
 
 impl Recognisable for Definitions {
-    fn recognise_tag(e: &BytesStart, _state: &ParserState) -> Option<Tag>
+    fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
     {
-        if e.local_name().as_ref() == b"definitions" {
-            return Some(Tag::Definitions);
+        if state.open_tags.is_empty() {
+            if e.local_name().as_ref() == b"definitions" {
+                return Some(Tag::Definitions);
+            }
         }
         None
     }
@@ -40,6 +43,7 @@ impl Openable for Definitions {
             collaboration_id: None,
             draft_message_flows: vec![],
             processes: vec![],
+            collapsed_pools: vec![],
         })
     }
 }
@@ -54,7 +58,8 @@ impl Closeable for Definitions {
             collaboration_index,
             collaboration_id,
             draft_message_flows,
-            processes,
+            mut processes,
+            mut collapsed_pools,
         } = opened_tag
         {
             //finalise the message flows
@@ -66,19 +71,19 @@ impl Closeable for Definitions {
                     source_id,
                     target_id,
                 } = draft_message_flows;
-                if let Some((Some(source_process_rank), source_element_index)) =
-                    processes.search_id(&source_id)
+                if let Some((Some(source_pool_index), source_element_index)) =
+                    (&mut processes, &mut collapsed_pools).search_id(&source_id)
                 {
-                    if let Some((Some(target_process_rank), target_element_index)) =
-                        processes.search_id(&target_id)
+                    if let Some((Some(target_pool_index), target_element_index)) =
+                        (&mut processes, &mut collapsed_pools).search_id(&target_id)
                     {
                         message_flows.push(MessageFlow {
                             index,
                             id,
                             source_element_index,
-                            source_process_rank,
+                            source_pool_index,
                             target_element_index,
-                            target_process_rank,
+                            target_pool_index,
                         });
                     } else {
                         return Err(anyhow!(
@@ -103,6 +108,7 @@ impl Closeable for Definitions {
                 collaboration_id,
                 processes,
                 message_flows,
+                collapsed_pools,
             });
 
             Ok(())
@@ -119,4 +125,5 @@ pub(crate) struct DraftDefinitions {
     pub(crate) collaboration_id: Option<String>,
     pub(crate) processes: Vec<BPMNProcess>,
     pub(crate) message_flows: Vec<MessageFlow>,
+    pub(crate) collapsed_pools: Vec<BPMNCollapsedPool>,
 }

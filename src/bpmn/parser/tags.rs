@@ -1,6 +1,7 @@
 use crate::{
     Activity,
     bpmn::{
+        collapsed_pool::BPMNCollapsedPool,
         element::BPMNElement,
         parser::{
             parser_state::ParserState,
@@ -16,9 +17,11 @@ use crate::{
             tag_message_event_definition::MessageEventDefinition,
             tag_message_flow::{DraftMessageFlow, MessageFlow},
             tag_parallel_gateway::ParallelGateway,
+            tag_participant::Participant,
             tag_process::Process,
             tag_sequence_flow::{DraftSequenceFlow, SequenceFlow},
             tag_start_event::StartEvent,
+            tag_subprocess::SubProcess,
             tag_task::Task,
         },
         process::BPMNProcess,
@@ -42,8 +45,10 @@ pub(crate) enum Tag {
     MessageEventDefinition,
     MessageFlow,
     ParallelGateway,
+    Participant,
     Process,
     SequenceFlow,
+    SubProcess,
     StartEvent,
     Task,
 }
@@ -70,6 +75,8 @@ impl Recognisable for Tag {
                 Tag::IntermediateCatchEvent => IntermediateCatchEvent::recognise_tag(e, state),
                 Tag::ParallelGateway => ParallelGateway::recognise_tag(e, state),
                 Tag::EventBasedGateway => EventBasedGateway::recognise_tag(e, state),
+                Tag::SubProcess => SubProcess::recognise_tag(e, state),
+                Tag::Participant => Participant::recognise_tag(e, state),
             };
             if x.is_some() {
                 return x;
@@ -100,6 +107,8 @@ impl Openable for Tag {
             Tag::IntermediateCatchEvent => IntermediateCatchEvent::open_tag(tag, e, state),
             Tag::ParallelGateway => ParallelGateway::open_tag(tag, e, state),
             Tag::EventBasedGateway => EventBasedGateway::open_tag(tag, e, state),
+            Tag::SubProcess => SubProcess::open_tag(tag, e, state),
+            Tag::Participant => Participant::open_tag(tag, e, state),
         }
     }
 }
@@ -110,6 +119,7 @@ pub(crate) enum OpenedTag {
     Collaboration {
         index: usize,
         id: String,
+        collapsed_pools: Vec<BPMNCollapsedPool>,
         message_flows: Vec<DraftMessageFlow>,
     },
     Definitions {
@@ -119,6 +129,7 @@ pub(crate) enum OpenedTag {
         collaboration_id: Option<String>,
         draft_message_flows: Vec<DraftMessageFlow>,
         processes: Vec<BPMNProcess>,
+        collapsed_pools: Vec<BPMNCollapsedPool>,
     },
     EndEvent {
         index: usize,
@@ -164,6 +175,12 @@ pub(crate) enum OpenedTag {
         index: usize,
         id: String,
     },
+    Participant {
+        index: usize,
+        id: String,
+        name: Option<String>,
+        process_id: Option<String>,
+    },
     Process {
         index: usize,
         id: String,
@@ -175,6 +192,13 @@ pub(crate) enum OpenedTag {
         id: String,
         source_ref: String,
         target_ref: String,
+    },
+    SubProcess {
+        index: usize,
+        id: String,
+        name: Option<String>,
+        elements: Vec<BPMNElement>,
+        draft_sequence_flows: Vec<DraftSequenceFlow>,
     },
     StartEvent {
         index: usize,
@@ -216,6 +240,8 @@ impl Closeable for OpenedTag {
             OpenedTag::EventBasedGateway { .. } => {
                 EventBasedGateway::close_tag(opened_tag, e, state)
             }
+            OpenedTag::SubProcess { .. } => SubProcess::close_tag(opened_tag, e, state),
+            OpenedTag::Participant { .. } => Participant::close_tag(opened_tag, e, state),
         }
     }
 }

@@ -12,16 +12,6 @@ pub struct SequenceFlow {
 }
 
 impl IdSearchable for SequenceFlow {
-    fn search_id(&self, id: &str) -> Option<(Option<usize>, usize)> {
-        if self.id == id {
-            Some((None, self.index))
-        } else {
-            None
-        }
-    }
-}
-
-impl BPMNObject for SequenceFlow {
     fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
         if self.index == index {
             Some(self)
@@ -30,20 +20,16 @@ impl BPMNObject for SequenceFlow {
         }
     }
 
-    fn index(&self) -> usize {
-        self.index
+    fn search_id(&self, id: &str) -> Option<(Option<usize>, usize)> {
+        if self.id == id {
+            Some((None, self.index))
+        } else {
+            None
+        }
     }
 
-    fn id(&self) -> &str {
-        &self.id
-    }
-
-    fn can_catch_message(&self) -> bool {
-        false
-    }
-
-    fn can_throw_message(&self) -> bool {
-        false
+    fn number_of_flows(&self) -> usize {
+        1
     }
 
     fn all_elements_ref(&self) -> Vec<&BPMNElement> {
@@ -52,5 +38,27 @@ impl BPMNObject for SequenceFlow {
 
     fn element_mut(&mut self, _index: usize) -> Option<&mut BPMNElement> {
         None
+    }
+}
+
+impl BPMNObject for SequenceFlow {
+    fn index(&self) -> usize {
+        self.index
+    }
+
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn can_have_incoming_sequence_flow(&self) -> bool {
+        false
+    }
+
+    fn can_catch_message(&self) -> bool {
+        false
+    }
+
+    fn can_throw_message(&self) -> bool {
+        false
     }
 }

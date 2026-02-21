@@ -4,16 +4,13 @@ use crate::bpmn::{
 };
 
 #[derive(Clone, Debug)]
-pub struct MessageFlow {
+pub struct BPMNCollapsedPool {
     pub index: usize,
     pub id: String,
-    pub source_pool_index: usize,
-    pub source_element_index: usize,
-    pub target_pool_index: usize,
-    pub target_element_index: usize,
+    pub name: Option<String>,
 }
 
-impl IdSearchable for MessageFlow {
+impl IdSearchable for BPMNCollapsedPool {
     fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
         if self.index == index {
             Some(self)
@@ -24,14 +21,14 @@ impl IdSearchable for MessageFlow {
 
     fn search_id(&self, id: &str) -> Option<(Option<usize>, usize)> {
         if self.id == id {
-            Some((None, self.index))
+            Some((Some(self.index), self.index))
         } else {
             None
         }
     }
 
     fn number_of_flows(&self) -> usize {
-        1
+        0
     }
 
     fn all_elements_ref(&self) -> Vec<&BPMNElement> {
@@ -43,13 +40,13 @@ impl IdSearchable for MessageFlow {
     }
 }
 
-impl BPMNObject for MessageFlow {
-    fn id(&self) -> &str {
-        &self.id
-    }
-
+impl BPMNObject for BPMNCollapsedPool {
     fn index(&self) -> usize {
         self.index
+    }
+
+    fn id(&self) -> &str {
+        &self.id
     }
 
     fn can_have_incoming_sequence_flow(&self) -> bool {
@@ -57,10 +54,10 @@ impl BPMNObject for MessageFlow {
     }
 
     fn can_catch_message(&self) -> bool {
-        false
+        true
     }
 
     fn can_throw_message(&self) -> bool {
-        false
+        true
     }
 }
