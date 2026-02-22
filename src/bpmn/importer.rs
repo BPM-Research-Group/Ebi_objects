@@ -112,7 +112,7 @@ mod tests {
         let fin = fs::read_to_string("testfiles/model.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
-        assert_eq!(bpmn.processes[0].sequence_flows.len(), 10);
+        assert_eq!(bpmn.sequence_flows.len(), 10);
     }
 
     #[test]
@@ -121,8 +121,7 @@ mod tests {
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
         assert_eq!(bpmn.processes.len(), 2);
-        assert_eq!(bpmn.processes[0].sequence_flows.len(), 4);
-        assert_eq!(bpmn.processes[1].sequence_flows.len(), 4);
+        assert_eq!(bpmn.sequence_flows.len(), 8);
         assert_eq!(bpmn.message_flows.len(), 2);
     }
 

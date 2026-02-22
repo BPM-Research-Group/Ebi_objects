@@ -45,7 +45,11 @@ impl Closeable for EventBasedGateway {
             Some(OpenedTag::Process { elements, .. })
             | Some(OpenedTag::SubProcess { elements, .. }) => {
                 if let OpenedTag::EventBasedGateway { index, id } = opened_tag {
-                    elements.push(BPMNElement::EventBasedGateway { index, id });
+                    elements.push(BPMNElement::EventBasedGateway {
+                        index,
+                        id,
+                        outgoing_sequence_flows: vec![],
+                    });
                     Ok(())
                 } else {
                     unreachable!()

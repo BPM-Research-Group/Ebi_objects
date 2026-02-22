@@ -45,7 +45,11 @@ impl Closeable for ExclusiveGateway {
             Some(OpenedTag::Process { elements, .. })
             | Some(OpenedTag::SubProcess { elements, .. }) => {
                 if let OpenedTag::ExclusiveGateway { index, id } = opened_tag {
-                    elements.push(BPMNElement::ExclusiveGateway { index, id });
+                    elements.push(BPMNElement::ExclusiveGateway {
+                        index,
+                        id,
+                        outgoing_sequence_flows: vec![],
+                    });
                     Ok(())
                 } else {
                     unreachable!()

@@ -19,18 +19,19 @@ use crate::{
             tag_parallel_gateway::ParallelGateway,
             tag_participant::Participant,
             tag_process::Process,
-            tag_sequence_flow::{DraftSequenceFlow, SequenceFlow},
+            tag_sequence_flow::{DraftSequenceFlow, SequenceFlowParser},
             tag_start_event::StartEvent,
             tag_subprocess::SubProcess,
             tag_task::Task,
         },
         process::BPMNProcess,
+        sequence_flow::SequenceFlow,
     },
 };
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter, EnumString};
+use strum_macros::{Display, EnumIs, EnumIter, EnumString};
 
 #[derive(Clone, Copy, EnumString, EnumIter, Display)]
 pub(crate) enum Tag {
@@ -67,7 +68,7 @@ impl Recognisable for Tag {
                 Tag::MessageFlow => MessageFlow::recognise_tag(e, state),
                 Tag::StartEvent => StartEvent::recognise_tag(e, state),
                 Tag::Task => Task::recognise_tag(e, state),
-                Tag::SequenceFlow => SequenceFlow::recognise_tag(e, state),
+                Tag::SequenceFlow => SequenceFlowParser::recognise_tag(e, state),
                 Tag::EndEvent => EndEvent::recognise_tag(e, state),
                 Tag::ExclusiveGateway => ExclusiveGateway::recognise_tag(e, state),
                 Tag::InclusiveGateway => InclusiveGateway::recognise_tag(e, state),
@@ -99,7 +100,7 @@ impl Openable for Tag {
             Tag::MessageFlow => MessageFlow::open_tag(tag, e, state),
             Tag::StartEvent => StartEvent::open_tag(tag, e, state),
             Tag::Task => Task::open_tag(tag, e, state),
-            Tag::SequenceFlow => SequenceFlow::open_tag(tag, e, state),
+            Tag::SequenceFlow => SequenceFlowParser::open_tag(tag, e, state),
             Tag::EndEvent => EndEvent::open_tag(tag, e, state),
             Tag::ExclusiveGateway => ExclusiveGateway::open_tag(tag, e, state),
             Tag::InclusiveGateway => InclusiveGateway::open_tag(tag, e, state),
@@ -113,7 +114,7 @@ impl Openable for Tag {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, EnumIs)]
 pub(crate) enum OpenedTag {
     Unknown,
     Collaboration {
@@ -128,6 +129,7 @@ pub(crate) enum OpenedTag {
         collaboration_index: Option<usize>,
         collaboration_id: Option<String>,
         draft_message_flows: Vec<DraftMessageFlow>,
+        sequence_flows: Vec<SequenceFlow>,
         processes: Vec<BPMNProcess>,
         collapsed_pools: Vec<BPMNCollapsedPool>,
     },
@@ -226,7 +228,7 @@ impl Closeable for OpenedTag {
             OpenedTag::MessageFlow { .. } => MessageFlow::close_tag(opened_tag, e, state),
             OpenedTag::StartEvent { .. } => StartEvent::close_tag(opened_tag, e, state),
             OpenedTag::Task { .. } => Task::close_tag(opened_tag, e, state),
-            OpenedTag::SequenceFlow { .. } => SequenceFlow::close_tag(opened_tag, e, state),
+            OpenedTag::SequenceFlow { .. } => SequenceFlowParser::close_tag(opened_tag, e, state),
             OpenedTag::EndEvent { .. } => EndEvent::close_tag(opened_tag, e, state),
             OpenedTag::ExclusiveGateway { .. } => ExclusiveGateway::close_tag(opened_tag, e, state),
             OpenedTag::InclusiveGateway { .. } => InclusiveGateway::close_tag(opened_tag, e, state),

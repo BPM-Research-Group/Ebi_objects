@@ -9,6 +9,7 @@ use crate::bpmn::{
         tags::{OpenedTag, Tag},
     },
     process::BPMNProcess,
+    sequence_flow::SequenceFlow,
 };
 use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
@@ -42,6 +43,7 @@ impl Openable for Definitions {
             collaboration_index: None,
             collaboration_id: None,
             draft_message_flows: vec![],
+            sequence_flows: vec![],
             processes: vec![],
             collapsed_pools: vec![],
         })
@@ -58,6 +60,7 @@ impl Closeable for Definitions {
             collaboration_index,
             collaboration_id,
             draft_message_flows,
+            sequence_flows,
             mut processes,
             mut collapsed_pools,
         } = opened_tag
@@ -72,10 +75,10 @@ impl Closeable for Definitions {
                     target_id,
                 } = draft_message_flows;
                 if let Some((Some(source_pool_index), source_element_index)) =
-                    (&mut processes, &mut collapsed_pools).search_id(&source_id)
+                    (&mut processes, &mut collapsed_pools).id_2_pool_and_index(&source_id)
                 {
                     if let Some((Some(target_pool_index), target_element_index)) =
-                        (&mut processes, &mut collapsed_pools).search_id(&target_id)
+                        (&mut processes, &mut collapsed_pools).id_2_pool_and_index(&target_id)
                     {
                         message_flows.push(MessageFlow {
                             index,
@@ -108,6 +111,7 @@ impl Closeable for Definitions {
                 collaboration_id,
                 processes,
                 message_flows,
+                sequence_flows,
                 collapsed_pools,
             });
 
@@ -125,5 +129,6 @@ pub(crate) struct DraftDefinitions {
     pub(crate) collaboration_id: Option<String>,
     pub(crate) processes: Vec<BPMNProcess>,
     pub(crate) message_flows: Vec<MessageFlow>,
+    pub(crate) sequence_flows: Vec<SequenceFlow>,
     pub(crate) collapsed_pools: Vec<BPMNCollapsedPool>,
 }

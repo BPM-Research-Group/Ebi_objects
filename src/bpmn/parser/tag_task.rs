@@ -61,6 +61,7 @@ impl Closeable for Task {
                         index,
                         id,
                         activity,
+                        outgoing_sequence_flows: vec![],
                     });
                     Ok(())
                 } else {

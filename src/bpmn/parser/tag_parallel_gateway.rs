@@ -45,7 +45,11 @@ impl Closeable for ParallelGateway {
             Some(OpenedTag::Process { elements, .. })
             | Some(OpenedTag::SubProcess { elements, .. }) => {
                 if let OpenedTag::ParallelGateway { index, id } = opened_tag {
-                    elements.push(BPMNElement::ParallelGateway { index, id });
+                    elements.push(BPMNElement::ParallelGateway {
+                        index,
+                        id,
+                        outgoing_sequence_flows: vec![],
+                    });
                     Ok(())
                 } else {
                     unreachable!()

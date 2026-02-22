@@ -44,6 +44,7 @@ impl ParserState {
                 collaboration_id,
                 processes,
                 message_flows,
+                sequence_flows,
                 collapsed_pools,
             } = draft_definition;
             //construct result
@@ -56,6 +57,7 @@ impl ParserState {
                 processes: processes,
                 message_flows,
                 collapsed_pools,
+                sequence_flows,
             };
 
             //check structural correctness

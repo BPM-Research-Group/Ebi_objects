@@ -1,7 +1,4 @@
-use crate::{
-    Activity, BusinessProcessModelAndNotation,
-    bpmn::{element::BPMNElement, objects::BPMNObject},
-};
+use crate::{Activity, BusinessProcessModelAndNotation, bpmn::objects::BPMNObject};
 use anyhow::Result;
 
 type SemState = Vec<u64>;
@@ -20,17 +17,17 @@ impl BusinessProcessModelAndNotation {
         //determine the initiation mode
         let result = if start_events.len() == 1 {
             //starting mode: through a start event
-            let marking = vec![0; self.number_of_flows()];
+            let mut marking = vec![0; self.number_of_flows()];
             for start_event in start_events {
                 for sequence_flow in start_event.outgoing_sequence_flows() {
-                    marking[sequence_flow.index()] += 1;
+                    marking[*sequence_flow] += 1;
                 }
             }
             marking
         } else if start_events.len() > 1 {
             //starting mode: choose any of multiple start events
             //add a place to the marking
-            let marking = vec![0; self.number_of_flows() + 1];
+            let mut marking = vec![0; self.number_of_flows() + 1];
             marking[self.number_of_flows()] = 1;
             marking
         } else {

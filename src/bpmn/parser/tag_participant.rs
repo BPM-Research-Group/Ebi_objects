@@ -71,7 +71,12 @@ impl Closeable for Participant {
                 {
                     if process_id.is_none() {
                         //this is a collapsed pool
-                        collapsed_pools.push(BPMNCollapsedPool { index, id, name });
+                        collapsed_pools.push(BPMNCollapsedPool {
+                            index,
+                            id,
+                            name,
+                            outgoing_sequence_flows: vec![],
+                        });
                     }
                 } else {
                     unreachable!()

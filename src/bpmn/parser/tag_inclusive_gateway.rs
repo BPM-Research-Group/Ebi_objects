@@ -45,7 +45,11 @@ impl Closeable for InclusiveGateway {
             Some(OpenedTag::Process { elements, .. })
             | Some(OpenedTag::SubProcess { elements, .. }) => {
                 if let OpenedTag::InclusiveGateway { index, id } = opened_tag {
-                    elements.push(BPMNElement::InclusiveGateway { index, id });
+                    elements.push(BPMNElement::InclusiveGateway {
+                        index,
+                        id,
+                        outgoing_sequence_flows: vec![],
+                    });
                     Ok(())
                 } else {
                     unreachable!()

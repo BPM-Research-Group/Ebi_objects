@@ -41,14 +41,14 @@ pub mod conversions {
     pub mod to_stochastic_process_tree;
 }
 pub mod bpmn {
+    pub mod collapsed_pool;
     pub mod element;
     pub mod exporter;
     pub mod importer;
     pub mod message_flow;
     pub mod objects;
     pub mod process;
-    // pub mod semantics;
-    pub mod collapsed_pool;
+    pub mod semantics;
     pub mod sequence_flow;
     pub mod structure_checker;
     pub mod parser {

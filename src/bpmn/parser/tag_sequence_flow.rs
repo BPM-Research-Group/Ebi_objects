@@ -7,11 +7,11 @@ use crate::bpmn::{
     },
 };
 use anyhow::{Result, anyhow};
-use quick_xml::events::BytesStart;
+use quick_xml::events::{BytesEnd, BytesStart};
 
-pub(crate) struct SequenceFlow {}
+pub(crate) struct SequenceFlowParser {}
 
-impl Recognisable for SequenceFlow {
+impl Recognisable for SequenceFlowParser {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -28,7 +28,7 @@ impl Recognisable for SequenceFlow {
     }
 }
 
-impl Openable for SequenceFlow {
+impl Openable for SequenceFlowParser {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> anyhow::Result<OpenedTag>
     where
         Self: Sized,
@@ -52,12 +52,8 @@ impl Openable for SequenceFlow {
     }
 }
 
-impl Closeable for SequenceFlow {
-    fn close_tag(
-        opened_tag: OpenedTag,
-        _e: &quick_xml::events::BytesEnd,
-        state: &mut ParserState,
-    ) -> Result<()> {
+impl Closeable for SequenceFlowParser {
+    fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process {
                 draft_sequence_flows,
@@ -77,8 +73,8 @@ impl Closeable for SequenceFlow {
                     draft_sequence_flows.push(DraftSequenceFlow {
                         index,
                         id,
-                        source_ref,
-                        target_ref,
+                        source_id: source_ref,
+                        target_id: target_ref,
                     });
                     Ok(())
                 } else {
@@ -94,6 +90,6 @@ impl Closeable for SequenceFlow {
 pub(crate) struct DraftSequenceFlow {
     pub(crate) index: usize,
     pub(crate) id: String,
-    pub(crate) source_ref: String,
-    pub(crate) target_ref: String,
+    pub(crate) source_id: String,
+    pub(crate) target_id: String,
 }

@@ -1,4 +1,5 @@
 use crate::bpmn::{
+    objects::IdSearchable,
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
@@ -51,21 +52,76 @@ impl Closeable for Process {
         if let OpenedTag::Process {
             index,
             id,
-            elements,
+            mut elements,
             draft_sequence_flows,
         } = opened_tag
         {
-            let sequence_flows = process_sequence_flows(state, draft_sequence_flows)?;
-
-            if let Some(OpenedTag::Definitions { processes, .. }) =
-                state.open_tags.iter_mut().last()
+            if let Some(OpenedTag::Definitions {
+                processes,
+                sequence_flows,
+                ..
+            }) = state.open_tags.iter_mut().last()
             {
+                //process sequence flows
+                for draft_sequence_flow in draft_sequence_flows {
+                    let DraftSequenceFlow {
+                        index,
+                        id,
+                        source_id,
+                        target_id,
+                    } = draft_sequence_flow;
+                    let new_flow_index = sequence_flows.len();
+                    let source_index = elements
+                        .id_2_pool_and_index(&source_id)
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "id `{}` mentioned but not declared in sequence flow `{}`",
+                                source_id,
+                                id
+                            )
+                        })?
+                        .1;
+                    //register the sequence flow in the source element
+                    let source = elements.index_2_element_mut(source_index).ok_or_else(|| {
+                        anyhow!(
+                            "could not find object of id `{}` mentioned in sequence flow `{}`",
+                            source_id,
+                            id
+                        )
+                    })?;
+                    if !source.add_outgoing_sequence_flow(new_flow_index) {
+                        return Err(anyhow!(
+                            "could not add sequence flow `{}` to element with id `{}`",
+                            id,
+                            source_id,
+                        ));
+                    }
+
+                    let target_index = elements
+                        .id_2_pool_and_index(&target_id)
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "id `{}` mentioned but not declared in sequence flow `{}`",
+                                target_id,
+                                id
+                            )
+                        })?
+                        .1;
+
+                    sequence_flows.push(SequenceFlow {
+                        index,
+                        id,
+                        flow_index: new_flow_index,
+                        source_index,
+                        target_index,
+                    });
+                }
+
                 //create a process
                 processes.push(BPMNProcess {
                     index,
                     id,
                     elements,
-                    sequence_flows,
                 });
                 Ok(())
             } else {
@@ -77,38 +133,7 @@ impl Closeable for Process {
     }
 }
 
-pub(crate) fn process_sequence_flows(
-    state: &ParserState,
-    draft_sequence_flows: Vec<DraftSequenceFlow>,
-) -> Result<Vec<SequenceFlow>> {
-    let mut sequence_flows = Vec::with_capacity(draft_sequence_flows.len());
-    for draft_sequence_flow in draft_sequence_flows {
-        let DraftSequenceFlow {
-            index,
-            id,
-            source_ref,
-            target_ref,
-        } = draft_sequence_flow;
-        let source_element_index = *state.ids.get(&source_ref).ok_or_else(|| {
-            anyhow!(
-                "id `{}` mentioned but not declared in sequence flow `{}`",
-                source_ref,
-                id
-            )
-        })?;
-        let target_element_index = *state.ids.get(&target_ref).ok_or_else(|| {
-            anyhow!(
-                "id `{}` mentioned but not declared in sequence flow `{}`",
-                target_ref,
-                id
-            )
-        })?;
-        sequence_flows.push(SequenceFlow {
-            index,
-            id,
-            source_element_index,
-            target_element_index,
-        });
-    }
-    Ok(sequence_flows)
+#[macro_export]
+macro_rules! process_draft_sequence_flows {
+    () => {};
 }

@@ -8,6 +8,7 @@ use crate::{
         message_flow::MessageFlow,
         objects::{BPMNObject, IdSearchable},
         process::BPMNProcess,
+        sequence_flow::SequenceFlow,
     },
     traits::graphable::{create_edge, create_gateway, create_place, create_transition},
 };
@@ -30,6 +31,7 @@ pub struct BusinessProcessModelAndNotation {
     pub definitions_id: String,
 
     pub processes: Vec<BPMNProcess>,
+    pub sequence_flows: Vec<SequenceFlow>,
     pub message_flows: Vec<MessageFlow>,
     pub collapsed_pools: Vec<BPMNCollapsedPool>,
 }
@@ -43,7 +45,7 @@ impl BusinessProcessModelAndNotation {
     }
 
     pub fn number_of_flows(&self) -> usize {
-        self.message_flows.len() + self.processes.number_of_flows()
+        self.message_flows.len() + self.sequence_flows.len()
     }
 
     pub fn all_elements_ref(&self) -> Vec<&BPMNElement> {
@@ -51,11 +53,11 @@ impl BusinessProcessModelAndNotation {
     }
 
     pub fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
-        let x = self.processes.find_object_with_index(index);
+        let x = self.processes.index_2_object(index);
         if x.is_some() {
             return x;
         }
-        self.collapsed_pools.find_object_with_index(index)
+        self.collapsed_pools.index_2_object(index)
     }
 }
 
@@ -122,18 +124,18 @@ impl Graphable for BusinessProcessModelAndNotation {
                 };
                 object_2_node.insert(element.index(), node);
             }
+        }
 
-            //add edges
-            for sequence_flow in &process.sequence_flows {
-                let from = object_2_node
-                    .get(&sequence_flow.source_element_index)
-                    .ok_or_else(|| anyhow!("node not found"))?;
-                let to = object_2_node
-                    .get(&sequence_flow.target_element_index)
-                    .ok_or_else(|| anyhow!("node not found"))?;
+        //add edges
+        for sequence_flow in &self.sequence_flows {
+            let from = object_2_node
+                .get(&sequence_flow.source_index)
+                .ok_or_else(|| anyhow!("node not found"))?;
+            let to = object_2_node
+                .get(&sequence_flow.target_index)
+                .ok_or_else(|| anyhow!("node not found"))?;
 
-                create_edge(&mut graph, from, to, "");
-            }
+            create_edge(&mut graph, from, to, "");
         }
 
         for message_flow in &self.message_flows {
@@ -167,7 +169,7 @@ impl TranslateActivityKey for BusinessProcessModelAndNotation {
             //adjust activities
             for index in indices {
                 if let Some(BPMNElement::Task { activity, .. }) =
-                    self.processes[process_rank].element_mut(index)
+                    self.processes[process_rank].index_2_element_mut(index)
                 {
                     *activity = translator.translate_activity(&activity);
                 } else {

@@ -60,11 +60,16 @@ impl Closeable for IntermediateCatchEvent {
                         elements.push(BPMNElement::MessageIntermediateCatchEvent {
                             index,
                             id,
+                            outgoing_sequence_flows: vec![],
                             message_index,
                             message_id,
                         });
                     } else {
-                        elements.push(BPMNElement::IntermediateCatchEvent { index, id });
+                        elements.push(BPMNElement::IntermediateCatchEvent {
+                            index,
+                            id,
+                            outgoing_sequence_flows: vec![],
+                        });
                     }
                     Ok(())
                 } else {
