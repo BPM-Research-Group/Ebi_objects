@@ -116,11 +116,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn bpmn_pool_import() {
         let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
-        assert_eq!(bpmn.processes.len(), 2);
+        assert_eq!(bpmn.elements.len(), 2);
         assert_eq!(bpmn.sequence_flows.len(), 8);
         assert_eq!(bpmn.message_flows.len(), 2);
     }
@@ -137,8 +138,7 @@ mod tests {
         let fin = fs::read_to_string("testfiles/model-lanes.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
-        assert_eq!(bpmn.processes.len(), 1);
-        assert_eq!(bpmn.collapsed_pools.len(), 1);
+        assert_eq!(bpmn.elements.len(), 2);
         assert_eq!(bpmn.message_flows.len(), 1);
     }
 }

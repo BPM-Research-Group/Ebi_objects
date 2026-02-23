@@ -1,5 +1,6 @@
 use crate::bpmn::{
     element::BPMNElement,
+    elements::task::BPMNTask,
     importer::parse_attribute,
     parser::{
         parser_state::ParserState,
@@ -10,9 +11,9 @@ use crate::bpmn::{
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub struct Task {}
+pub struct TagTask {}
 
-impl Recognisable for Task {
+impl Recognisable for TagTask {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -29,7 +30,7 @@ impl Recognisable for Task {
     }
 }
 
-impl Openable for Task {
+impl Openable for TagTask {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -46,7 +47,7 @@ impl Openable for Task {
     }
 }
 
-impl Closeable for Task {
+impl Closeable for TagTask {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process { elements, .. })
@@ -57,12 +58,15 @@ impl Closeable for Task {
                     activity,
                 } = opened_tag
                 {
-                    elements.push(BPMNElement::Task {
+                    elements.push(BPMNElement::Task(BPMNTask {
                         index,
                         id,
                         activity,
+                        incoming_sequence_flows: vec![],
                         outgoing_sequence_flows: vec![],
-                    });
+                        incoming_message_flow: None,
+                        outgoing_message_flow: None,
+                    }));
                     Ok(())
                 } else {
                     unreachable!()

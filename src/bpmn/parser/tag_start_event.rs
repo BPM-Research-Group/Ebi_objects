@@ -1,5 +1,6 @@
 use crate::bpmn::{
     element::BPMNElement,
+    elements::{message_start_event::BPMNMessageStartEvent, start_event::BPMNStartEvent},
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
@@ -9,9 +10,9 @@ use crate::bpmn::{
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub struct StartEvent {}
+pub struct TagStartEvent {}
 
-impl Recognisable for StartEvent {
+impl Recognisable for TagStartEvent {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -28,7 +29,7 @@ impl Recognisable for StartEvent {
     }
 }
 
-impl Openable for StartEvent {
+impl Openable for TagStartEvent {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -38,13 +39,13 @@ impl Openable for StartEvent {
         Ok(OpenedTag::StartEvent {
             index,
             id,
-            message_index: None,
-            message_id: None,
+            message_marker_index: None,
+            message_marker_id: None,
         })
     }
 }
 
-impl Closeable for StartEvent {
+impl Closeable for TagStartEvent {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process { elements, .. })
@@ -52,24 +53,27 @@ impl Closeable for StartEvent {
                 if let OpenedTag::StartEvent {
                     index,
                     id,
-                    message_index,
-                    message_id,
+                    message_marker_index,
+                    message_marker_id,
                 } = opened_tag
                 {
-                    if let (Some(message_index), Some(message_id)) = (message_index, message_id) {
-                        elements.push(BPMNElement::MessageStartEvent {
+                    if let (Some(message_marker_index), Some(message_marker_id)) =
+                        (message_marker_index, message_marker_id)
+                    {
+                        elements.push(BPMNElement::MessageStartEvent(BPMNMessageStartEvent {
                             index,
                             id,
+                            message_marker_index,
+                            message_marker_id,
                             outgoing_sequence_flows: vec![],
-                            message_index,
-                            message_id,
-                        });
+                            incoming_message_flow: None,
+                        }));
                     } else {
-                        elements.push(BPMNElement::StartEvent {
+                        elements.push(BPMNElement::StartEvent(BPMNStartEvent {
                             index,
                             id,
                             outgoing_sequence_flows: vec![],
-                        });
+                        }));
                     }
                     Ok(())
                 } else {

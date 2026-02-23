@@ -1,7 +1,10 @@
-use crate::bpmn::parser::{
-    parser_state::ParserState,
-    parser_traits::{Closeable, Openable, Recognisable},
-    tags::{OpenedTag, Tag},
+use crate::bpmn::{
+    element::BPMNElement,
+    parser::{
+        parser_state::ParserState,
+        parser_traits::{Closeable, Openable, Recognisable},
+        tags::{OpenedTag, Tag},
+    },
 };
 use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
@@ -49,7 +52,7 @@ impl Closeable for Collaboration {
         let index = state.open_tags.len() - 1;
         if let Some(OpenedTag::Definitions {
             draft_message_flows: message_flows,
-            collapsed_pools,
+            elements,
             collaboration_index,
             collaboration_id,
             ..
@@ -71,7 +74,11 @@ impl Closeable for Collaboration {
                 *collaboration_id = Some(id);
 
                 message_flows.extend(sub_message_flows);
-                collapsed_pools.extend(sub_collapsed_pools);
+                elements.extend(
+                    sub_collapsed_pools
+                        .into_iter()
+                        .map(|pool| BPMNElement::CollapsedPool(pool)),
+                );
                 Ok(())
             } else {
                 unreachable!()

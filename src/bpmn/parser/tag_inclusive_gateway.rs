@@ -1,5 +1,6 @@
 use crate::bpmn::{
     element::BPMNElement,
+    elements::inclusive_gateway::BPMNInclusiveGateway,
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
@@ -9,9 +10,9 @@ use crate::bpmn::{
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub struct InclusiveGateway {}
+pub struct TagInclusiveGateway {}
 
-impl Recognisable for InclusiveGateway {
+impl Recognisable for TagInclusiveGateway {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -28,7 +29,7 @@ impl Recognisable for InclusiveGateway {
     }
 }
 
-impl Openable for InclusiveGateway {
+impl Openable for TagInclusiveGateway {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -39,17 +40,18 @@ impl Openable for InclusiveGateway {
     }
 }
 
-impl Closeable for InclusiveGateway {
+impl Closeable for TagInclusiveGateway {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process { elements, .. })
             | Some(OpenedTag::SubProcess { elements, .. }) => {
                 if let OpenedTag::InclusiveGateway { index, id } = opened_tag {
-                    elements.push(BPMNElement::InclusiveGateway {
+                    elements.push(BPMNElement::InclusiveGateway(BPMNInclusiveGateway {
                         index,
                         id,
+                        incoming_sequence_flows: vec![],
                         outgoing_sequence_flows: vec![],
-                    });
+                    }));
                     Ok(())
                 } else {
                     unreachable!()

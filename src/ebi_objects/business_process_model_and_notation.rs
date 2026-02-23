@@ -3,12 +3,9 @@ use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable, TranslateActivityKey,
     bpmn::{
-        collapsed_pool::BPMNCollapsedPool,
-        element::BPMNElement,
-        message_flow::MessageFlow,
-        objects::{BPMNObject, IdSearchable},
-        process::BPMNProcess,
-        sequence_flow::SequenceFlow,
+        element::BPMNElement, elements::task::BPMNTask, message_flow::MessageFlow,
+        objects_elementable::Elementable, objects_objectable::BPMNObject,
+        objects_searchable::Searchable, sequence_flow::SequenceFlow,
     },
     traits::graphable::{create_edge, create_gateway, create_place, create_transition},
 };
@@ -30,34 +27,36 @@ pub struct BusinessProcessModelAndNotation {
     pub definitions_index: usize,
     pub definitions_id: String,
 
-    pub processes: Vec<BPMNProcess>,
+    pub elements: Vec<BPMNElement>,
     pub sequence_flows: Vec<SequenceFlow>,
     pub message_flows: Vec<MessageFlow>,
-    pub collapsed_pools: Vec<BPMNCollapsedPool>,
 }
 
 impl BusinessProcessModelAndNotation {
     fn number_of_elements(&self) -> usize {
-        self.processes
-            .iter()
-            .map(|process| process.all_elements_ref().len())
-            .sum()
+        self.all_elements_ref().len()
     }
 
-    pub fn number_of_flows(&self) -> usize {
-        self.message_flows.len() + self.sequence_flows.len()
+    pub fn number_of_sequence_flows(&self) -> usize {
+        self.sequence_flows.len()
+    }
+
+    pub fn number_of_message_flows(&self) -> usize {
+        self.message_flows.len()
     }
 
     pub fn all_elements_ref(&self) -> Vec<&BPMNElement> {
-        self.processes.all_elements_ref()
+        self.elements.all_elements_ref()
     }
 
-    pub fn find_object_with_index(&self, index: usize) -> Option<&dyn BPMNObject> {
-        let x = self.processes.index_2_object(index);
-        if x.is_some() {
-            return x;
-        }
-        self.collapsed_pools.index_2_object(index)
+    /// find an element with the given index
+    pub fn index_2_element(&self, index: usize) -> Option<&BPMNElement> {
+        self.elements.index_2_element(index)
+    }
+
+    /// find the object of the given index
+    pub fn index_2_object(&self, index: usize) -> Option<&dyn BPMNObject> {
+        self.elements.index_2_object(index)
     }
 }
 
@@ -69,7 +68,7 @@ impl Display for BusinessProcessModelAndNotation {
 
 impl Infoable for BusinessProcessModelAndNotation {
     fn info(&self, f: &mut impl Write) -> Result<()> {
-        writeln!(f, "Number of processes (pools)\t{}", self.processes.len())?;
+        writeln!(f, "Number of processes (pools)\t{}", self.elements.len())?;
         writeln!(f, "Number of elements\t\t{}", self.number_of_elements())?;
         writeln!(f, "Number of message flows\t\t{}", self.message_flows.len())?;
         writeln!(
@@ -90,40 +89,37 @@ impl Graphable for BusinessProcessModelAndNotation {
         let mut graph = VisualGraph::new(Orientation::LeftToRight);
 
         let mut object_2_node = HashMap::new();
-        for process in &self.processes {
+        for element in &self.all_elements_ref() {
             //add nodes
-            for element in &process.elements {
-                let node = match element {
-                    BPMNElement::EndEvent { .. } => create_place(&mut graph, "e"),
-                    BPMNElement::MessageEndEvent { .. } => create_place(&mut graph, "me"),
-                    BPMNElement::StartEvent { .. } => create_place(&mut graph, "s"),
-                    BPMNElement::MessageStartEvent { .. } => create_place(&mut graph, "ms"),
-                    BPMNElement::IntermediateCatchEvent { .. } => create_place(&mut graph, "ci"),
-                    BPMNElement::MessageIntermediateCatchEvent { .. } => {
-                        create_place(&mut graph, "mci")
-                    }
-                    BPMNElement::IntermediateThrowEvent { .. } => create_place(&mut graph, "ti"),
-                    BPMNElement::MessageIntermediateThrowEvent { .. } => {
-                        create_place(&mut graph, "mti")
-                    }
-                    BPMNElement::CollapsedSubProcess { .. } => {
-                        create_transition(&mut graph, "csp", "")
-                    }
-                    BPMNElement::ExpandedSubProcess { .. } => {
-                        create_transition(&mut graph, "esp", "")
-                    }
-                    BPMNElement::ExclusiveGateway { .. } => create_gateway(&mut graph, "x"),
-                    BPMNElement::InclusiveGateway { .. } => create_gateway(&mut graph, "o"),
-                    BPMNElement::ParallelGateway { .. } => create_gateway(&mut graph, "+"),
-                    BPMNElement::EventBasedGateway { .. } => create_gateway(&mut graph, "e"),
-                    BPMNElement::Task { activity, .. } => create_transition(
-                        &mut graph,
-                        self.activity_key.deprocess_activity(activity),
-                        "",
-                    ),
-                };
-                object_2_node.insert(element.index(), node);
-            }
+
+            let node = match element {
+                BPMNElement::CollapsedPool(_) => create_place(&mut graph, "cp"),
+                BPMNElement::EndEvent { .. } => create_place(&mut graph, "e"),
+                BPMNElement::MessageEndEvent { .. } => create_place(&mut graph, "me"),
+                BPMNElement::StartEvent { .. } => create_place(&mut graph, "s"),
+                BPMNElement::MessageStartEvent { .. } => create_place(&mut graph, "ms"),
+                BPMNElement::IntermediateCatchEvent { .. } => create_place(&mut graph, "ci"),
+                BPMNElement::MessageIntermediateCatchEvent { .. } => {
+                    create_place(&mut graph, "mci")
+                }
+                BPMNElement::IntermediateThrowEvent { .. } => create_place(&mut graph, "ti"),
+                BPMNElement::MessageIntermediateThrowEvent { .. } => {
+                    create_place(&mut graph, "mti")
+                }
+                BPMNElement::CollapsedSubProcess { .. } => create_transition(&mut graph, "csp", ""),
+                BPMNElement::ExpandedSubProcess { .. } => create_transition(&mut graph, "esp", ""),
+                BPMNElement::ExclusiveGateway { .. } => create_gateway(&mut graph, "x"),
+                BPMNElement::InclusiveGateway { .. } => create_gateway(&mut graph, "o"),
+                BPMNElement::ParallelGateway { .. } => create_gateway(&mut graph, "+"),
+                BPMNElement::Process(_) => create_place(&mut graph, "p"),
+                BPMNElement::EventBasedGateway { .. } => create_gateway(&mut graph, "e"),
+                BPMNElement::Task(BPMNTask { activity, .. }) => create_transition(
+                    &mut graph,
+                    self.activity_key.deprocess_activity(activity),
+                    "",
+                ),
+            };
+            object_2_node.insert(element.index(), node);
         }
 
         //add edges
@@ -157,26 +153,25 @@ impl TranslateActivityKey for BusinessProcessModelAndNotation {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
-        for process_rank in 0..self.processes.len() {
-            //gather indices of elements
-            let mut indices = vec![];
-            for element in self.processes[process_rank].all_elements_ref() {
-                if let BPMNElement::Task { index, .. } = element {
-                    indices.push(*index);
-                }
-            }
-
-            //adjust activities
-            for index in indices {
-                if let Some(BPMNElement::Task { activity, .. }) =
-                    self.processes[process_rank].index_2_element_mut(index)
-                {
-                    *activity = translator.translate_activity(&activity);
-                } else {
-                    unreachable!()
-                }
+        //gather indices of elements
+        let mut indices = vec![];
+        for element in self.all_elements_ref() {
+            if element.is_task() {
+                indices.push(element.index());
             }
         }
+
+        //adjust activities
+        for index in indices {
+            if let Some(BPMNElement::Task(BPMNTask { activity, .. })) =
+                self.elements.index_2_element_mut(index)
+            {
+                *activity = translator.translate_activity(&activity);
+            } else {
+                unreachable!()
+            }
+        }
+
         self.activity_key = to_activity_key.clone();
     }
 }
@@ -184,11 +179,9 @@ impl TranslateActivityKey for BusinessProcessModelAndNotation {
 #[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for BusinessProcessModelAndNotation {
     fn test_activity_key(&self) {
-        for process in &self.processes {
-            for element in process.all_elements_ref() {
-                if let BPMNElement::Task { activity, .. } = element {
-                    self.activity_key.assert_activity_is_of_key(activity);
-                }
+        for element in self.all_elements_ref() {
+            if let BPMNElement::Task(BPMNTask { activity, .. }) = element {
+                self.activity_key.assert_activity_is_of_key(activity);
             }
         }
     }
@@ -204,7 +197,7 @@ mod tests {
 
     #[test]
     fn bpmn_pool_graphable() {
-        let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
+        let fin = fs::read_to_string("testfiles/model-lanes.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
         bpmn.to_dot().unwrap();
@@ -212,7 +205,7 @@ mod tests {
 
     #[test]
     fn bpmn_pool_translate() {
-        let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
+        let fin = fs::read_to_string("testfiles/model-lanes.bpmn").unwrap();
         let mut bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
         bpmn.test_activity_key();
@@ -227,7 +220,7 @@ mod tests {
 
     #[test]
     fn bpmn_pool_infoable() {
-        let fin = fs::read_to_string("testfiles/model-pool.bpmn").unwrap();
+        let fin = fs::read_to_string("testfiles/model-lanes.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
         let mut f = vec![];

@@ -1,5 +1,5 @@
 use crate::bpmn::{
-    collapsed_pool::BPMNCollapsedPool,
+    elements::collapsed_pool::BPMNCollapsedPool,
     importer::parse_attribute,
     parser::{
         parser_state::ParserState,
@@ -10,9 +10,9 @@ use crate::bpmn::{
 use anyhow::Result;
 use quick_xml::events::BytesStart;
 
-pub(crate) struct Participant {}
+pub(crate) struct TagParticipant {}
 
-impl Recognisable for Participant {
+impl Recognisable for TagParticipant {
     fn recognise_tag(
         e: &quick_xml::events::BytesStart,
         state: &super::parser_state::ParserState,
@@ -32,7 +32,7 @@ impl Recognisable for Participant {
     }
 }
 
-impl Openable for Participant {
+impl Openable for TagParticipant {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -52,7 +52,7 @@ impl Openable for Participant {
     }
 }
 
-impl Closeable for Participant {
+impl Closeable for TagParticipant {
     fn close_tag(
         opened_tag: OpenedTag,
         _e: &quick_xml::events::BytesEnd,
@@ -75,7 +75,8 @@ impl Closeable for Participant {
                             index,
                             id,
                             name,
-                            outgoing_sequence_flows: vec![],
+                            incoming_message_flows: vec![],
+                            outgoing_message_flows: vec![],
                         });
                     }
                 } else {

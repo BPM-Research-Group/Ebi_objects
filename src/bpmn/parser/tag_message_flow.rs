@@ -7,11 +7,11 @@ use crate::bpmn::{
     },
 };
 use anyhow::{Result, anyhow};
-use quick_xml::events::BytesStart;
+use quick_xml::events::{BytesEnd, BytesStart};
 
-pub(crate) struct MessageFlow {}
+pub(crate) struct TagMessageFlow {}
 
-impl Recognisable for MessageFlow {
+impl Recognisable for TagMessageFlow {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -29,7 +29,7 @@ impl Recognisable for MessageFlow {
     }
 }
 
-impl Openable for MessageFlow {
+impl Openable for TagMessageFlow {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -41,8 +41,8 @@ impl Openable for MessageFlow {
                 Ok(OpenedTag::MessageFlow {
                     index,
                     id,
-                    source_ref,
-                    target_ref,
+                    source_id: source_ref,
+                    target_id: target_ref,
                 })
             } else {
                 Err(anyhow!("message flow must have a target"))
@@ -53,27 +53,23 @@ impl Openable for MessageFlow {
     }
 }
 
-impl Closeable for MessageFlow {
-    fn close_tag(
-        opened_tag: OpenedTag,
-        _e: &quick_xml::events::BytesEnd,
-        state: &mut ParserState,
-    ) -> Result<()> {
+impl Closeable for TagMessageFlow {
+    fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         let index = state.open_tags.len() - 1;
         if let Some(OpenedTag::Collaboration { message_flows, .. }) = state.open_tags.get_mut(index)
         {
             if let OpenedTag::MessageFlow {
                 index,
                 id,
-                source_ref,
-                target_ref,
+                source_id,
+                target_id,
             } = opened_tag
             {
                 message_flows.push(DraftMessageFlow {
                     index,
                     id,
-                    source_id: source_ref,
-                    target_id: target_ref,
+                    source_id,
+                    target_id,
                 });
                 Ok(())
             } else {

@@ -1,20 +1,22 @@
 use crate::bpmn::{
-    objects::IdSearchable,
+    element::{BPMNElement, BPMNElementTrait},
+    elements::process::BPMNProcess,
+    objects_elementable::Elementable,
+    objects_searchable::Searchable,
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
         tag_sequence_flow::DraftSequenceFlow,
         tags::{OpenedTag, Tag},
     },
-    process::BPMNProcess,
     sequence_flow::SequenceFlow,
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub(crate) struct Process {}
+pub(crate) struct TagProcess {}
 
-impl Recognisable for Process {
+impl Recognisable for TagProcess {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -31,7 +33,7 @@ impl Recognisable for Process {
     }
 }
 
-impl Openable for Process {
+impl Openable for TagProcess {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -47,17 +49,17 @@ impl Openable for Process {
     }
 }
 
-impl Closeable for Process {
+impl Closeable for TagProcess {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         if let OpenedTag::Process {
             index,
             id,
-            mut elements,
+            elements: mut sub_elements,
             draft_sequence_flows,
         } = opened_tag
         {
             if let Some(OpenedTag::Definitions {
-                processes,
+                elements: super_elements,
                 sequence_flows,
                 ..
             }) = state.open_tags.iter_mut().last()
@@ -71,7 +73,7 @@ impl Closeable for Process {
                         target_id,
                     } = draft_sequence_flow;
                     let new_flow_index = sequence_flows.len();
-                    let source_index = elements
+                    let source_index = sub_elements
                         .id_2_pool_and_index(&source_id)
                         .ok_or_else(|| {
                             anyhow!(
@@ -82,22 +84,26 @@ impl Closeable for Process {
                         })?
                         .1;
                     //register the sequence flow in the source element
-                    let source = elements.index_2_element_mut(source_index).ok_or_else(|| {
-                        anyhow!(
-                            "could not find object of id `{}` mentioned in sequence flow `{}`",
-                            source_id,
-                            id
-                        )
-                    })?;
-                    if !source.add_outgoing_sequence_flow(new_flow_index) {
-                        return Err(anyhow!(
-                            "could not add sequence flow `{}` to element with id `{}`",
-                            id,
-                            source_id,
-                        ));
-                    }
+                    let source = sub_elements.index_2_element_mut(source_index).ok_or_else(
+                        || {
+                            anyhow!(
+                                "could not find object of id `{}` mentioned in sequence flow `{}`",
+                                source_id,
+                                id
+                            )
+                        },
+                    )?;
+                    source
+                        .add_outgoing_sequence_flow(new_flow_index)
+                        .with_context(|| {
+                            anyhow!(
+                                "could not add sequence flow `{}` to element with id `{}`",
+                                id,
+                                source_id,
+                            )
+                        })?;
 
-                    let target_index = elements
+                    let target_index = sub_elements
                         .id_2_pool_and_index(&target_id)
                         .ok_or_else(|| {
                             anyhow!(
@@ -107,6 +113,25 @@ impl Closeable for Process {
                             )
                         })?
                         .1;
+                    //register the sequence flow in the target element
+                    let target = sub_elements.index_2_element_mut(target_index).ok_or_else(
+                        || {
+                            anyhow!(
+                                "could not find object of id `{}` mentioned in sequence flow `{}`",
+                                source_id,
+                                id
+                            )
+                        },
+                    )?;
+                    target
+                        .add_incoming_sequence_flow(new_flow_index)
+                        .with_context(|| {
+                            anyhow!(
+                                "could not add sequence flow `{}` to element with id `{}`",
+                                id,
+                                source_id,
+                            )
+                        })?;
 
                     sequence_flows.push(SequenceFlow {
                         index,
@@ -118,11 +143,11 @@ impl Closeable for Process {
                 }
 
                 //create a process
-                processes.push(BPMNProcess {
+                super_elements.push(BPMNElement::Process(BPMNProcess {
                     index,
                     id,
-                    elements,
-                });
+                    elements: sub_elements,
+                }));
                 Ok(())
             } else {
                 unreachable!()
@@ -131,9 +156,4 @@ impl Closeable for Process {
             unreachable!()
         }
     }
-}
-
-#[macro_export]
-macro_rules! process_draft_sequence_flows {
-    () => {};
 }

@@ -9,9 +9,9 @@ use crate::bpmn::{
 use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub(crate) struct SequenceFlowParser {}
+pub(crate) struct TagSequenceFlow {}
 
-impl Recognisable for SequenceFlowParser {
+impl Recognisable for TagSequenceFlow {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -28,7 +28,7 @@ impl Recognisable for SequenceFlowParser {
     }
 }
 
-impl Openable for SequenceFlowParser {
+impl Openable for TagSequenceFlow {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> anyhow::Result<OpenedTag>
     where
         Self: Sized,
@@ -52,7 +52,7 @@ impl Openable for SequenceFlowParser {
     }
 }
 
-impl Closeable for SequenceFlowParser {
+impl Closeable for TagSequenceFlow {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process {

@@ -1,17 +1,17 @@
 use crate::bpmn::{
-    collapsed_pool::BPMNCollapsedPool,
+    element::{BPMNElement, BPMNElementTrait},
     message_flow::MessageFlow,
-    objects::IdSearchable,
+    objects_elementable::Elementable,
+    objects_searchable::Searchable,
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
         tag_message_flow::DraftMessageFlow,
         tags::{OpenedTag, Tag},
     },
-    process::BPMNProcess,
     sequence_flow::SequenceFlow,
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
 
 pub struct Definitions {}
@@ -44,8 +44,7 @@ impl Openable for Definitions {
             collaboration_id: None,
             draft_message_flows: vec![],
             sequence_flows: vec![],
-            processes: vec![],
-            collapsed_pools: vec![],
+            elements: vec![],
         })
     }
 }
@@ -61,47 +60,78 @@ impl Closeable for Definitions {
             collaboration_id,
             draft_message_flows,
             sequence_flows,
-            mut processes,
-            mut collapsed_pools,
+            mut elements,
         } = opened_tag
         {
             //finalise the message flows
             let mut message_flows = Vec::with_capacity(draft_message_flows.len());
             for draft_message_flows in draft_message_flows {
+                let new_message_flow_index = message_flows.len();
                 let DraftMessageFlow {
                     index,
                     id,
                     source_id,
                     target_id,
                 } = draft_message_flows;
-                if let Some((Some(source_pool_index), source_element_index)) =
-                    (&mut processes, &mut collapsed_pools).id_2_pool_and_index(&source_id)
-                {
-                    if let Some((Some(target_pool_index), target_element_index)) =
-                        (&mut processes, &mut collapsed_pools).id_2_pool_and_index(&target_id)
-                    {
-                        message_flows.push(MessageFlow {
-                            index,
-                            id,
-                            source_element_index,
-                            source_pool_index,
-                            target_element_index,
-                            target_pool_index,
-                        });
-                    } else {
-                        return Err(anyhow!(
-                            "id `{}` mentioned but not declared in message flow `{}`",
-                            target_id,
+
+                //obtain source
+                let (source_pool_index, source_element_index) =
+                    elements.id_2_pool_and_index(&source_id).ok_or_else(|| {
+                        anyhow!(
+                            "could not find source `{}` of message flow `{}`",
+                            source_id,
                             id
-                        ));
-                    }
+                        )
+                    })?;
+
+                //link to source element or pool
+                if let Some(source) = elements.index_2_element_mut(source_element_index) {
+                    //element
+                    source
+                        .add_outgoing_message_flow(new_message_flow_index)
+                        .with_context(|| anyhow!("message flow `{}`", id))?;
                 } else {
                     return Err(anyhow!(
-                        "id `{}` mentioned but not declared in message flow `{}`",
+                        "could not find source `{}` of message flow `{}`",
                         source_id,
                         id
                     ));
                 }
+
+                //obtain target
+                let (target_pool_index, target_element_index) =
+                    elements.id_2_pool_and_index(&target_id).ok_or_else(|| {
+                        anyhow!(
+                            "could not find target `{}` of message flow `{}`",
+                            target_id,
+                            id
+                        )
+                    })?;
+
+                //link to target element or pool
+                if let Some(target) = elements.index_2_element_mut(target_element_index) {
+                    //element
+                    target
+                        .add_incoming_message_flow(new_message_flow_index)
+                        .with_context(|| anyhow!("message flow `{}`", id))?;
+                } else {
+                    return Err(anyhow!(
+                        "could not find target `{}` of message flow `{}`",
+                        target_id,
+                        id
+                    ));
+                }
+
+                message_flows.push(MessageFlow {
+                    index,
+                    id,
+                    source_element_index,
+                    source_pool_index: source_pool_index
+                        .ok_or_else(|| anyhow!("pool not found"))?,
+                    target_element_index,
+                    target_pool_index: target_pool_index
+                        .ok_or_else(|| anyhow!("pool not found {}", target_id))?,
+                });
             }
 
             state.draft_definitionss.push(DraftDefinitions {
@@ -109,10 +139,9 @@ impl Closeable for Definitions {
                 id,
                 collaboration_index,
                 collaboration_id,
-                processes,
+                elements,
                 message_flows,
                 sequence_flows,
-                collapsed_pools,
             });
 
             Ok(())
@@ -127,8 +156,7 @@ pub(crate) struct DraftDefinitions {
     pub(crate) id: String,
     pub(crate) collaboration_index: Option<usize>,
     pub(crate) collaboration_id: Option<String>,
-    pub(crate) processes: Vec<BPMNProcess>,
+    pub(crate) elements: Vec<BPMNElement>,
     pub(crate) message_flows: Vec<MessageFlow>,
     pub(crate) sequence_flows: Vec<SequenceFlow>,
-    pub(crate) collapsed_pools: Vec<BPMNCollapsedPool>,
 }

@@ -6,9 +6,9 @@ use crate::bpmn::parser::{
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub(crate) struct MessageEventDefinition {}
+pub(crate) struct TagMessageEventDefinition {}
 
-impl Recognisable for MessageEventDefinition {
+impl Recognisable for TagMessageEventDefinition {
     fn recognise_tag(
         e: &quick_xml::events::BytesStart,
         state: &super::parser_state::ParserState,
@@ -31,7 +31,7 @@ impl Recognisable for MessageEventDefinition {
     }
 }
 
-impl Openable for MessageEventDefinition {
+impl Openable for TagMessageEventDefinition {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -42,28 +42,28 @@ impl Openable for MessageEventDefinition {
     }
 }
 
-impl Closeable for MessageEventDefinition {
+impl Closeable for TagMessageEventDefinition {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         let index = state.open_tags.len() - 1;
         match state.open_tags.get_mut(index) {
             Some(OpenedTag::StartEvent {
-                message_index,
-                message_id,
+                message_marker_index: message_index,
+                message_marker_id: message_id,
                 ..
             })
             | Some(OpenedTag::EndEvent {
-                message_index,
-                message_id,
+                message_marker_index: message_index,
+                message_marker_id: message_id,
                 ..
             })
             | Some(OpenedTag::IntermediateCatchEvent {
-                message_index,
-                message_id,
+                message_marker_index: message_index,
+                message_marker_id: message_id,
                 ..
             })
             | Some(OpenedTag::IntermediateThrowEvent {
-                message_index,
-                message_id,
+                message_marker_index: message_index,
+                message_marker_id: message_id,
                 ..
             }) => {
                 if let OpenedTag::MessageEventDefinition { index, id } = opened_tag {

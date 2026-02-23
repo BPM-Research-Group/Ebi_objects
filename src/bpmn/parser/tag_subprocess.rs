@@ -1,7 +1,12 @@
 use crate::bpmn::{
-    element::BPMNElement,
+    element::{BPMNElement, BPMNElementTrait},
+    elements::{
+        collapsed_sub_process::BPMNCollapsedSubProcess,
+        expanded_sub_process::BPMNExpandedSubProcess,
+    },
     importer::parse_attribute,
-    objects::IdSearchable,
+    objects_elementable::Elementable,
+    objects_searchable::Searchable,
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
@@ -10,12 +15,12 @@ use crate::bpmn::{
     },
     sequence_flow::SequenceFlow,
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub struct SubProcess {}
+pub struct TagSubProcess {}
 
-impl Recognisable for SubProcess {
+impl Recognisable for TagSubProcess {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -32,7 +37,7 @@ impl Recognisable for SubProcess {
     }
 }
 
-impl Openable for SubProcess {
+impl Openable for TagSubProcess {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -50,7 +55,7 @@ impl Openable for SubProcess {
     }
 }
 
-impl Closeable for SubProcess {
+impl Closeable for TagSubProcess {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         if let OpenedTag::SubProcess {
             index,
@@ -91,14 +96,17 @@ impl Closeable for SubProcess {
                             source_id,
                             id
                         )
-                    })?;
-                        if !source.add_outgoing_sequence_flow(new_flow_index) {
-                            return Err(anyhow!(
-                                "could not add sequence flow `{}` to element with id `{}`",
-                                id,
-                                source_id,
-                            ));
-                        }
+                        })?;
+
+                        source
+                            .add_outgoing_sequence_flow(new_flow_index)
+                            .with_context(|| {
+                                anyhow!(
+                                    "could not add sequence flow `{}` to element with id `{}`",
+                                    id,
+                                    source_id,
+                                )
+                            })?;
 
                         let target_index = elements
                             .id_2_pool_and_index(&target_id)
@@ -135,22 +143,30 @@ impl Closeable for SubProcess {
                 }) => {
                     if elements.is_empty() {
                         //create a collapsed sub-process
-                        super_elements.push(BPMNElement::CollapsedSubProcess {
-                            index,
-                            id,
-                            name,
-                            outgoing_sequence_flows: vec![],
-                        });
+                        super_elements.push(BPMNElement::CollapsedSubProcess(
+                            BPMNCollapsedSubProcess {
+                                index,
+                                id,
+                                name,
+                                incoming_sequence_flows: vec![],
+                                outgoing_sequence_flows: vec![],
+                                incoming_message_flows: vec![],
+                                outgoing_message_flows: vec![],
+                            },
+                        ));
                     } else {
                         //create an expanded sub-process
 
-                        super_elements.push(BPMNElement::ExpandedSubProcess {
-                            index,
-                            id,
-                            name,
-                            elements,
-                            outgoing_sequence_flows: vec![],
-                        });
+                        super_elements.push(BPMNElement::ExpandedSubProcess(
+                            BPMNExpandedSubProcess {
+                                index,
+                                id,
+                                name,
+                                elements,
+                                incoming_sequence_flows: vec![],
+                                outgoing_sequence_flows: vec![],
+                            },
+                        ));
                     }
                     Ok(())
                 }

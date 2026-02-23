@@ -1,5 +1,6 @@
 use crate::bpmn::{
     element::BPMNElement,
+    elements::parallel_gateway::BPMNParallelGateway,
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
@@ -9,9 +10,9 @@ use crate::bpmn::{
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub struct ParallelGateway {}
+pub struct TagParallelGateway {}
 
-impl Recognisable for ParallelGateway {
+impl Recognisable for TagParallelGateway {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -28,7 +29,7 @@ impl Recognisable for ParallelGateway {
     }
 }
 
-impl Openable for ParallelGateway {
+impl Openable for TagParallelGateway {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -39,17 +40,18 @@ impl Openable for ParallelGateway {
     }
 }
 
-impl Closeable for ParallelGateway {
+impl Closeable for TagParallelGateway {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process { elements, .. })
             | Some(OpenedTag::SubProcess { elements, .. }) => {
                 if let OpenedTag::ParallelGateway { index, id } = opened_tag {
-                    elements.push(BPMNElement::ParallelGateway {
+                    elements.push(BPMNElement::ParallelGateway(BPMNParallelGateway {
                         index,
                         id,
+                        incoming_sequence_flows: vec![],
                         outgoing_sequence_flows: vec![],
-                    });
+                    }));
                     Ok(())
                 } else {
                     unreachable!()

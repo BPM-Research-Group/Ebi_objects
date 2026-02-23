@@ -1,5 +1,9 @@
 use crate::bpmn::{
     element::BPMNElement,
+    elements::{
+        intermediate_catch_event::BPMNIntermediateCatchEvent,
+        message_intermediate_catch_event::BPMNMessageIntermediateCatchEvent,
+    },
     parser::{
         parser_state::ParserState,
         parser_traits::{Closeable, Openable, Recognisable},
@@ -9,9 +13,9 @@ use crate::bpmn::{
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart};
 
-pub(crate) struct IntermediateCatchEvent {}
+pub(crate) struct TagIntermediateCatchEvent {}
 
-impl Recognisable for IntermediateCatchEvent {
+impl Recognisable for TagIntermediateCatchEvent {
     fn recognise_tag(e: &BytesStart, state: &ParserState) -> Option<Tag>
     where
         Self: Sized,
@@ -28,7 +32,7 @@ impl Recognisable for IntermediateCatchEvent {
     }
 }
 
-impl Openable for IntermediateCatchEvent {
+impl Openable for TagIntermediateCatchEvent {
     fn open_tag(_tag: Tag, e: &BytesStart, state: &mut ParserState) -> Result<OpenedTag>
     where
         Self: Sized,
@@ -38,13 +42,13 @@ impl Openable for IntermediateCatchEvent {
         Ok(OpenedTag::IntermediateCatchEvent {
             index,
             id,
-            message_index: None,
-            message_id: None,
+            message_marker_index: None,
+            message_marker_id: None,
         })
     }
 }
 
-impl Closeable for IntermediateCatchEvent {
+impl Closeable for TagIntermediateCatchEvent {
     fn close_tag(opened_tag: OpenedTag, _e: &BytesEnd, state: &mut ParserState) -> Result<()> {
         match state.open_tags.iter_mut().last() {
             Some(OpenedTag::Process { elements, .. })
@@ -52,24 +56,33 @@ impl Closeable for IntermediateCatchEvent {
                 if let OpenedTag::IntermediateCatchEvent {
                     index,
                     id,
-                    message_index,
-                    message_id,
+                    message_marker_index,
+                    message_marker_id,
                 } = opened_tag
                 {
-                    if let (Some(message_index), Some(message_id)) = (message_index, message_id) {
-                        elements.push(BPMNElement::MessageIntermediateCatchEvent {
-                            index,
-                            id,
-                            outgoing_sequence_flows: vec![],
-                            message_index,
-                            message_id,
-                        });
+                    if let (Some(message_marker_index), Some(message_marker_id)) =
+                        (message_marker_index, message_marker_id)
+                    {
+                        elements.push(BPMNElement::MessageIntermediateCatchEvent(
+                            BPMNMessageIntermediateCatchEvent {
+                                index,
+                                id,
+                                message_marker_index,
+                                message_marker_id,
+                                incoming_sequence_flows: vec![],
+                                outgoing_sequence_flows: vec![],
+                                incoming_message_flow: None,
+                            },
+                        ));
                     } else {
-                        elements.push(BPMNElement::IntermediateCatchEvent {
-                            index,
-                            id,
-                            outgoing_sequence_flows: vec![],
-                        });
+                        elements.push(BPMNElement::IntermediateCatchEvent(
+                            BPMNIntermediateCatchEvent {
+                                index,
+                                id,
+                                incoming_sequence_flows: vec![],
+                                outgoing_sequence_flows: vec![],
+                            },
+                        ));
                     }
                     Ok(())
                 } else {
