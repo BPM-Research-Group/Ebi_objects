@@ -28,7 +28,7 @@ impl From<Vec<u8>> for PortableNetworkGraphics {
 impl Exportable for PortableNetworkGraphics {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
-            EbiObject::BusinessProcessModelAndNotation(object) => object.to_png()?.export(f),
+            // EbiObject::BusinessProcessModelAndNotation(object) => object.to_png()?.export(f),
             EbiObject::DeterministicFiniteAutomaton(object) => object.to_png()?.export(f),
             EbiObject::DirectlyFollowsModel(object) => object.to_png()?.export(f),
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_png()?.export(f),

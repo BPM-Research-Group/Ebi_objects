@@ -101,9 +101,9 @@ impl Exportable for PetriNetMarkupLanguage {
                 <StochasticLabelledPetriNet as TryInto<LabelledPetriNet>>::try_into(slpn)?.export(f)
             }
 
-            EbiObject::BusinessProcessModelAndNotation(_) => {
-                Err(anyhow!("Cannot export BPMN as PNML."))
-            }
+            // EbiObject::BusinessProcessModelAndNotation(_) => {
+            //     Err(anyhow!("Cannot export BPMN as PNML."))
+            // }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as PNML.")),

@@ -297,22 +297,24 @@ impl fmt::Display for StochasticLabelledPetriNet {
 
             writeln!(f, "# weight\n{}", &self.weights[transition])?;
 
-            writeln!(
-                f,
-                "# number of input places\n{}",
-                self.transition2input_places[transition].len()
-            )?;
+            let number_of_input_places = self.transition2input_places[transition]
+                .iter()
+                .enumerate()
+                .map(|(pos, _)| self.transition2input_places_cardinality[transition][pos])
+                .sum::<u64>();
+            writeln!(f, "# number of input places\n{}", number_of_input_places)?;
             for (pos, place) in self.transition2input_places[transition].iter().enumerate() {
                 for _ in 0..self.transition2input_places_cardinality[transition][pos] {
                     writeln!(f, "{}", place)?;
                 }
             }
 
-            writeln!(
-                f,
-                "# number of output places\n{}",
-                self.transition2output_places[transition].len()
-            )?;
+            let number_of_output_places = self.transition2output_places[transition]
+                .iter()
+                .enumerate()
+                .map(|(pos, _)| self.transition2output_places_cardinality[transition][pos])
+                .sum::<u64>();
+            writeln!(f, "# number of output places\n{}", number_of_output_places)?;
             for (pos, place) in self.transition2output_places[transition].iter().enumerate() {
                 for _ in 0..self.transition2output_places_cardinality[transition][pos] {
                     writeln!(f, "{}", place)?;
