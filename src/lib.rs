@@ -96,7 +96,7 @@ pub mod bpmn {
     }
 }
 pub mod ebi_objects {
-    // pub mod business_process_model_and_notation;
+    pub mod business_process_model_and_notation;
     pub mod compressed_event_log;
     pub mod compressed_event_log_trace_attributes;
     pub mod compressed_event_log_xes;
@@ -171,7 +171,7 @@ pub use crate::traits::number_of_traces::NumberOfTraces;
 pub use crate::traits::trace_attributes::*;
 pub use crate::traits::trace_iterators::*;
 
-// pub use ebi_objects::business_process_model_and_notation::BusinessProcessModelAndNotation;
+pub use ebi_objects::business_process_model_and_notation::BusinessProcessModelAndNotation;
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes;
 pub use ebi_objects::compressed_event_log_xes::CompressedEventLogXes;

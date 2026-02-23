@@ -33,7 +33,7 @@ impl Infoable for ScalableVectorGraphics {
 impl Exportable for ScalableVectorGraphics {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
-            // EbiObject::BusinessProcessModelAndNotation(object) => object.to_svg()?.export(f),
+            EbiObject::BusinessProcessModelAndNotation(object) => object.to_svg()?.export(f),
             EbiObject::DeterministicFiniteAutomaton(object) => object.to_svg()?.export(f),
             EbiObject::DirectlyFollowsModel(object) => object.to_svg()?.export(f),
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_svg()?.export(f),
