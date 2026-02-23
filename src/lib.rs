@@ -68,6 +68,7 @@ pub mod bpmn {
     pub mod objects_objectable;
     pub mod objects_searchable;
     pub mod objects_transitionable;
+    pub mod objects_writable;
     pub mod semantics;
     pub mod sequence_flow;
     pub mod structure_checker;
@@ -93,6 +94,11 @@ pub mod bpmn {
         pub mod tag_subprocess;
         pub mod tag_task;
         pub mod tags;
+    }
+    pub mod writer {
+        pub mod process;
+        pub mod start_event;
+        pub mod task;
     }
 }
 pub mod ebi_objects {

@@ -18,11 +18,13 @@ use crate::{
         objects_objectable::BPMNObject,
         objects_searchable::Searchable,
         objects_transitionable::Transitionable,
+        objects_writable::Writable,
         semantics::SemState,
     },
 };
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use bitvec::vec::BitVec;
+use quick_xml::Writer;
 use strum_macros::EnumIs;
 
 #[derive(Clone, Debug, EnumIs)]
@@ -158,6 +160,23 @@ impl Searchable for BPMNElement {
 impl Transitionable for BPMNElement {
     fn number_of_transitions(&self) -> usize {
         enums!(self, number_of_transitions,)
+    }
+}
+
+impl Writable for BPMNElement {
+    fn write<W: std::io::Write>(
+        &self,
+        x: &mut Writer<W>,
+        bpmn: &BusinessProcessModelAndNotation,
+    ) -> std::io::Result<()> {
+        // enums!(self, write, x, bpmn)
+        match self {
+            BPMNElement::Task(t) => t.write(x, bpmn),
+            BPMNElement::Process(t) => t.write(x, bpmn),
+            _ => {
+                return std::io::Result::Ok(());
+            }
+        }
     }
 }
 
