@@ -1,5 +1,9 @@
 use crate::{
-    BusinessProcessModelAndNotation, EbiObject, Exportable, bpmn::objects_writable::Writable,
+    BusinessProcessModelAndNotation, EbiObject, Exportable,
+    bpmn::{
+        element::BPMNElement, elements::collapsed_pool::BPMNCollapsedPool,
+        objects_objectable::BPMNObject, objects_writable::Writable,
+    },
 };
 use anyhow::{Result, anyhow};
 use quick_xml::{
@@ -31,10 +35,42 @@ impl Exportable for BusinessProcessModelAndNotation {
             ]),
         ))?;
 
+        //collaboration
+        if let Some(collaboration_id) = &self.collaboration_id {
+            x.write_event(Event::Start(
+                BytesStart::new("collaboration")
+                    .with_attributes([("id", collaboration_id.as_str())]),
+            ))?;
+
+            //expanded pools
+            self.participants.write(&mut x, self)?;
+
+            //collapsed pools
+            for element in &self.elements {
+                if element.is_collapsed_pool() {
+                    let mut el = x
+                        .create_element("participant")
+                        .with_attributes([("id", element.id())]);
+                    if let BPMNElement::CollapsedPool(BPMNCollapsedPool {
+                        name: Some(name), ..
+                    }) = element
+                    {
+                        el = el.with_attribute(("name", name.as_str()));
+                    }
+                    el.write_empty()?;
+                }
+            }
+
+            //messages
+            self.message_flows.write(&mut x, self)?;
+
+            x.write_event(Event::End(BytesEnd::new("collaboration")))?;
+        }
+
         self.elements.write(&mut x, self)?;
 
         x.write_event(Event::End(BytesEnd::new("definitions")))?;
-        
+
         Ok(())
     }
 }
@@ -45,12 +81,15 @@ mod tests {
     use std::fs::{self};
 
     #[test]
-    fn bpmn_export() {
-        let fin = fs::read_to_string("testfiles/model.bpmn").unwrap();
+    fn bpmn_export_import() {
+        let fin = fs::read_to_string("testfiles/model-lanes.bpmn").unwrap();
         let bpmn = fin.parse::<BusinessProcessModelAndNotation>().unwrap();
 
         let mut f = vec![];
         bpmn.export(&mut f).unwrap();
+
+        let fout = String::from_utf8_lossy(&f);
+        let _bpmn2 = fout.parse::<BusinessProcessModelAndNotation>();
 
         println!("{}", String::from_utf8_lossy(&f));
     }

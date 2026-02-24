@@ -36,9 +36,9 @@ impl Openable for TagMessageEventDefinition {
     where
         Self: Sized,
     {
-        let (index, id) = state.read_and_add_id(e)?;
+        let (_, id) = state.read_and_add_id(e)?;
 
-        Ok(OpenedTag::MessageEventDefinition { index, id })
+        Ok(OpenedTag::MessageEventDefinition { id })
     }
 }
 
@@ -47,27 +47,22 @@ impl Closeable for TagMessageEventDefinition {
         let index = state.open_tags.len() - 1;
         match state.open_tags.get_mut(index) {
             Some(OpenedTag::StartEvent {
-                message_marker_index: message_index,
                 message_marker_id: message_id,
                 ..
             })
             | Some(OpenedTag::EndEvent {
-                message_marker_index: message_index,
                 message_marker_id: message_id,
                 ..
             })
             | Some(OpenedTag::IntermediateCatchEvent {
-                message_marker_index: message_index,
                 message_marker_id: message_id,
                 ..
             })
             | Some(OpenedTag::IntermediateThrowEvent {
-                message_marker_index: message_index,
                 message_marker_id: message_id,
                 ..
             }) => {
-                if let OpenedTag::MessageEventDefinition { index, id } = opened_tag {
-                    *message_index = Some(index);
+                if let OpenedTag::MessageEventDefinition { id } = opened_tag {
                     *message_id = Some(id);
                     Ok(())
                 } else {

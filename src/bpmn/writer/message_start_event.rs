@@ -1,8 +1,9 @@
-use quick_xml::events::BytesText;
+use crate::bpmn::{
+    elements::message_start_event::BPMNMessageStartEvent, objects_writable::Writable,
+};
+use quick_xml::events::{BytesStart, BytesText, Event};
 
-use crate::bpmn::{elements::start_event::BPMNStartEvent, objects_writable::Writable};
-
-impl Writable for BPMNStartEvent {
+impl Writable for BPMNMessageStartEvent {
     fn write<W: std::io::Write>(
         &self,
         x: &mut quick_xml::Writer<W>,
@@ -17,6 +18,10 @@ impl Writable for BPMNStartEvent {
                             &bpmn.sequence_flows[*outgoing_sequence_flow].id,
                         ))?;
                 }
+                x.write_event(Event::Empty(
+                    BytesStart::new("messageEventDefinition")
+                        .with_attributes([("id", self.message_marker_id.as_str())]),
+                ))?;
                 Ok(())
             })?;
         Ok(())

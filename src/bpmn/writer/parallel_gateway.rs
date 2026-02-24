@@ -1,19 +1,14 @@
+use crate::bpmn::{elements::parallel_gateway::BPMNParallelGateway, objects_writable::Writable};
 use quick_xml::events::BytesText;
 
-use crate::{
-    BusinessProcessModelAndNotation,
-    bpmn::{elements::task::BPMNTask, objects_writable::Writable},
-};
-
-impl Writable for BPMNTask {
+impl Writable for BPMNParallelGateway {
     fn write<W: std::io::Write>(
         &self,
         x: &mut quick_xml::Writer<W>,
-        bpmn: &BusinessProcessModelAndNotation,
+        bpmn: &crate::BusinessProcessModelAndNotation,
     ) -> anyhow::Result<()> {
-        x.create_element("task")
+        x.create_element("parallelGateway")
             .with_attribute(("id", self.id.as_str()))
-            .with_attribute(("name", bpmn.activity_key.deprocess_activity(&self.activity)))
             .write_inner_content(|x| {
                 for incoming_sequence_flow in &self.incoming_sequence_flows {
                     x.create_element("incoming")

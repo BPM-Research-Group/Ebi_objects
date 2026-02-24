@@ -24,7 +24,7 @@ use crate::{
             tag_subprocess::TagSubProcess,
             tag_task::TagTask,
         },
-        sequence_flow::SequenceFlow,
+        sequence_flow::BPMNSequenceFlow,
     },
 };
 use anyhow::Result;
@@ -128,13 +128,12 @@ pub(crate) enum OpenedTag {
         collaboration_index: Option<usize>,
         collaboration_id: Option<String>,
         draft_message_flows: Vec<DraftMessageFlow>,
-        sequence_flows: Vec<SequenceFlow>,
+        sequence_flows: Vec<BPMNSequenceFlow>,
         elements: Vec<BPMNElement>,
     },
     EndEvent {
         index: usize,
         id: String,
-        message_marker_index: Option<usize>,
         message_marker_id: Option<String>,
     },
     EventBasedGateway {
@@ -152,17 +151,14 @@ pub(crate) enum OpenedTag {
     IntermediateCatchEvent {
         index: usize,
         id: String,
-        message_marker_index: Option<usize>,
         message_marker_id: Option<String>,
     },
     IntermediateThrowEvent {
         index: usize,
         id: String,
-        message_marker_index: Option<usize>,
         message_marker_id: Option<String>,
     },
     MessageEventDefinition {
-        index: usize,
         id: String,
     },
     MessageFlow {
@@ -203,7 +199,6 @@ pub(crate) enum OpenedTag {
     StartEvent {
         index: usize,
         id: String,
-        message_marker_index: Option<usize>,
         message_marker_id: Option<String>,
     },
     Task {

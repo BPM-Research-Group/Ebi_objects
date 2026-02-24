@@ -3,9 +3,9 @@ use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable, TranslateActivityKey,
     bpmn::{
-        element::BPMNElement, elements::task::BPMNTask, message_flow::MessageFlow,
+        element::BPMNElement, elements::{participant::BPMNParticipant, task::BPMNTask}, message_flow::BPMNMessageFlow,
         objects_elementable::Elementable, objects_objectable::BPMNObject,
-        objects_searchable::Searchable, sequence_flow::SequenceFlow,
+        objects_searchable::Searchable, sequence_flow::BPMNSequenceFlow,
     },
     traits::graphable::{create_edge, create_gateway, create_place, create_transition},
 };
@@ -27,9 +27,11 @@ pub struct BusinessProcessModelAndNotation {
     pub definitions_index: usize,
     pub definitions_id: String,
 
+    /// white-box pools/participants
+    pub participants: Vec<BPMNParticipant>,
     pub elements: Vec<BPMNElement>,
-    pub sequence_flows: Vec<SequenceFlow>,
-    pub message_flows: Vec<MessageFlow>,
+    pub sequence_flows: Vec<BPMNSequenceFlow>,
+    pub message_flows: Vec<BPMNMessageFlow>,
 }
 
 impl BusinessProcessModelAndNotation {

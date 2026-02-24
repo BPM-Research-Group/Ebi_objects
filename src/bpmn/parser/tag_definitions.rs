@@ -1,6 +1,6 @@
 use crate::bpmn::{
     element::{BPMNElement, BPMNElementTrait},
-    message_flow::MessageFlow,
+    message_flow::BPMNMessageFlow,
     objects_elementable::Elementable,
     objects_searchable::Searchable,
     parser::{
@@ -9,7 +9,7 @@ use crate::bpmn::{
         tag_message_flow::DraftMessageFlow,
         tags::{OpenedTag, Tag},
     },
-    sequence_flow::SequenceFlow,
+    sequence_flow::BPMNSequenceFlow,
 };
 use anyhow::{Context, Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
@@ -122,7 +122,7 @@ impl Closeable for Definitions {
                     ));
                 }
 
-                message_flows.push(MessageFlow {
+                message_flows.push(BPMNMessageFlow {
                     index,
                     id,
                     source_element_index,
@@ -157,6 +157,6 @@ pub(crate) struct DraftDefinitions {
     pub(crate) collaboration_index: Option<usize>,
     pub(crate) collaboration_id: Option<String>,
     pub(crate) elements: Vec<BPMNElement>,
-    pub(crate) message_flows: Vec<MessageFlow>,
-    pub(crate) sequence_flows: Vec<SequenceFlow>,
+    pub(crate) message_flows: Vec<BPMNMessageFlow>,
+    pub(crate) sequence_flows: Vec<BPMNSequenceFlow>,
 }

@@ -9,7 +9,7 @@ use crate::bpmn::{
         tag_sequence_flow::DraftSequenceFlow,
         tags::{OpenedTag, Tag},
     },
-    sequence_flow::SequenceFlow,
+    sequence_flow::BPMNSequenceFlow,
 };
 use anyhow::{Context, Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
@@ -133,7 +133,7 @@ impl Closeable for TagProcess {
                             )
                         })?;
 
-                    sequence_flows.push(SequenceFlow {
+                    sequence_flows.push(BPMNSequenceFlow {
                         index,
                         id,
                         flow_index: new_flow_index,

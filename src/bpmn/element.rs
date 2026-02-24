@@ -19,11 +19,9 @@ use crate::{
         objects_searchable::Searchable,
         objects_transitionable::Transitionable,
         objects_writable::Writable,
-        semantics::SemState,
     },
 };
 use anyhow::{Ok, Result};
-use bitvec::vec::BitVec;
 use quick_xml::Writer;
 use strum_macros::EnumIs;
 
@@ -118,13 +116,6 @@ impl BPMNElementTrait for BPMNElement {
     }
 }
 
-impl BPMNElement {
-    /// Extend `result` by pushing whether each transition is enabled.
-    pub fn enabled_transitions(&self, _state: &SemState, _result: &mut BitVec) {
-        todo!()
-    }
-}
-
 impl Searchable for BPMNElement {
     fn index_2_object(&self, search_index: usize) -> Option<&dyn BPMNObject> {
         if self.index() == search_index {
@@ -168,15 +159,17 @@ impl Writable for BPMNElement {
         &self,
         x: &mut Writer<W>,
         bpmn: &BusinessProcessModelAndNotation,
-    ) -> std::io::Result<()> {
-        // enums!(self, write, x, bpmn)
-        match self {
-            BPMNElement::Task(t) => t.write(x, bpmn),
-            BPMNElement::Process(t) => t.write(x, bpmn),
-            _ => {
-                return std::io::Result::Ok(());
-            }
-        }
+    ) -> anyhow::Result<()> {
+        enums!(self, write, x, bpmn)?;
+
+        //write outgoing sequence flows
+        self.outgoing_sequence_flows()
+            .iter()
+            .map(|sequence_flow| &bpmn.sequence_flows[*sequence_flow])
+            .collect::<Vec<_>>()
+            .write(x, bpmn)?;
+
+        Ok(())
     }
 }
 

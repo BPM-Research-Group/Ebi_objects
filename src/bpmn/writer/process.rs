@@ -1,3 +1,5 @@
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+
 use crate::bpmn::{elements::process::BPMNProcess, objects_writable::Writable};
 
 impl Writable for BPMNProcess {
@@ -5,16 +7,15 @@ impl Writable for BPMNProcess {
         &self,
         x: &mut quick_xml::Writer<W>,
         bpmn: &crate::BusinessProcessModelAndNotation,
-    ) -> std::io::Result<()> {
-        x.create_element("process")
-            .with_attribute(("id", self.id.as_str()))
-            .with_attribute(("isExecutable", "true"))
-            .write_inner_content(|x| {
-                for element in &self.elements {
-                    element.write(x, bpmn)?;
-                }
-                Ok(())
-            })?;
+    ) -> anyhow::Result<()> {
+        x.write_event(Event::Start(BytesStart::new("process").with_attributes([
+            ("id", self.id.as_str()),
+            ("isExecutable", "true"),
+        ])))?;
+
+        self.elements.write(x, bpmn)?;
+
+        x.write_event(Event::End(BytesEnd::new("process")))?;
         Ok(())
     }
 }

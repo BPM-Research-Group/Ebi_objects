@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct MessageFlow {
+pub struct BPMNMessageFlow {
     pub index: usize,
     pub id: String,
     pub source_pool_index: usize,

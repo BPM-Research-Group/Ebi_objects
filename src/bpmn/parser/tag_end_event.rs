@@ -39,7 +39,6 @@ impl Openable for TagEndEvent {
         Ok(OpenedTag::EndEvent {
             index,
             id,
-            message_marker_index: None,
             message_marker_id: None,
         })
     }
@@ -53,18 +52,14 @@ impl Closeable for TagEndEvent {
                 if let OpenedTag::EndEvent {
                     index,
                     id,
-                    message_marker_index,
                     message_marker_id,
                 } = opened_tag
                 {
-                    if let (Some(message_marker_index), Some(message_marker_id)) =
-                        (message_marker_index, message_marker_id)
-                    {
+                    if let Some(message_marker_id) = message_marker_id {
                         elements.push(BPMNElement::MessageEndEvent(BPMNMessageEndEvent {
                             index,
                             id,
                             message_marker_id,
-                            message_marker_index,
                             incoming_sequence_flows: vec![],
                             outgoing_message_flow: None,
                         }));

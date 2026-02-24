@@ -1,19 +1,17 @@
-use quick_xml::events::BytesText;
-
-use crate::{
-    BusinessProcessModelAndNotation,
-    bpmn::{elements::task::BPMNTask, objects_writable::Writable},
+use crate::bpmn::{
+    elements::message_intermediate_throw_event::BPMNMessageIntermediateThrowEvent,
+    objects_writable::Writable,
 };
+use quick_xml::events::{BytesStart, BytesText, Event};
 
-impl Writable for BPMNTask {
+impl Writable for BPMNMessageIntermediateThrowEvent {
     fn write<W: std::io::Write>(
         &self,
         x: &mut quick_xml::Writer<W>,
-        bpmn: &BusinessProcessModelAndNotation,
+        bpmn: &crate::BusinessProcessModelAndNotation,
     ) -> anyhow::Result<()> {
-        x.create_element("task")
+        x.create_element("intermediateThrowEvent")
             .with_attribute(("id", self.id.as_str()))
-            .with_attribute(("name", bpmn.activity_key.deprocess_activity(&self.activity)))
             .write_inner_content(|x| {
                 for incoming_sequence_flow in &self.incoming_sequence_flows {
                     x.create_element("incoming")
@@ -27,6 +25,10 @@ impl Writable for BPMNTask {
                             &bpmn.sequence_flows[*outgoing_sequence_flow].id,
                         ))?;
                 }
+                x.write_event(Event::Empty(
+                    BytesStart::new("messageEventDefinition")
+                        .with_attributes([("id", self.message_marker_id.as_str())]),
+                ))?;
                 Ok(())
             })?;
         Ok(())

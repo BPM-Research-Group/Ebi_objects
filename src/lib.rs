@@ -57,6 +57,7 @@ pub mod bpmn {
         pub mod message_intermediate_throw_event;
         pub mod message_start_event;
         pub mod parallel_gateway;
+        pub mod participant;
         pub mod process;
         pub mod start_event;
         pub mod task;
@@ -69,7 +70,7 @@ pub mod bpmn {
     pub mod objects_searchable;
     pub mod objects_transitionable;
     pub mod objects_writable;
-    pub mod semantics;
+    // pub mod semantics;
     pub mod sequence_flow;
     pub mod structure_checker;
     pub mod parser {
@@ -96,8 +97,25 @@ pub mod bpmn {
         pub mod tags;
     }
     pub mod writer {
+        pub mod collapsed_pool;
+        pub mod collapsed_sub_process;
+        pub mod end_event;
+        pub mod event_based_gateway;
+        pub mod exclusive_gateway;
+        pub mod inclusive_gateway;
+        pub mod intermediate_catch_event;
+        pub mod intermediate_throw_event;
+        pub mod message_end_event;
+        pub mod message_flow;
+        pub mod message_intermediate_catch_event;
+        pub mod message_intermediate_throw_event;
+        pub mod message_start_event;
+        pub mod parallel_gateway;
+        pub mod participant;
         pub mod process;
+        pub mod sequence_flow;
         pub mod start_event;
+        pub mod sub_process;
         pub mod task;
     }
 }

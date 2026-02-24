@@ -13,7 +13,7 @@ use crate::bpmn::{
         tag_sequence_flow::DraftSequenceFlow,
         tags::{OpenedTag, Tag},
     },
-    sequence_flow::SequenceFlow,
+    sequence_flow::BPMNSequenceFlow,
 };
 use anyhow::{Context, Result, anyhow};
 use quick_xml::events::{BytesEnd, BytesStart};
@@ -119,7 +119,26 @@ impl Closeable for TagSubProcess {
                             })?
                             .1;
 
-                        sequence_flows.push(SequenceFlow {
+                        //register the sequence flow in the target element
+                        let target = elements.index_2_element_mut(target_index).ok_or_else(|| {
+                        anyhow!(
+                            "could not find object of id `{}` mentioned in sequence flow `{}`",
+                            target_id,
+                            id
+                        )
+                        })?;
+
+                        target
+                            .add_incoming_sequence_flow(new_flow_index)
+                            .with_context(|| {
+                                anyhow!(
+                                    "could not add sequence flow `{}` to element with id `{}`",
+                                    id,
+                                    target_id,
+                                )
+                            })?;
+
+                        sequence_flows.push(BPMNSequenceFlow {
                             index,
                             id,
                             flow_index: new_flow_index,

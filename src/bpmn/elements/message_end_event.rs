@@ -12,7 +12,6 @@ use anyhow::{Result, anyhow};
 pub struct BPMNMessageEndEvent {
     pub(crate) index: usize,
     pub(crate) id: String,
-    pub(crate) message_marker_index: usize,
     pub(crate) message_marker_id: String,
     pub(crate) incoming_sequence_flows: Vec<usize>,
     pub(crate) outgoing_message_flow: Option<usize>,

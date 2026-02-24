@@ -42,7 +42,6 @@ impl Openable for TagIntermediateCatchEvent {
         Ok(OpenedTag::IntermediateCatchEvent {
             index,
             id,
-            message_marker_index: None,
             message_marker_id: None,
         })
     }
@@ -56,18 +55,14 @@ impl Closeable for TagIntermediateCatchEvent {
                 if let OpenedTag::IntermediateCatchEvent {
                     index,
                     id,
-                    message_marker_index,
                     message_marker_id,
                 } = opened_tag
                 {
-                    if let (Some(message_marker_index), Some(message_marker_id)) =
-                        (message_marker_index, message_marker_id)
-                    {
+                    if let Some(message_marker_id) = message_marker_id {
                         elements.push(BPMNElement::MessageIntermediateCatchEvent(
                             BPMNMessageIntermediateCatchEvent {
                                 index,
                                 id,
-                                message_marker_index,
                                 message_marker_id,
                                 incoming_sequence_flows: vec![],
                                 outgoing_sequence_flows: vec![],

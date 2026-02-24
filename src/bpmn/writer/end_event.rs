@@ -1,20 +1,19 @@
+use crate::bpmn::{elements::end_event::BPMNEndEvent, objects_writable::Writable};
 use quick_xml::events::BytesText;
 
-use crate::bpmn::{elements::start_event::BPMNStartEvent, objects_writable::Writable};
-
-impl Writable for BPMNStartEvent {
+impl Writable for BPMNEndEvent {
     fn write<W: std::io::Write>(
         &self,
         x: &mut quick_xml::Writer<W>,
         bpmn: &crate::BusinessProcessModelAndNotation,
     ) -> anyhow::Result<()> {
-        x.create_element("startEvent")
+        x.create_element("endEvent")
             .with_attributes([("id", self.id.as_str())])
             .write_inner_content(|x| {
-                for outgoing_sequence_flow in &self.outgoing_sequence_flows {
-                    x.create_element("outgoing")
+                for incoming_sequence_flow in &self.incoming_sequence_flows {
+                    x.create_element("incoming")
                         .write_text_content(BytesText::new(
-                            &bpmn.sequence_flows[*outgoing_sequence_flow].id,
+                            &bpmn.sequence_flows[*incoming_sequence_flow].id,
                         ))?;
                 }
                 Ok(())
