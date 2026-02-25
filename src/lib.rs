@@ -140,5 +140,6 @@ pub use ebi_objects::stochastic_language_of_alignments::StochasticLanguageOfAlig
 pub use ebi_objects::stochastic_nondeterministic_finite_automaton::StochasticNondeterministicFiniteAutomaton;
 pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 
+pub use ebi_activity_key;
 pub use ebi_arithmetic;
 pub use ebi_derive;
