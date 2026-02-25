@@ -1,3 +1,10 @@
+use crate::{
+    EbiObject, Exportable, Graphable, Importable, Infoable,
+    traits::{
+        graphable::{create_edge, create_gateway, create_place, create_transition},
+        importable::{ImporterParameter, ImporterParameterValues},
+    },
+};
 use anyhow::{Result, anyhow};
 use ebi_activity_key::HasActivityKey;
 use ebi_bpmn::{
@@ -7,10 +14,51 @@ use ebi_bpmn::{
 use layout::{core::base::Orientation, topo::layout::VisualGraph};
 use std::{collections::HashMap, io::Write};
 
-use crate::{
-    Graphable, Infoable,
-    traits::graphable::{create_edge, create_gateway, create_place, create_transition},
-};
+impl Importable for BusinessProcessModelAndNotation {
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str =
+        "A Business Process Model and Notation (BPMN) model follows the OMG 2.0.2 standard~\\cite{omg2011bpmn}.
+    Currently, a sub-set of elements is supported.";
+
+    fn import_as_object(
+        reader: &mut dyn std::io::BufRead,
+        parameter_values: &ImporterParameterValues,
+    ) -> Result<EbiObject> {
+        Ok(EbiObject::BusinessProcessModelAndNotation(Self::import(
+            reader,
+            parameter_values,
+        )?))
+    }
+
+    fn import(
+        reader: &mut dyn std::io::BufRead,
+        _parameter_values: &ImporterParameterValues,
+    ) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        BusinessProcessModelAndNotation::import_from_reader(reader)
+    }
+}
+
+impl Exportable for BusinessProcessModelAndNotation {
+    fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
+        match object {
+            EbiObject::BusinessProcessModelAndNotation(bpmn) => bpmn.export(f),
+
+            _ => Err(anyhow!(
+                "cannot export {} {} as a BPMN model",
+                object.get_type().get_article(),
+                object.get_type()
+            )),
+        }
+    }
+
+    fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
+        self.export_to_writer(f)
+    }
+}
 
 impl Infoable for BusinessProcessModelAndNotation {
     fn info(&self, f: &mut impl Write) -> Result<()> {
