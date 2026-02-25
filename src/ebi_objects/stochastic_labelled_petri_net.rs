@@ -1,5 +1,4 @@
-#[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
+use super::labelled_petri_net::LabelledPetriNet;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -12,12 +11,12 @@ use crate::{
     },
 };
 use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
 use ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{fmt, io::BufRead};
-
-use super::labelled_petri_net::LabelledPetriNet;
 
 pub const HEADER: &str = "stochastic labelled Petri net";
 

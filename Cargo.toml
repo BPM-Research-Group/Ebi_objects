@@ -1,6 +1,6 @@
 [package]
 name = "ebi_objects"
-version = "0.3.124"
+version = "0.3.125"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 keywords = ["stochastic-processes", "process-mining", "business-processes"]
@@ -24,13 +24,15 @@ approximatearithmetic = [
     "ebi_arithmetic/approximatearithmetic",
 ]
 eapproximatearithmetic = []
-testactivities = []
+testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ebi_activity_key = "0.0.1"
 ebi_arithmetic = "0.3.7"
-ebi_derive = "0.2.7"
+ebi_derive = "0.2.10"
+ebi_bpmn = "0.0.1"
 anyhow = "1.0.102"
 process_mining = "0.5.2"
 log = "0.4.28"
@@ -42,7 +44,7 @@ flate2 = "1.1.9"
 strum = "0.28.0"
 strum_macros = "0.28.0"
 itertools = "0.14.0"
-chrono = "0.4.43"
+chrono = "0.4.44"
 fnv = "1.0.7"
 svg2pdf = "0.13.0"
 quick-xml = {version="0.39.2", features=["serialize"]}
@@ -50,7 +52,7 @@ rayon = "1.11.0"
 intmap = "3.1.3"
 csv = "1.4.0"
 resvg = "0.47.0"
-tiny-skia = "0.12.0"
+tiny-skia = "0.12.0" 
 bitvec = "1.0.1"
 
 [profile.release]
@@ -60,3 +62,6 @@ panic = 'abort'
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[dev-dependencies]
+ebi_objects = { path = ".", default-features = false, features = ["testactivities"] }

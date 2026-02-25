@@ -1,10 +1,3 @@
-pub mod activity_key {
-    pub mod activity;
-    pub mod activity_key;
-    pub mod activity_key_translator;
-    pub mod has_activity_key;
-    pub mod translate_activity_key;
-}
 pub mod attribute_key {
     pub mod attribute;
     pub mod attribute_key;
@@ -39,85 +32,6 @@ pub mod conversions {
     pub mod to_stochastic_labelled_petri_net;
     pub mod to_stochastic_nondeterministic_finite_automaton;
     pub mod to_stochastic_process_tree;
-}
-pub mod bpmn {
-    pub mod element;
-    pub mod elements {
-        pub mod collapsed_pool;
-        pub mod collapsed_sub_process;
-        pub mod end_event;
-        pub mod event_based_gateway;
-        pub mod exclusive_gateway;
-        pub mod expanded_sub_process;
-        pub mod inclusive_gateway;
-        pub mod intermediate_catch_event;
-        pub mod intermediate_throw_event;
-        pub mod message_end_event;
-        pub mod message_intermediate_catch_event;
-        pub mod message_intermediate_throw_event;
-        pub mod message_start_event;
-        pub mod parallel_gateway;
-        pub mod participant;
-        pub mod process;
-        pub mod start_event;
-        pub mod task;
-    }
-    pub mod exporter;
-    pub mod importer;
-    pub mod message_flow;
-    pub mod objects_elementable;
-    pub mod objects_objectable;
-    pub mod objects_searchable;
-    pub mod objects_transitionable;
-    pub mod objects_writable;
-    // pub mod semantics;
-    pub mod sequence_flow;
-    pub mod structure_checker;
-    pub mod parser {
-        pub mod parser;
-        pub mod parser_state;
-        pub mod parser_traits;
-        pub mod tag_collaboration;
-        pub mod tag_definitions;
-        pub mod tag_end_event;
-        pub mod tag_event_based_gateway;
-        pub mod tag_exclusive_gateway;
-        pub mod tag_inclusive_gateway;
-        pub mod tag_intermediate_catch_event;
-        pub mod tag_intermediate_throw_event;
-        pub mod tag_message_event_definition;
-        pub mod tag_message_flow;
-        pub mod tag_parallel_gateway;
-        pub mod tag_participant;
-        pub mod tag_process;
-        pub mod tag_sequence_flow;
-        pub mod tag_start_event;
-        pub mod tag_subprocess;
-        pub mod tag_task;
-        pub mod tags;
-    }
-    pub mod writer {
-        pub mod collapsed_pool;
-        pub mod collapsed_sub_process;
-        pub mod end_event;
-        pub mod event_based_gateway;
-        pub mod exclusive_gateway;
-        pub mod inclusive_gateway;
-        pub mod intermediate_catch_event;
-        pub mod intermediate_throw_event;
-        pub mod message_end_event;
-        pub mod message_flow;
-        pub mod message_intermediate_catch_event;
-        pub mod message_intermediate_throw_event;
-        pub mod message_start_event;
-        pub mod parallel_gateway;
-        pub mod participant;
-        pub mod process;
-        pub mod sequence_flow;
-        pub mod start_event;
-        pub mod sub_process;
-        pub mod task;
-    }
 }
 pub mod ebi_objects {
     pub mod business_process_model_and_notation;
@@ -176,11 +90,6 @@ pub mod line_reader;
 pub mod marking;
 pub mod tests;
 
-pub use crate::activity_key::activity::Activity;
-pub use crate::activity_key::activity_key::ActivityKey;
-pub use crate::activity_key::activity_key_translator::ActivityKeyTranslator;
-pub use crate::activity_key::has_activity_key::HasActivityKey;
-pub use crate::activity_key::translate_activity_key::TranslateActivityKey;
 pub use crate::attribute_key::attribute::Attribute;
 pub use crate::attribute_key::attribute_key::AttributeKey;
 pub use crate::attribute_key::data_type::DataType;
@@ -194,8 +103,12 @@ pub use crate::traits::infoable::Infoable;
 pub use crate::traits::number_of_traces::NumberOfTraces;
 pub use crate::traits::trace_attributes::*;
 pub use crate::traits::trace_iterators::*;
-
-pub use ebi_objects::business_process_model_and_notation::BusinessProcessModelAndNotation;
+pub use ebi_activity_key::Activity;
+pub use ebi_activity_key::ActivityKey;
+pub use ebi_activity_key::ActivityKeyTranslator;
+pub use ebi_activity_key::HasActivityKey;
+pub use ebi_activity_key::TranslateActivityKey;
+pub use ebi_bpmn::BusinessProcessModelAndNotation;
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes;
 pub use ebi_objects::compressed_event_log_xes::CompressedEventLogXes;

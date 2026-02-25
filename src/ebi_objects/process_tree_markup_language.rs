@@ -1,6 +1,6 @@
 use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
 #[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
+use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,

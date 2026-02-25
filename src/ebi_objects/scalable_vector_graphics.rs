@@ -1,11 +1,9 @@
-use std::fmt::Display;
-
-use anyhow::{Result, anyhow};
-use layout::{backends::svg::SVGWriter, topo::layout::VisualGraph};
-
-#[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{EbiObject, Exportable, Graphable, Infoable};
+use anyhow::{Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use layout::{backends::svg::SVGWriter, topo::layout::VisualGraph};
+use std::fmt::Display;
 
 pub const FORMAT_SPECIFICATION: &str = "Ebi does not support importing of SVG files.";
 

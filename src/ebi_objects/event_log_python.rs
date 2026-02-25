@@ -1,5 +1,5 @@
 #[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
+use ebi_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, Infoable,
     NumberOfTraces, TranslateActivityKey,

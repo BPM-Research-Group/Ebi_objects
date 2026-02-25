@@ -1,6 +1,6 @@
 use super::language_of_alignments::Move;
 #[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
+use ebi_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable,
     Infoable, TranslateActivityKey,

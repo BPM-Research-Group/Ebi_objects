@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::fmt::Display;
 
 #[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
+use ebi_activity_key::TestActivityKey;
 use crate::{
     BusinessProcessModelAndNotation, EventLogPython, EventLogTraceAttributes,
     PortableDocumentFormat, PortableNetworkGraphics, StochasticNondeterministicFiniteAutomaton,

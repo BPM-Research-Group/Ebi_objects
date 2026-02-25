@@ -4,7 +4,6 @@ use crate::{
     EventLogXes, NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage,
     StochasticDirectlyFollowsModel, StochasticNondeterministicFiniteAutomaton,
     StochasticProcessTree,
-    activity_key::has_activity_key::HasActivityKey,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -19,6 +18,7 @@ use crate::{
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
 };
+use ebi_activity_key::HasActivityKey;
 use ebi_arithmetic::ebi_number::{Signed, Zero};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 

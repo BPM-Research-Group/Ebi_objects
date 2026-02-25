@@ -3,7 +3,7 @@ use std::fmt::Display;
 use svg2pdf::{ConversionOptions, PageOptions};
 
 #[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
+use ebi_activity_key::TestActivityKey;
 use crate::{
     Exportable, Infoable,
     constants::ebi_object::EbiObject,

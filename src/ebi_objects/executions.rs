@@ -1,17 +1,16 @@
-use anyhow::Result;
-use chrono::{DateTime, FixedOffset};
-use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{self, Display},
-    io::BufRead,
-};
-
-#[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Exportable, Importable, Infoable,
     constants::ebi_object::EbiObject,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+};
+use anyhow::Result;
+use chrono::{DateTime, FixedOffset};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use serde::{Deserialize, Serialize};
+use std::{
+    fmt::{self, Display},
+    io::BufRead,
 };
 
 pub const HEADER: &str = "executions";

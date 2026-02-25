@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use crate::activity_key::has_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, Attribute, AttributeKey, EbiObject, Exportable, HasActivityKey,
     Importable, Infoable, IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
@@ -11,6 +9,8 @@ use crate::{
     },
 };
 use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::{ActivityKey, AttributeKey};
 use intmap::IntMap;

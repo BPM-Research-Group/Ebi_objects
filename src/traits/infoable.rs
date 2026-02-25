@@ -1,4 +1,5 @@
 use anyhow::Result;
+use ebi_activity_key::ActivityKey;
 use ebi_arithmetic::{
     Fraction, MaybeExact,
     malachite::{base::num::logic::traits::SignificantBits, rational::Rational},
@@ -34,5 +35,24 @@ impl Infoable for Fraction {
                 "Fraction is a result of combining exact and approximate arithmethic and therefore has no value."
             )?),
         }
+    }
+}
+
+impl Infoable for ActivityKey {
+    fn info(&self, f: &mut impl std::io::Write) -> anyhow::Result<()> {
+        let count = 20;
+
+        writeln!(f, "Activities:")?;
+        let mut labels = self.activity2name.clone();
+        labels.sort();
+        for label in labels.iter().take(count) {
+            writeln!(f, "\t{}", label)?;
+        }
+
+        if self.activity2name.len() > 20 {
+            writeln!(f, ".. ({} more)", self.activity2name.len() - count)?;
+        }
+
+        Ok(write!(f, "")?)
     }
 }
