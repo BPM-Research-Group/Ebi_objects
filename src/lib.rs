@@ -143,3 +143,4 @@ pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 pub use ebi_activity_key;
 pub use ebi_arithmetic;
 pub use ebi_derive;
+pub use ebi_bpmn;
