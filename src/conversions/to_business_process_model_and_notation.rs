@@ -1,7 +1,5 @@
 use crate::{
-    DeterministicFiniteAutomaton, DirectlyFollowsGraph, DirectlyFollowsModel, LabelledPetriNet,
-    ProcessTree, StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
-    StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
+    DeterministicFiniteAutomaton, DirectlyFollowsGraph, DirectlyFollowsModel, LabelledPetriNet, PetriNetMarkupLanguage, ProcessTree, ProcessTreeMarkupLanguage, StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel, StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree
 };
 use ebi_bpmn::{
     BusinessProcessModelAndNotation,
@@ -179,7 +177,24 @@ via_lpn!(DirectlyFollowsGraph);
 via_lpn!(DirectlyFollowsModel);
 via_lpn!(StochasticDirectlyFollowsModel);
 via_lpn!(ProcessTree);
+via_lpn!(PetriNetMarkupLanguage);
+via_lpn!(ProcessTreeMarkupLanguage);
 via_lpn!(StochasticProcessTree);
 via_lpn!(StochasticLabelledPetriNet);
 via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticNondeterministicFiniteAutomaton);
+
+#[cfg(test)]
+mod tests {
+    use crate::StochasticLabelledPetriNet;
+    use ebi_bpmn::BusinessProcessModelAndNotation;
+    use std::fs;
+
+    #[test]
+    fn slpn_2_bpmn() {
+        let fin = fs::read_to_string("testfiles/a-aa-bb.slpn").unwrap();
+        let slpn = fin.parse::<StochasticLabelledPetriNet>().unwrap();
+
+        let _bpmn = BusinessProcessModelAndNotation::from(slpn);
+    }
+}
