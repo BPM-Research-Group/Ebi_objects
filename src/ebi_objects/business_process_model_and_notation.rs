@@ -46,12 +46,63 @@ impl Exportable for BusinessProcessModelAndNotation {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::BusinessProcessModelAndNotation(bpmn) => bpmn.export(f),
+            EbiObject::DeterministicFiniteAutomaton(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::DirectlyFollowsGraph(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::DirectlyFollowsModel(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::StochasticDirectlyFollowsModel(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::LabelledPetriNet(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::ProcessTree(obj) => BusinessProcessModelAndNotation::from(obj).export(f),
+            EbiObject::StochasticProcessTree(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::StochasticDeterministicFiniteAutomaton(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::StochasticNondeterministicFiniteAutomaton(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
+            EbiObject::StochasticLabelledPetriNet(obj) => {
+                BusinessProcessModelAndNotation::from(obj).export(f)
+            }
 
-            _ => Err(anyhow!(
-                "cannot export {} {} as a BPMN model",
-                object.get_type().get_article(),
-                object.get_type()
+            EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::EventLogTraceAttributes(_) => {
+                Err(anyhow!("Cannot export event log as BPMN."))
+            }
+            EbiObject::EventLogXes(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::Executions(_) => Err(anyhow!("Cannot export executions as BPMN.")),
+            EbiObject::FiniteLanguage(_) => Err(anyhow!("Cannot export finite language as BPMN.")),
+            EbiObject::FiniteStochasticLanguage(_) => {
+                Err(anyhow!("Cannot export finite stochastic language as BPMN."))
+            }
+            EbiObject::LanguageOfAlignments(_) => {
+                Err(anyhow!("Cannot export language of alignments as BPMN."))
+            }
+            EbiObject::StochasticLanguageOfAlignments(_) => Err(anyhow!(
+                "Cannot export stochastic language of alignments as BPMN."
             )),
+            EbiObject::ScalableVectorGraphics(_) => {
+                Err(anyhow!("Cannot export scalable vector graphics as BPMN."))
+            }
+            EbiObject::PortableDocumentFormat(_) => {
+                Err(anyhow!("Cannot export portable document format as BPMN."))
+            }
+            EbiObject::PortableNetworkGraphics(_) => {
+                Err(anyhow!("Cannot export portable network graphics as BPMN."))
+            }
         }
     }
 

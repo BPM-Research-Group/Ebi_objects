@@ -9,6 +9,7 @@ pub mod constants {
     pub mod ebi_object_type;
 }
 pub mod conversions {
+    pub mod to_business_process_model_and_notation;
     pub mod to_compressed_event_log;
     pub mod to_compressed_event_log_trace_attributes;
     pub mod to_compressed_event_log_xes;
@@ -142,5 +143,5 @@ pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 
 pub use ebi_activity_key;
 pub use ebi_arithmetic;
-pub use ebi_derive;
 pub use ebi_bpmn;
+pub use ebi_derive;
