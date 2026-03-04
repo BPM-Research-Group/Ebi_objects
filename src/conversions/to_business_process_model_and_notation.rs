@@ -8,7 +8,7 @@ use ebi_bpmn::{
 
 impl From<LabelledPetriNet> for BusinessProcessModelAndNotation {
     fn from(value: LabelledPetriNet) -> Self {
-        let mut c = BPMNCreator::new();
+        let mut c = BPMNCreator::new_with_activity_key(value.activity_key.clone());
         let process = c.add_process();
 
         //transform places to xor gateways
