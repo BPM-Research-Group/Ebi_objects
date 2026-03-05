@@ -18,10 +18,11 @@ crate-type = ["cdylib", "lib"]
 [features]
 default = [ ]
 eexactarithmetic = []
-exactarithmetic = ["eexactarithmetic", "ebi_arithmetic/exactarithmetic"]
+exactarithmetic = ["eexactarithmetic", "ebi_arithmetic/exactarithmetic", "ebi_bpmn/exactarithmetic"]
 approximatearithmetic = [
     "eapproximatearithmetic",
     "ebi_arithmetic/approximatearithmetic",
+    "ebi_bpmn/exactarithmetic"
 ]
 eapproximatearithmetic = []
 testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" ]
@@ -32,7 +33,7 @@ testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" 
 ebi_activity_key = "0.0.1"
 ebi_arithmetic = "0.3.7"
 ebi_derive = "0.2.10"
-ebi_bpmn = "0.0.12"
+ebi_bpmn = "0.0.13"
 anyhow = "1.0.102"
 process_mining = "0.5.2"
 log = "0.4.28"

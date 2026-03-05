@@ -38,7 +38,7 @@ impl Importable for BusinessProcessModelAndNotation {
     where
         Self: Sized,
     {
-        BusinessProcessModelAndNotation::import_from_reader(reader)
+        BusinessProcessModelAndNotation::import_from_reader(reader, true)
     }
 }
 
