@@ -47,32 +47,34 @@ impl Exportable for BusinessProcessModelAndNotation {
         match object {
             EbiObject::BusinessProcessModelAndNotation(bpmn) => bpmn.export(f),
             EbiObject::DeterministicFiniteAutomaton(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::DirectlyFollowsGraph(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::DirectlyFollowsModel(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::StochasticDirectlyFollowsModel(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::LabelledPetriNet(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
-            EbiObject::ProcessTree(obj) => BusinessProcessModelAndNotation::from(obj).export(f),
+            EbiObject::ProcessTree(obj) => {
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
+            }
             EbiObject::StochasticProcessTree(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::StochasticNondeterministicFiniteAutomaton(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::StochasticLabelledPetriNet(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
+                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as BPMN.")),
