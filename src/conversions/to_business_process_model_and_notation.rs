@@ -4,7 +4,7 @@ use crate::{
     StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
 };
-use anyhow::{Error, Result, anyhow};
+use ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
     BusinessProcessModelAndNotation,
     creator::{BPMNCreator, EndEventType, GatewayType, StartEventType},

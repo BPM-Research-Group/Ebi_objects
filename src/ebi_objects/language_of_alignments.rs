@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Importable, Infoable,
     TranslateActivityKey,
@@ -8,7 +6,9 @@ use crate::{
     line_reader::LineReader,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use std::fmt::Display;
 
@@ -166,10 +166,7 @@ impl Importable for LanguageOfAlignments {
         )?))
     }
 
-    fn import(
-        reader: &mut dyn std::io::BufRead,
-        _: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

@@ -1,13 +1,13 @@
 use super::language_of_alignments::Move;
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, HasActivityKey, Importable,
     Infoable, TranslateActivityKey,
     line_reader::LineReader,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
 use ebi_arithmetic::{Fraction, One, Signed};
 use ebi_derive::ActivityKey;
 use std::fmt::Display;
@@ -173,7 +173,7 @@ impl Importable for StochasticLanguageOfAlignments {
     fn import(
         reader: &mut dyn std::io::BufRead,
         _: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    ) -> Result<Self>
     where
         Self: Sized,
     {

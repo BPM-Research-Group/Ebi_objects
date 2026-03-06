@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     CompressedEventLogXes, EventLogTraceAttributes, EventLogXes, HasActivityKey,
     TranslateActivityKey,
@@ -9,7 +7,9 @@ use crate::{
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::Result;
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Error, Result};
 use flate2::{Compression, write::GzEncoder};
 use std::io::{BufRead, Write};
 
@@ -31,10 +31,7 @@ impl Importable for CompressedEventLogTraceAttributes {
         Ok(EbiObject::EventLogTraceAttributes(log.log))
     }
 
-    fn import(
-        reader: &mut dyn BufRead,
-        parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn BufRead, parameter_values: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

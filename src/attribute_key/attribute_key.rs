@@ -1,4 +1,5 @@
 use crate::{Attribute, DataType, Infoable};
+use ebi_arithmetic::anyhow::Result;
 use process_mining::core::event_data::{
     case_centric::AttributeValue, object_centric::OCELAttributeValue,
 };
@@ -127,7 +128,7 @@ impl<'a> AttributeKey {
 }
 
 impl Infoable for AttributeKey {
-    fn info(&self, f: &mut impl std::io::Write) -> anyhow::Result<()> {
+    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         //make tuples
         let mut tuples = self
             .attribute2name

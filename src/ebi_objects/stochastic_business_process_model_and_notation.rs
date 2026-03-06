@@ -2,7 +2,7 @@ use crate::{
     EbiObject, Exportable, Graphable, Importable, Infoable,
     traits::importable::{ImporterParameter, ImporterParameterValues},
 };
-use anyhow::{Result, anyhow};
+use ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
 use layout::topo::layout::VisualGraph;
 use std::io::Write;

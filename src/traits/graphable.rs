@@ -1,4 +1,4 @@
-use anyhow::Result;
+use ebi_arithmetic::anyhow::Result;
 use layout::{
     adt::dag::NodeHandle,
     core::{base::Orientation, color::Color, geometry::Point, style::StyleAttr},

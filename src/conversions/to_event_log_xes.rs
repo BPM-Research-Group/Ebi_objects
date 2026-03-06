@@ -2,7 +2,7 @@ use crate::{
     ActivityKey, CompressedEventLogXes, EventLogCsv,
     ebi_objects::{event_log_python::EventLogPython, event_log_xes::EventLogXes},
 };
-use anyhow::{Error, anyhow};
+use ebi_arithmetic::anyhow::{Error, anyhow};
 use process_mining::core::event_data::case_centric::{
     Attribute, AttributeValue, Event, EventLogClassifier, Trace,
 };

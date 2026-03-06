@@ -5,8 +5,8 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues},
     },
 };
-use anyhow::{Result, anyhow};
 use ebi_activity_key::HasActivityKey;
+use ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_bpmn::{
     BusinessProcessModelAndNotation, element::BPMNElement, elements::task::BPMNTask,
     traits::objectable::BPMNObject,

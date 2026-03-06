@@ -1,9 +1,14 @@
-use anyhow::{Error, anyhow};
-use ebi_arithmetic::Fraction;
-
-use crate::{ActivityKey, ebi_objects::{
-    process_tree::{Node, ProcessTree}, stochastic_process_tree::StochasticProcessTree,
-}};
+use crate::{
+    ActivityKey,
+    ebi_objects::{
+        process_tree::{Node, ProcessTree},
+        stochastic_process_tree::StochasticProcessTree,
+    },
+};
+use ebi_arithmetic::{
+    Fraction,
+    anyhow::{Error, anyhow},
+};
 
 impl TryFrom<(ProcessTree, Vec<Fraction>, Fraction)> for StochasticProcessTree {
     type Error = Error;

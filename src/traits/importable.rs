@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_arithmetic::{ConstFraction, Fraction};
 use std::{collections::HashMap, fmt::Debug, hash::Hash, io::BufRead};
 use strum_macros::Display;
@@ -35,7 +35,7 @@ pub trait Importable {
 macro_rules! from_string {
     ($t:ident) => {
         impl std::str::FromStr for $t {
-            type Err = anyhow::Error;
+            type Err = Error;
 
             fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
                 let mut reader = std::io::Cursor::new(s);
@@ -165,7 +165,7 @@ impl Debug for ImporterParameter {
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub enum ImporterParameterValue {
     Boolean(bool),
     String(String),

@@ -1,6 +1,5 @@
-use anyhow::Error;
-
 use crate::{CompressedEventLogXes, EventLogCsv, EventLogXes};
+use ebi_arithmetic::anyhow::Error;
 
 impl From<EventLogXes> for CompressedEventLogXes {
     fn from(value: EventLogXes) -> Self {

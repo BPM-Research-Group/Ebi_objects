@@ -1,4 +1,4 @@
-use anyhow::Result;
+use ebi_arithmetic::anyhow::Result;
 use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
 use std::fmt::Display;
 

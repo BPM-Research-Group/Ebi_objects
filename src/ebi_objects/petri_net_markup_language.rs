@@ -7,15 +7,15 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::{Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use process_mining::core::process_models::petri_net::pnml::{
     export_petri_net_to_pnml, import_pnml_reader,
 };

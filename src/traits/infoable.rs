@@ -1,5 +1,5 @@
-use anyhow::Result;
 use ebi_activity_key::ActivityKey;
+use ebi_arithmetic::anyhow::Result;
 use ebi_arithmetic::{
     Fraction, MaybeExact,
     malachite::{base::num::logic::traits::SignificantBits, rational::Rational},
@@ -39,7 +39,7 @@ impl Infoable for Fraction {
 }
 
 impl Infoable for ActivityKey {
-    fn info(&self, f: &mut impl std::io::Write) -> anyhow::Result<()> {
+    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         let count = 20;
 
         writeln!(f, "Activities:")?;

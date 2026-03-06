@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EventLogXes, Exportable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -14,8 +12,10 @@ use crate::{
         trace_iterators::IntoRefTraceIterator,
     },
 };
-use anyhow::{Result, anyhow};
 use core::fmt;
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
 use intmap::IntMap;
@@ -73,10 +73,7 @@ impl Importable for EventLog {
         Ok(EbiObject::EventLog(Self::import(reader, parameter_values)?))
     }
 
-    fn import(
-        reader: &mut dyn BufRead,
-        parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn BufRead, parameter_values: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
