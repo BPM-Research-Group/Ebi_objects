@@ -363,9 +363,9 @@ dependencies = [
 
 [[package]]
 name = "ebi_bpmn"
-version = "0.0.21"
+version = "0.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06e59de60a680e2565f9536af859d89246cf417b707587a7f50a1664fa9660e5"
+checksum = "45a6d84d11930deb7c731029a9ffc2ed9ecc8f9d2d956464d4a072068eaf344f"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -392,7 +392,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.142"
+version = "0.3.143"
 dependencies = [
  "bitvec",
  "chrono",
