@@ -177,10 +177,10 @@ impl Graphable for BusinessProcessModelAndNotation {
         //add edges
         for sequence_flow in self.sequence_flows() {
             let from = object_2_node
-                .get(&sequence_flow.source_global_index.0)
+                .get(&sequence_flow.source_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
             let to = object_2_node
-                .get(&sequence_flow.target_global_index.0)
+                .get(&sequence_flow.target_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
 
             create_edge(&mut graph, from, to, "");
@@ -188,10 +188,10 @@ impl Graphable for BusinessProcessModelAndNotation {
 
         for message_flow in &self.message_flows {
             let from = object_2_node
-                .get(&message_flow.source_global_index.0)
+                .get(&message_flow.source_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
             let to = object_2_node
-                .get(&message_flow.target_global_index.0)
+                .get(&message_flow.target_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
 
             create_edge(&mut graph, from, to, "m");
