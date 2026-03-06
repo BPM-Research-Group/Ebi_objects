@@ -60,6 +60,7 @@ pub mod ebi_objects {
     pub mod process_tree;
     pub mod process_tree_markup_language;
     pub mod scalable_vector_graphics;
+    pub mod stochastic_business_process_model_and_notation;
     pub mod stochastic_deterministic_finite_automaton;
     pub mod stochastic_directly_follows_model;
     pub mod stochastic_labelled_petri_net;
@@ -110,6 +111,7 @@ pub use ebi_activity_key::ActivityKeyTranslator;
 pub use ebi_activity_key::HasActivityKey;
 pub use ebi_activity_key::TranslateActivityKey;
 pub use ebi_bpmn::BusinessProcessModelAndNotation;
+pub use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes;
 pub use ebi_objects::compressed_event_log_xes::CompressedEventLogXes;

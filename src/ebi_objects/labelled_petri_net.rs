@@ -256,6 +256,9 @@ impl Exportable for LabelledPetriNet {
             EbiObject::BusinessProcessModelAndNotation(_) => {
                 Err(anyhow!("cannot export BPMN as LPN."))
             }
+            EbiObject::StochasticBusinessProcessModelAndNotation(_) => {
+                Err(anyhow!("cannot export SBPMN as LPN."))
+            }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as LPN.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as LPN.")),

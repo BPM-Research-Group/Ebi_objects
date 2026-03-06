@@ -31,6 +31,7 @@ impl Exportable for PortableDocumentFormat {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::BusinessProcessModelAndNotation(object) => object.to_pdf()?.export(f),
+            EbiObject::StochasticBusinessProcessModelAndNotation(object) => object.to_pdf()?.export(f),
             EbiObject::DeterministicFiniteAutomaton(object) => object.to_pdf()?.export(f),
             EbiObject::DirectlyFollowsModel(object) => object.to_pdf()?.export(f),
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_pdf()?.export(f),

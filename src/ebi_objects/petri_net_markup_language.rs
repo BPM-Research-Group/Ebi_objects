@@ -104,6 +104,9 @@ impl Exportable for PetriNetMarkupLanguage {
             EbiObject::BusinessProcessModelAndNotation(_) => {
                 Err(anyhow!("Cannot export BPMN as PNML."))
             }
+            EbiObject::StochasticBusinessProcessModelAndNotation(_) => {
+                Err(anyhow!("Cannot export SBPMN as PNML."))
+            }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as PNML.")),

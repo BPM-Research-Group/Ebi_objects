@@ -1,8 +1,7 @@
 use anyhow::Result;
+use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
 use std::fmt::Display;
 
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     BusinessProcessModelAndNotation, EventLogPython, EventLogTraceAttributes,
     PortableDocumentFormat, PortableNetworkGraphics, StochasticNondeterministicFiniteAutomaton,
@@ -23,10 +22,13 @@ use crate::{
     },
     traits::infoable::Infoable,
 };
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
 
 #[derive(Clone)]
 pub enum EbiObject {
     BusinessProcessModelAndNotation(BusinessProcessModelAndNotation),
+    StochasticBusinessProcessModelAndNotation(StochasticBusinessProcessModelAndNotation),
     LabelledPetriNet(LabelledPetriNet),
     StochasticLabelledPetriNet(StochasticLabelledPetriNet),
     FiniteStochasticLanguage(FiniteStochasticLanguage),
@@ -58,6 +60,9 @@ impl EbiObject {
         match self {
             EbiObject::BusinessProcessModelAndNotation(_) => {
                 EbiObjectType::BusinessProcessModelAndNotation
+            }
+            EbiObject::StochasticBusinessProcessModelAndNotation(_) => {
+                EbiObjectType::StochasticBusinessProcessModelAndNotation
             }
             EbiObject::LabelledPetriNet(_) => EbiObjectType::LabelledPetriNet,
             EbiObject::StochasticLabelledPetriNet(_) => EbiObjectType::StochasticLabelledPetriNet,
@@ -101,6 +106,7 @@ impl Display for EbiObject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             EbiObject::BusinessProcessModelAndNotation(o) => write!(f, "{}", o),
+            EbiObject::StochasticBusinessProcessModelAndNotation(o) => write!(f, "{}", o),
             EbiObject::LabelledPetriNet(o) => write!(f, "{}", o),
             EbiObject::StochasticLabelledPetriNet(o) => write!(f, "{}", o),
             EbiObject::FiniteStochasticLanguage(o) => write!(f, "{}", o),
@@ -133,6 +139,7 @@ impl Infoable for EbiObject {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         match self {
             EbiObject::BusinessProcessModelAndNotation(o) => o.info(f),
+            EbiObject::StochasticBusinessProcessModelAndNotation(o) => o.info(f),
             EbiObject::LabelledPetriNet(o) => o.info(f),
             EbiObject::StochasticLabelledPetriNet(o) => o.info(f),
             EbiObject::FiniteStochasticLanguage(o) => o.info(f),
@@ -166,6 +173,7 @@ impl TestActivityKey for EbiObject {
     fn test_activity_key(&self) {
         match self {
             EbiObject::BusinessProcessModelAndNotation(o) => o.test_activity_key(),
+            EbiObject::StochasticBusinessProcessModelAndNotation(o) => o.test_activity_key(),
             EbiObject::LabelledPetriNet(o) => o.test_activity_key(),
             EbiObject::StochasticLabelledPetriNet(o) => o.test_activity_key(),
             EbiObject::FiniteStochasticLanguage(o) => o.test_activity_key(),

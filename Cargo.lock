@@ -350,9 +350,9 @@ dependencies = [
 
 [[package]]
 name = "ebi_arithmetic"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0ac8cf68004cfcf5e00f5df5a6c8a8a9ac1b1908b4fef7a68ee47556dd887ff"
+checksum = "d1187273cd8b7c9b5c130655a8993b4af945dc4296323ae2ea79913fedd90a70"
 dependencies = [
  "anyhow",
  "itertools",
@@ -363,9 +363,9 @@ dependencies = [
 
 [[package]]
 name = "ebi_bpmn"
-version = "0.0.13"
+version = "0.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4703d044ce8444df73fc2554f8aee062b6e700fc6b520930773470df2d3333fc"
+checksum = "57812c3ee4ac58751b6a4a756a0fee885d207d5eb366531a6c14a90492be54c7"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -392,7 +392,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.137"
+version = "0.3.138"
 dependencies = [
  "anyhow",
  "bitvec",

@@ -122,6 +122,9 @@ impl Exportable for LolaNet {
             EbiObject::BusinessProcessModelAndNotation(_) => {
                 Err(anyhow!("cannot export BPMN as Lolanet."))
             }
+            EbiObject::StochasticBusinessProcessModelAndNotation(_) => {
+                Err(anyhow!("cannot export SBPMN as Lolanet."))
+            }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as Lolanet.")),

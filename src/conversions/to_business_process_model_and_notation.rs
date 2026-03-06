@@ -130,7 +130,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                     //there no outgoing edges of this transition; add an end event
                     let end_event = c.add_end_event(parent, EndEventType::None)?;
                     c.add_sequence_flow(parent, output_element, end_event)?;
-                },
+                }
                 Card::One | Card::Multiple => {
                     //there are outgoing edges; connect them
                     for (output_place, cardinality) in value.transition2output_places[transition]

@@ -6,6 +6,7 @@ use strum_macros::EnumIter;
 pub enum EbiObjectType {
     #[default]
     BusinessProcessModelAndNotation,
+    StochasticBusinessProcessModelAndNotation,
     LanguageOfAlignments,
     StochasticLanguageOfAlignments,
     StochasticDeterministicFiniteAutomaton,
@@ -36,6 +37,7 @@ impl EbiObjectType {
     pub fn get_article(&self) -> &str {
         match self {
             EbiObjectType::BusinessProcessModelAndNotation => "a",
+            EbiObjectType::StochasticBusinessProcessModelAndNotation => "an",
             EbiObjectType::LabelledPetriNet => "a",
             EbiObjectType::StochasticLabelledPetriNet => "a",
             EbiObjectType::FiniteStochasticLanguage => "a",
@@ -90,6 +92,8 @@ impl Display for EbiObjectType {
             match self {
                 EbiObjectType::BusinessProcessModelAndNotation =>
                     "business process model and notation",
+                EbiObjectType::StochasticBusinessProcessModelAndNotation =>
+                    "stochastic business process model and notation",
                 EbiObjectType::LabelledPetriNet => "labelled Petri net",
                 EbiObjectType::StochasticLabelledPetriNet => "stochastic labelled Petri net",
                 EbiObjectType::FiniteStochasticLanguage => "finite stochastic language",

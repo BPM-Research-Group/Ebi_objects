@@ -46,6 +46,9 @@ impl Exportable for BusinessProcessModelAndNotation {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::BusinessProcessModelAndNotation(bpmn) => bpmn.export(f),
+            EbiObject::StochasticBusinessProcessModelAndNotation(sbpmn) => {
+                BusinessProcessModelAndNotation::from(sbpmn).export(f)
+            }
             EbiObject::DeterministicFiniteAutomaton(obj) => {
                 BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
