@@ -593,7 +593,8 @@ impl Exportable for ProcessTree {
 pub enum Node {
     Tau,
     Activity(Activity),
-    Operator(Operator, usize), //type, number of children
+    ///type, number of children
+    Operator(Operator, usize), 
 }
 
 impl Node {

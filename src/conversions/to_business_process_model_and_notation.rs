@@ -1,13 +1,17 @@
+use std::collections::{HashMap, hash_map::Entry};
+
 use crate::{
     DeterministicFiniteAutomaton, DirectlyFollowsGraph, DirectlyFollowsModel, LabelledPetriNet,
     PetriNetMarkupLanguage, ProcessTree, ProcessTreeMarkupLanguage,
     StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
+    ebi_objects::process_tree::{Node, Operator},
 };
 use ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
     BusinessProcessModelAndNotation,
-    creator::{BPMNCreator, EndEventType, GatewayType, StartEventType},
+    creator::{BPMNCreator, Container, EndEventType, GatewayType, StartEventType},
+    parser::parser_state::GlobalIndex,
 };
 
 impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
@@ -72,7 +76,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                 match (ain, value.get_transition_label(transition)) {
                     (Card::Zero, None) => {
                         let inp = c.add_gateway(parent, GatewayType::Exclusive)?;
-                        let out = c.add_gateway(parent, GatewayType::Parallel)?;
+                        let out: (usize, ()) = c.add_gateway(parent, GatewayType::Parallel)?;
                         c.add_sequence_flow(parent, inp, out)?;
                         c.add_sequence_flow(parent, out, inp)?;
                         additional_start_elements.push(inp);
@@ -202,13 +206,135 @@ via_lpn!(DeterministicFiniteAutomaton);
 via_lpn!(DirectlyFollowsGraph);
 via_lpn!(DirectlyFollowsModel);
 via_lpn!(StochasticDirectlyFollowsModel);
-via_lpn!(ProcessTree);
 via_lpn!(PetriNetMarkupLanguage);
 via_lpn!(ProcessTreeMarkupLanguage);
-via_lpn!(StochasticProcessTree);
 via_lpn!(StochasticLabelledPetriNet);
 via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticNondeterministicFiniteAutomaton);
+
+impl From<ProcessTree> for BusinessProcessModelAndNotation {
+    fn from(value: ProcessTree) -> Self {
+        let mut c = BPMNCreator::new_with_activity_key(value.activity_key.clone());
+        let parent = c.add_process();
+
+        let source = c.add_start_event_unchecked(parent, StartEventType::None);
+        let sink = c.add_end_event_unchecked(parent, EndEventType::None);
+        let root = value.root();
+        transform_node(&value, root, source, sink, &mut c, parent);
+
+        c.to_bpmn().unwrap()
+    }
+}
+
+fn transform_node(
+    tree: &ProcessTree,
+    node: usize,
+    source: GlobalIndex,
+    sink: GlobalIndex,
+    c: &mut BPMNCreator,
+    parent: Container,
+) {
+    match tree.get_node(node).unwrap() {
+        Node::Tau => {
+            c.add_sequence_flow_unchecked(parent, source, sink);
+        }
+        Node::Activity(activity) => {
+            let task = c.add_task_unchecked(parent, *activity);
+            c.add_sequence_flow_unchecked(parent, source, task);
+            c.add_sequence_flow_unchecked(parent, task, sink);
+        }
+        Node::Operator(Operator::Concurrent, _) => {
+            let sub_source = c.add_gateway_unchecked(parent, GatewayType::Parallel);
+            let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Parallel);
+            c.add_sequence_flow_unchecked(parent, source, sub_source);
+            c.add_sequence_flow_unchecked(parent, sub_sink, sink);
+            for child in tree.get_children(node) {
+                transform_node(tree, child, sub_source, sub_sink, c, parent);
+            }
+        }
+        Node::Operator(Operator::Xor, _) => {
+            let sub_source = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+            let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+            c.add_sequence_flow_unchecked(parent, source, sub_source);
+            c.add_sequence_flow_unchecked(parent, sub_sink, sink);
+            for child in tree.get_children(node) {
+                transform_node(tree, child, sub_source, sub_sink, c, parent);
+            }
+        }
+        Node::Operator(Operator::Or, _) => {
+            let sub_source = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
+            let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
+            c.add_sequence_flow_unchecked(parent, source, sub_source);
+            c.add_sequence_flow_unchecked(parent, sub_sink, sink);
+            for child in tree.get_children(node) {
+                transform_node(tree, child, sub_source, sub_sink, c, parent);
+            }
+        }
+        Node::Operator(Operator::Loop, _) => {
+            let sub_source = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+            let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+            c.add_sequence_flow_unchecked(parent, source, sub_source);
+            c.add_sequence_flow_unchecked(parent, sub_sink, sink);
+            let mut it = tree.get_children(node);
+            if let Some(child) = it.next() {
+                transform_node(tree, child, sub_source, sub_sink, c, parent);
+            }
+            while let Some(child) = it.next() {
+                transform_node(tree, child, sub_sink, sub_source, c, parent);
+            }
+        }
+        Node::Operator(Operator::Sequence, _) => {
+            let mut it = tree.get_children(node);
+            let mut sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+            if let Some(child) = it.next() {
+                transform_node(tree, child, source, sub_sink, c, parent);
+            }
+            while let Some(child) = it.next() {
+                let sub_source = sub_sink;
+                sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+                transform_node(tree, child, sub_source, sub_sink, c, parent);
+            }
+            c.add_sequence_flow_unchecked(parent, sub_sink, sink);
+        }
+        Node::Operator(Operator::Interleaved, _) => {
+            let children = tree.get_children(node).collect::<Vec<_>>();
+            let mut children_left_2_gateway = HashMap::new();
+            children_left_2_gateway.insert(vec![], sink);
+            children_left_2_gateway.insert(children.clone(), source);
+
+            let mut queue = vec![];
+            queue.push(children);
+            while let Some(children_left) = queue.pop() {
+                let sub_source = *children_left_2_gateway.get(&children_left).unwrap();
+                for (i, child) in children_left.iter().enumerate() {
+                    //remove one child
+                    let mut sub_children_left = children_left.clone();
+                    sub_children_left.remove(i);
+
+                    //fetch a sub-sink or create a new one
+                    let sub_sink = match children_left_2_gateway.entry(sub_children_left.clone()) {
+                        Entry::Occupied(occupied_entry) => *occupied_entry.get(),
+                        Entry::Vacant(vacant_entry) => {
+                            //new, add to queue
+                            queue.push(sub_children_left);
+                            let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
+                            vacant_entry.insert(sub_sink);
+                            sub_sink
+                        }
+                    };
+
+                    transform_node(tree, *child, sub_source, sub_sink, c, parent);
+                }
+            }
+        }
+    }
+}
+
+impl From<StochasticProcessTree> for BusinessProcessModelAndNotation {
+    fn from(value: StochasticProcessTree) -> Self {
+        ProcessTree::from(value).into()
+    }
+}
 
 #[cfg(test)]
 mod tests {
