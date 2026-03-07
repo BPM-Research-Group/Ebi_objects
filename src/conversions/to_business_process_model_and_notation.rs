@@ -219,9 +219,12 @@ impl From<ProcessTree> for BusinessProcessModelAndNotation {
         let source = c.add_start_event_unchecked(parent, StartEventType::None);
         let sink = c.add_end_event_unchecked(parent, EndEventType::None);
         let root = value.root();
-        transform_node(&value, root, source, sink, &mut c, parent);
-
-        c.to_bpmn().unwrap()
+        if !transform_node(&value, root, source, sink, &mut c, parent) {
+            //empty model
+            BPMNCreator::new().to_bpmn().unwrap()
+        } else {
+            c.to_bpmn().unwrap()
+        }
     }
 }
 
@@ -232,17 +235,19 @@ fn transform_node(
     sink: GlobalIndex,
     c: &mut BPMNCreator,
     parent: Container,
-) {
-    match tree.get_node(node).unwrap() {
-        Node::Tau => {
+) -> bool {
+    match tree.get_node(node) {
+        Some(Node::Tau) => {
             c.add_sequence_flow_unchecked(parent, source, sink);
+            true
         }
-        Node::Activity(activity) => {
+        Some(Node::Activity(activity)) => {
             let task = c.add_task_unchecked(parent, *activity);
             c.add_sequence_flow_unchecked(parent, source, task);
             c.add_sequence_flow_unchecked(parent, task, sink);
+            true
         }
-        Node::Operator(Operator::Concurrent, _) => {
+        Some(Node::Operator(Operator::Concurrent, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Parallel);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Parallel);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -250,8 +255,9 @@ fn transform_node(
             for child in tree.get_children(node) {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
+            true
         }
-        Node::Operator(Operator::Xor, _) => {
+        Some(Node::Operator(Operator::Xor, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -259,8 +265,9 @@ fn transform_node(
             for child in tree.get_children(node) {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
+            true
         }
-        Node::Operator(Operator::Or, _) => {
+        Some(Node::Operator(Operator::Or, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -268,8 +275,9 @@ fn transform_node(
             for child in tree.get_children(node) {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
+            true
         }
-        Node::Operator(Operator::Loop, _) => {
+        Some(Node::Operator(Operator::Loop, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -281,8 +289,9 @@ fn transform_node(
             while let Some(child) = it.next() {
                 transform_node(tree, child, sub_sink, sub_source, c, parent);
             }
+            true
         }
-        Node::Operator(Operator::Sequence, _) => {
+        Some(Node::Operator(Operator::Sequence, _)) => {
             let mut it = tree.get_children(node);
             let mut sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             if let Some(child) = it.next() {
@@ -294,8 +303,9 @@ fn transform_node(
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
             c.add_sequence_flow_unchecked(parent, sub_sink, sink);
+            true
         }
-        Node::Operator(Operator::Interleaved, _) => {
+        Some(Node::Operator(Operator::Interleaved, _)) => {
             let children = tree.get_children(node).collect::<Vec<_>>();
             let mut children_left_2_gateway = HashMap::new();
             children_left_2_gateway.insert(vec![], sink);
@@ -325,7 +335,9 @@ fn transform_node(
                     transform_node(tree, *child, sub_source, sub_sink, c, parent);
                 }
             }
+            true
         }
+        None => false,
     }
 }
 
@@ -343,7 +355,7 @@ impl From<ProcessTreeMarkupLanguage> for BusinessProcessModelAndNotation {
 
 #[cfg(test)]
 mod tests {
-    use crate::StochasticLabelledPetriNet;
+    use crate::{ProcessTree, StochasticLabelledPetriNet};
     use ebi_bpmn::BusinessProcessModelAndNotation;
     use std::fs;
 
@@ -353,5 +365,13 @@ mod tests {
         let slpn = fin.parse::<StochasticLabelledPetriNet>().unwrap();
 
         let _bpmn = BusinessProcessModelAndNotation::try_from(slpn).unwrap();
+    }
+
+    #[test]
+    fn ptree_2_bpmn() {
+        let fin = fs::read_to_string("testfiles/empty_2.ptree").unwrap();
+        let slpn = fin.parse::<ProcessTree>().unwrap();
+
+        let _bpmn = BusinessProcessModelAndNotation::from(slpn);
     }
 }
