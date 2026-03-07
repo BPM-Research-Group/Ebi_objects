@@ -207,7 +207,6 @@ via_lpn!(DirectlyFollowsGraph);
 via_lpn!(DirectlyFollowsModel);
 via_lpn!(StochasticDirectlyFollowsModel);
 via_lpn!(PetriNetMarkupLanguage);
-via_lpn!(ProcessTreeMarkupLanguage);
 via_lpn!(StochasticLabelledPetriNet);
 via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticNondeterministicFiniteAutomaton);
@@ -332,6 +331,12 @@ fn transform_node(
 
 impl From<StochasticProcessTree> for BusinessProcessModelAndNotation {
     fn from(value: StochasticProcessTree) -> Self {
+        ProcessTree::from(value).into()
+    }
+}
+
+impl From<ProcessTreeMarkupLanguage> for BusinessProcessModelAndNotation {
+    fn from(value: ProcessTreeMarkupLanguage) -> Self {
         ProcessTree::from(value).into()
     }
 }
