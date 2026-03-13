@@ -8,6 +8,9 @@ use crate::{
     ebi_objects::process_tree::{Node, Operator},
 };
 use ebi_arithmetic::anyhow::{Error, Result, anyhow};
+use ebi_bpmn::{
+    BPMNCreator, BusinessProcessModelAndNotation, Container, EndEventType, GatewayType, GlobalIndex, StartEventType
+};
 
 impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
     type Error = Error;

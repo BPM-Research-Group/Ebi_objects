@@ -33,13 +33,9 @@ testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" 
 ebi_activity_key = "0.0.1"
 ebi_arithmetic = "0.3.9"
 ebi_derive = "0.2.10"
-<<<<<<< HEAD
-ebi_bpmn = "0.0.29"
-anyhow = "1.0.102"
-=======
-ebi_bpmn = "0.0.26"
->>>>>>> 8d263f59bebbf9293c0f748ccd908eb82e4850e0
+ebi_bpmn = "0.0.31"
 process_mining = "0.5.2"
+anyhow = "1.0.102"
 log = "0.4.28"
 serde = "1.0.228"
 serde_json = "1.0.149"
