@@ -8,7 +8,7 @@ use crate::ebi_objects::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-use anyhow::{Error, anyhow};
+use ebi_arithmetic::anyhow::{Error, anyhow};
 use process_mining::{
     PetriNet,
     core::process_models::petri_net::{self, ArcType},
@@ -16,7 +16,7 @@ use process_mining::{
 use std::collections::HashMap;
 
 impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
-    type Error = anyhow::Error;
+    type Error = Error;
 
     fn try_from(lpn: &LabelledPetriNet) -> std::result::Result<Self, Self::Error> {
         log::info!("Convert LPN into PNML.");

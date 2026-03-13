@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
     TranslateActivityKey,
@@ -11,8 +9,12 @@ use crate::{
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::{Context, Result, anyhow};
-use ebi_arithmetic::{Fraction, Signed, Zero};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::{
+    Fraction, Signed, Zero,
+    anyhow::{Context, Error, Result, anyhow},
+};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use serde_json::Value;
@@ -190,17 +192,14 @@ impl Importable for DirectlyFollowsGraph {
     fn import_as_object(
         reader: &mut dyn std::io::BufRead,
         parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<EbiObject> {
+    ) -> Result<EbiObject> {
         Ok(EbiObject::DirectlyFollowsGraph(Self::import(
             reader,
             parameter_values,
         )?))
     }
 
-    fn import(
-        reader: &mut dyn std::io::BufRead,
-        _: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

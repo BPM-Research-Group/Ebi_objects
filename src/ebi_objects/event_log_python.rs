@@ -1,11 +1,11 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     ActivityKey, EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, Infoable,
     NumberOfTraces, TranslateActivityKey,
     traits::importable::{ImporterParameter, ImporterParameterValues},
 };
-use anyhow::{Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Result, anyhow};
 use std::{
     fmt::Display,
     io::{BufRead, Write},
@@ -26,14 +26,14 @@ impl Importable for EventLogPython {
     fn import_as_object(
         _reader: &mut dyn BufRead,
         _parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<EbiObject> {
+    ) -> Result<EbiObject> {
         Err(anyhow!("A Python log can only be imported from Python."))
     }
 
     fn import(
         _reader: &mut dyn BufRead,
         _parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    ) -> Result<Self>
     where
         Self: Sized,
     {

@@ -1,7 +1,7 @@
 use crate::{EbiObject, Exportable, Graphable, Infoable};
-use anyhow::{Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Result, anyhow};
 use layout::{backends::svg::SVGWriter, topo::layout::VisualGraph};
 use std::fmt::Display;
 
@@ -32,7 +32,9 @@ impl Exportable for ScalableVectorGraphics {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::BusinessProcessModelAndNotation(object) => object.to_svg()?.export(f),
-            EbiObject::StochasticBusinessProcessModelAndNotation(object) => object.to_svg()?.export(f),
+            EbiObject::StochasticBusinessProcessModelAndNotation(object) => {
+                object.to_svg()?.export(f)
+            }
             EbiObject::DeterministicFiniteAutomaton(object) => object.to_svg()?.export(f),
             EbiObject::DirectlyFollowsModel(object) => object.to_svg()?.export(f),
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_svg()?.export(f),

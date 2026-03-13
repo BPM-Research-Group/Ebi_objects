@@ -7,15 +7,15 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use itertools::Itertools;
 use std::{
     collections::HashMap,

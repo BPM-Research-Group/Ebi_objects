@@ -16,7 +16,7 @@ use crate::{
     },
     marking::Marking,
 };
-use anyhow::{Error, Result, anyhow};
+use ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use std::collections::HashMap;
 
 macro_rules! tree {

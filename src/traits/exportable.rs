@@ -1,4 +1,4 @@
-use anyhow::Result;
+use ebi_arithmetic::anyhow::Result;
 
 use crate::constants::ebi_object::EbiObject;
 

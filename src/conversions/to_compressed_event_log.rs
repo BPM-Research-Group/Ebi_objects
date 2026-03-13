@@ -1,11 +1,11 @@
-use anyhow::Error;
-
 use crate::{
-    CompressedEventLogXes, EventLog, EventLogCsv, EventLogTraceAttributes, EventLogXes, ebi_objects::{
+    CompressedEventLogXes, EventLog, EventLogCsv, EventLogTraceAttributes, EventLogXes,
+    ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-    }
+    },
 };
+use ebi_arithmetic::anyhow::Error;
 
 macro_rules! via {
     ($t:ident) => {

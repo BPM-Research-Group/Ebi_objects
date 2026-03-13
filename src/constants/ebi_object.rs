@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 use anyhow::Result;
 use ebi_bpmn::StochasticBusinessProcessModelAndNotation;
+=======
+use ebi_arithmetic::anyhow::Result;
+use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
+>>>>>>> 8d263f59bebbf9293c0f748ccd908eb82e4850e0
 use std::fmt::Display;
 
 use crate::{

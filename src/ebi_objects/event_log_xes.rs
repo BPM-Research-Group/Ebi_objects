@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
@@ -10,7 +8,9 @@ use crate::{
         start_end_activities::StartEndActivities,
     },
 };
-use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
 use intmap::IntMap;
@@ -133,10 +133,7 @@ For instance:
         )?))
     }
 
-    fn import(
-        reader: &mut dyn BufRead,
-        parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn BufRead, parameter_values: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

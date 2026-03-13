@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -10,7 +8,9 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
 use layout::topo::layout::VisualGraph;
@@ -211,7 +211,7 @@ impl Importable for DirectlyFollowsModel {
     fn import(
         reader: &mut dyn std::io::prelude::BufRead,
         _: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    ) -> Result<Self>
     where
         Self: Sized,
     {

@@ -10,10 +10,10 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::{Context, Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_arithmetic::Fraction;
+use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{fmt, io::BufRead};

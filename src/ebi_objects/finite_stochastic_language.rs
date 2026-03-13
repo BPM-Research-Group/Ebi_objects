@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceProbabilityIterator, TranslateActivityKey,
@@ -18,7 +16,9 @@ use crate::{
         },
     },
 };
-use anyhow::{Context, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};

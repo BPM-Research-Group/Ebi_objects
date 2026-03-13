@@ -12,9 +12,9 @@ use crate::{
     },
     tree_semantics,
 };
-use anyhow::{Context, Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};

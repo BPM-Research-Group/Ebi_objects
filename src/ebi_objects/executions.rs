@@ -3,10 +3,10 @@ use crate::{
     constants::ebi_object::EbiObject,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::Result;
 use chrono::{DateTime, FixedOffset};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},

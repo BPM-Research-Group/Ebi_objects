@@ -1,10 +1,10 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     EbiObject, Exportable, Infoable, ScalableVectorGraphics,
     ebi_objects::scalable_vector_graphics::ToSVG,
 };
-use anyhow::{Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Result, anyhow};
 use resvg::usvg::{self};
 use std::fmt::Display;
 
@@ -29,7 +29,9 @@ impl Exportable for PortableNetworkGraphics {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::BusinessProcessModelAndNotation(object) => object.to_png()?.export(f),
-            EbiObject::StochasticBusinessProcessModelAndNotation(object) => object.to_png()?.export(f),
+            EbiObject::StochasticBusinessProcessModelAndNotation(object) => {
+                object.to_png()?.export(f)
+            }
             EbiObject::DeterministicFiniteAutomaton(object) => object.to_png()?.export(f),
             EbiObject::DirectlyFollowsModel(object) => object.to_png()?.export(f),
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_png()?.export(f),
@@ -67,7 +69,7 @@ impl Exportable for PortableNetworkGraphics {
         }
     }
 
-    fn export(&self, f: &mut dyn std::io::Write) -> anyhow::Result<()> {
+    fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
         Ok(f.write_all(&self.0)?)
     }
 }

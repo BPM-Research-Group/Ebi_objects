@@ -1,10 +1,10 @@
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, TranslateActivityKey,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
-use anyhow::Result;
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Error, Result};
 use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
 use std::io::{BufRead, BufReader, Write};
 
@@ -26,10 +26,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.";
         Ok(EbiObject::EventLogXes(log.log))
     }
 
-    fn import(
-        reader: &mut dyn BufRead,
-        parameter_values: &ImporterParameterValues,
-    ) -> anyhow::Result<Self>
+    fn import(reader: &mut dyn BufRead, parameter_values: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {

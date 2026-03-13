@@ -6,7 +6,7 @@ use crate::{
         event_log_csv::{self, DEFAULT_QUOTE_CHARACTER, DEFAULT_SEPARATOR, EventLogCsv},
     },
 };
-use anyhow::{Error, anyhow};
+use ebi_arithmetic::anyhow::{Error, anyhow};
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::{AttributeValue, XESEditableAttribute};
 

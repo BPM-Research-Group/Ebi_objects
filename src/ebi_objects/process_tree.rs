@@ -1,6 +1,4 @@
 use super::stochastic_process_tree::StochasticProcessTree;
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, TranslateActivityKey,
@@ -11,7 +9,9 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::{Context, Error, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
 use std::{
@@ -593,7 +593,8 @@ impl Exportable for ProcessTree {
 pub enum Node {
     Tau,
     Activity(Activity),
-    Operator(Operator, usize), //type, number of children
+    ///type, number of children
+    Operator(Operator, usize), 
 }
 
 impl Node {

@@ -363,9 +363,15 @@ dependencies = [
 
 [[package]]
 name = "ebi_bpmn"
+<<<<<<< HEAD
 version = "0.0.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4299ad41400a704b7eecd685d3696ee709bcb4c4ee6b75af9dd9fbfefcb487fb"
+=======
+version = "0.0.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a34b7ba3f11466f32f0bea43ff05087117b6acb2c9f5c07f69bb85b88773dd1"
+>>>>>>> 8d263f59bebbf9293c0f748ccd908eb82e4850e0
 dependencies = [
  "anyhow",
  "bitvec",
@@ -392,9 +398,12 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
+<<<<<<< HEAD
 version = "0.3.140"
+=======
+version = "0.3.147"
+>>>>>>> 8d263f59bebbf9293c0f748ccd908eb82e4850e0
 dependencies = [
- "anyhow",
  "bitvec",
  "chrono",
  "csv",
@@ -2032,9 +2041,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.21.0"
+version = "1.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b672338555252d43fd2240c714dc444b8c6fb0a5c5335e65a07bba7742735ddb"
+checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
 dependencies = [
  "getrandom 0.4.1",
  "js-sys",

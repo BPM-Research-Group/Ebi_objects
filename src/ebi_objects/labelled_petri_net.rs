@@ -7,8 +7,6 @@ use super::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-#[cfg(any(test, feature = "testactivities"))]
-use ebi_activity_key::TestActivityKey;
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, StochasticNondeterministicFiniteAutomaton, TranslateActivityKey,
@@ -20,7 +18,9 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::{Context, Ok, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
+use ebi_arithmetic::anyhow::{Context, Ok, Result, anyhow, Error};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{
