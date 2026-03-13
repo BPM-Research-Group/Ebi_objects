@@ -8,7 +8,9 @@ use crate::{
 use anyhow::{Result, anyhow};
 use ebi_activity_key::HasActivityKey;
 use ebi_bpmn::{
-    BusinessProcessModelAndNotation, element::BPMNElement, elements::task::BPMNTask,
+    BusinessProcessModelAndNotation,
+    element::BPMNElement,
+    elements::{receive_task::BPMNReceiveTask, task::BPMNTask},
     traits::objectable::BPMNObject,
 };
 use layout::{core::base::Orientation, topo::layout::VisualGraph};
@@ -168,6 +170,11 @@ impl Graphable for BusinessProcessModelAndNotation {
                     self.activity_key().deprocess_activity(activity),
                     "",
                 ),
+                BPMNElement::ReceiveTask(BPMNReceiveTask { activity, .. }) => create_transition(
+                    &mut graph,
+                    self.activity_key().deprocess_activity(activity),
+                    "rt",
+                ),
                 BPMNElement::TimerIntermediateCatchEvent(_) => create_place(&mut graph, "tic"),
                 BPMNElement::TimerStartEvent(_) => create_place(&mut graph, "tse"),
             };
@@ -177,10 +184,10 @@ impl Graphable for BusinessProcessModelAndNotation {
         //add edges
         for sequence_flow in self.sequence_flows() {
             let from = object_2_node
-                .get(&sequence_flow.source_global_index.0)
+                .get(&sequence_flow.source_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
             let to = object_2_node
-                .get(&sequence_flow.target_global_index.0)
+                .get(&sequence_flow.target_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
 
             create_edge(&mut graph, from, to, "");
@@ -188,10 +195,10 @@ impl Graphable for BusinessProcessModelAndNotation {
 
         for message_flow in &self.message_flows {
             let from = object_2_node
-                .get(&message_flow.source_global_index.0)
+                .get(&message_flow.source_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
             let to = object_2_node
-                .get(&message_flow.target_global_index.0)
+                .get(&message_flow.target_global_index().0)
                 .ok_or_else(|| anyhow!("node not found"))?;
 
             create_edge(&mut graph, from, to, "m");

@@ -111,7 +111,7 @@ pub use ebi_activity_key::ActivityKeyTranslator;
 pub use ebi_activity_key::HasActivityKey;
 pub use ebi_activity_key::TranslateActivityKey;
 pub use ebi_bpmn::BusinessProcessModelAndNotation;
-pub use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
+pub use ebi_bpmn::StochasticBusinessProcessModelAndNotation;
 pub use ebi_objects::compressed_event_log::CompressedEventLog;
 pub use ebi_objects::compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes;
 pub use ebi_objects::compressed_event_log_xes::CompressedEventLogXes;

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ebi_bpmn::stochastic_business_process_model_and_notation::StochasticBusinessProcessModelAndNotation;
+use ebi_bpmn::StochasticBusinessProcessModelAndNotation;
 use std::fmt::Display;
 
 use crate::{

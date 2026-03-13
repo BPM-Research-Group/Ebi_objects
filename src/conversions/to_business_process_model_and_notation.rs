@@ -6,8 +6,7 @@ use crate::{
 };
 use anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
-    BusinessProcessModelAndNotation,
-    creator::{BPMNCreator, EndEventType, GatewayType, StartEventType},
+    BPMNCreator, BusinessProcessModelAndNotation, EndEventType, GatewayType, StartEventType,
 };
 
 impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
