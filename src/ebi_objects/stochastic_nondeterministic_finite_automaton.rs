@@ -114,7 +114,7 @@ impl StochasticNondeterministicFiniteAutomaton {
 
             if self.terminating_probabilities[source].is_negative() {
                 return Err(anyhow!(
-                    "tried to insert edge from {} to {}, which brings the sum outgoing probability of the source state (1-{}) above 1",
+                    "tried to insert edge from {} to {}, which brings the sum outgoing probability of the source state (1 - {}) below 0",
                     source,
                     target,
                     self.terminating_probabilities[source]
