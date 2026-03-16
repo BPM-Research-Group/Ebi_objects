@@ -16,7 +16,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
     type Error = Error;
     fn try_from(value: LabelledPetriNet) -> Result<Self> {
         let mut c = BPMNCreator::new_with_activity_key(value.activity_key.clone());
-        let parent = c.add_process();
+        let parent = c.add_process(None);
 
         //transform places to xor gateways
         let mut place_2_xor_gateway = vec![];
@@ -212,7 +212,7 @@ via_lpn!(StochasticNondeterministicFiniteAutomaton);
 impl From<ProcessTree> for BusinessProcessModelAndNotation {
     fn from(value: ProcessTree) -> Self {
         let mut c = BPMNCreator::new_with_activity_key(value.activity_key.clone());
-        let parent = c.add_process();
+        let parent = c.add_process(None);
 
         let source = c.add_start_event_unchecked(parent, StartEventType::None);
         let sink = c.add_end_event_unchecked(parent, EndEventType::None);
