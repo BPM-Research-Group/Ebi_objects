@@ -10,7 +10,10 @@ use ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_bpmn::{
     BusinessProcessModelAndNotation,
     element::BPMNElement,
-    elements::{receive_task::BPMNReceiveTask, task::BPMNTask},
+    elements::{
+        manual_task::BPMNManualTask, receive_task::BPMNReceiveTask, task::BPMNTask,
+        user_task::BPMNUserTask,
+    },
     traits::objectable::BPMNObject,
 };
 use layout::{core::base::Orientation, topo::layout::VisualGraph};
@@ -171,6 +174,16 @@ impl Graphable for BusinessProcessModelAndNotation {
                     "",
                 ),
                 BPMNElement::ReceiveTask(BPMNReceiveTask { activity, .. }) => create_transition(
+                    &mut graph,
+                    self.activity_key().deprocess_activity(activity),
+                    "rt",
+                ),
+                BPMNElement::ManualTask(BPMNManualTask { activity, .. }) => create_transition(
+                    &mut graph,
+                    self.activity_key().deprocess_activity(activity),
+                    "mt",
+                ),
+                BPMNElement::UserTask(BPMNUserTask { activity, .. }) => create_transition(
                     &mut graph,
                     self.activity_key().deprocess_activity(activity),
                     "rt",
