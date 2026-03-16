@@ -393,7 +393,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.151"
+version = "0.3.152"
 dependencies = [
  "anyhow",
  "bitvec",
