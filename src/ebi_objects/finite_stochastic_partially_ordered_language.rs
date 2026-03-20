@@ -44,11 +44,11 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
     First, the probability of the trace.
     Second, the number of edges in the trace.
     Third, for each edge, 
-    (i) the word `silent' or the word `label ' directly followed by the activity label, or the phrase 'multiline label ' followed by the label, terminated with `#' (a `#' at the line end can be escaped with `##').
+    (i) the word `silent' or the word `label ' directly followed by the activity label, or the phrase 'multiline label ' followed by the label, terminated with `\\#' (a `\\#' at the line end can be escaped with `\\#\\#').
     (ii) the number of input states,
     (iii) the input states, 
-)   (iv) the number of output states, and 
-)   (v) the output states.
+    (iv) the number of output states, and 
+    (v) the output states.
     
     For instance:
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lpn}";
