@@ -23,6 +23,7 @@ pub mod conversions {
     pub mod to_event_log_xes;
     pub mod to_finite_language;
     pub mod to_finite_stochastic_language;
+    pub mod to_finite_stochastic_partially_ordered_language;
     pub mod to_labelled_petri_net;
     pub mod to_language_of_alignments;
     pub mod to_lola_net;
@@ -128,6 +129,7 @@ pub use ebi_objects::event_log_xes::EventLogXes;
 pub use ebi_objects::executions::Executions;
 pub use ebi_objects::finite_language::FiniteLanguage;
 pub use ebi_objects::finite_stochastic_language::FiniteStochasticLanguage;
+pub use ebi_objects::finite_stochastic_partially_ordered_language::FiniteStochasticPartiallyOrderedLanguage;
 pub use ebi_objects::labelled_petri_net::LabelledPetriNet;
 pub use ebi_objects::language_of_alignments::LanguageOfAlignments;
 pub use ebi_objects::lola_net::LolaNet;

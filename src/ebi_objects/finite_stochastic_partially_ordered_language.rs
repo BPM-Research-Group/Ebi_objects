@@ -24,7 +24,7 @@ pub const HEADER: &str = "finite stochastic partially ordered language";
 
 #[derive(Clone, ActivityKey)]
 pub struct FiniteStochasticPartiallyOrderedLanguage {
-    activity_key: ActivityKey,
+    pub(crate) activity_key: ActivityKey,
     pub traces: HashMap<PartiallyOrderedTrace, Fraction>,
 }
 
