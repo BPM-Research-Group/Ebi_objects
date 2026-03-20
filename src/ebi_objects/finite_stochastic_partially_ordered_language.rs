@@ -12,20 +12,20 @@ use anyhow::{Context, Error, Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{
-    Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey,
-    TranslateActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey, TranslateActivityKey,
 };
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::{core::base::Orientation, topo::layout::VisualGraph};
-use std::{collections::HashMap, fmt::Display, io::BufRead};
+use std::{fmt::Display, io::BufRead};
 
 pub const HEADER: &str = "finite stochastic partially ordered language";
 
 #[derive(Clone, ActivityKey)]
 pub struct FiniteStochasticPartiallyOrderedLanguage {
     pub(crate) activity_key: ActivityKey,
-    pub traces: HashMap<PartiallyOrderedTrace, Fraction>,
+    pub traces: Vec<PartiallyOrderedTrace>,
+    pub probabilities: Vec<Fraction>,
 }
 
 impl FiniteStochasticPartiallyOrderedLanguage {
@@ -84,7 +84,8 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
             .with_context(|| anyhow!("Failed to read number of traces."))?;
 
         let mut sum = Fraction::zero();
-        let mut traces = HashMap::with_capacity(number_of_traces);
+        let mut traces = Vec::with_capacity(number_of_traces);
+        let mut probabilities = Vec::with_capacity(number_of_traces);
         let mut activity_key = ActivityKey::new();
 
         for trace_i in 0..number_of_traces {
@@ -194,15 +195,13 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
                 }
             }
 
-            traces.insert(
-                PartiallyOrderedTrace {
-                    number_of_states: max_state + 1,
-                    edge_2_inputs,
-                    edge_2_outputs,
-                    edge_2_activity,
-                },
-                probability,
-            );
+            traces.push(PartiallyOrderedTrace {
+                number_of_states: max_state + 1,
+                edge_2_inputs,
+                edge_2_outputs,
+                edge_2_activity,
+            });
+            probabilities.push(probability);
         }
 
         if sum > Fraction::one() && !sum.is_one() {
@@ -216,6 +215,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
         Ok(Self {
             activity_key: activity_key,
             traces,
+            probabilities,
         })
     }
 }
@@ -243,7 +243,12 @@ impl Display for FiniteStochasticPartiallyOrderedLanguage {
         writeln!(f, "{}", HEADER)?;
         writeln!(f, "# number of traces\n{}", self.number_of_traces())?;
 
-        for (pos, (trace, probability)) in self.traces.iter().enumerate() {
+        for (pos, (trace, probability)) in self
+            .traces
+            .iter()
+            .zip(self.probabilities.iter())
+            .enumerate()
+        {
             writeln!(f, "# trace {}", pos)?;
             writeln!(f, "#\tprobability\n{}", probability)?;
             writeln!(f, "#\tnumber of edges\n{}", trace.number_of_edges())?;
@@ -329,7 +334,7 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
             f,
             "Number of states\t{}",
             self.traces
-                .keys()
+                .iter()
                 .map(|t| t.number_of_states())
                 .sum::<usize>()
         )?;
@@ -337,7 +342,7 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
             f,
             "Number of edges\t{}",
             self.traces
-                .keys()
+                .iter()
                 .map(|t| t.number_of_edges())
                 .sum::<usize>()
         )?;
@@ -349,10 +354,12 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
         writeln!(
             f,
             "Sum of probabilities\t{:.4}",
-            self.traces.values().fold(Fraction::zero(), |mut x, y| {
-                x += y;
-                x
-            })
+            self.probabilities
+                .iter()
+                .fold(Fraction::zero(), |mut x, y| {
+                    x += y;
+                    x
+                })
         )?;
 
         writeln!(f, "")?;
@@ -366,7 +373,7 @@ impl Graphable for FiniteStochasticPartiallyOrderedLanguage {
     fn to_dot(&self) -> Result<VisualGraph> {
         let mut graph = VisualGraph::new(Orientation::TopToBottom);
 
-        for (trace, probability) in &self.traces {
+        for (trace, probability) in self.traces.iter().zip(self.probabilities.iter()) {
             trace.to_dot(probability, &self.activity_key, &mut graph);
         }
 
@@ -378,22 +385,13 @@ impl TranslateActivityKey for FiniteStochasticPartiallyOrderedLanguage {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
-        //a hashmap needs to be rebuilt, unfortunately
-        let translated_traces: HashMap<PartiallyOrderedTrace, Fraction> = self
-            .traces
-            .drain() // `drain` is used to take ownership of the original traces (use `into_iter()` or `drain()` if we want to consume)
-            .map(|(mut trace, fraction)| {
-                for activity in trace.edge_2_activity.iter_mut() {
-                    if let Some(activity) = activity {
-                        *activity = translator.translate_activity(activity);
-                    }
+        self.traces.iter_mut().for_each(|trace| {
+            trace.edge_2_activity.iter_mut().for_each(|activity| {
+                if let Some(activity) = activity {
+                    *activity = translator.translate_activity(activity);
                 }
-                (trace, fraction)
             })
-            .collect();
-
-        // Update the traces in the language with the translated ones
-        self.traces = translated_traces;
+        });
 
         self.activity_key = to_activity_key.clone();
     }
@@ -402,7 +400,7 @@ impl TranslateActivityKey for FiniteStochasticPartiallyOrderedLanguage {
 #[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for FiniteStochasticPartiallyOrderedLanguage {
     fn test_activity_key(&self) {
-        self.traces.iter().for_each(|(trace, _)| {
+        self.traces.iter().for_each(|trace| {
             trace.edge_2_activity.iter().for_each(|activity| {
                 if let Some(activity) = activity {
                     self.activity_key().assert_activity_is_of_key(activity)

@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-
-use ebi_activity_key::ActivityKey;
-use ebi_arithmetic::Fraction;
-use ebi_bpmn::partially_ordered_run::PartiallyOrderedRun;
-
 use crate::{
     FiniteStochasticPartiallyOrderedLanguage,
     ebi_objects::finite_stochastic_partially_ordered_language::PartiallyOrderedTrace,
 };
+use ebi_activity_key::ActivityKey;
+use ebi_arithmetic::Fraction;
+use ebi_bpmn::partially_ordered_run::PartiallyOrderedRun;
 
 impl From<PartiallyOrderedRun> for PartiallyOrderedTrace {
     fn from(value: PartiallyOrderedRun) -> Self {
@@ -27,14 +24,15 @@ impl From<PartiallyOrderedRun> for PartiallyOrderedTrace {
     }
 }
 
-impl From<(ActivityKey, HashMap<PartiallyOrderedTrace, Fraction>)>
+impl From<(ActivityKey, Vec<PartiallyOrderedTrace>, Vec<Fraction>)>
     for FiniteStochasticPartiallyOrderedLanguage
 {
-    fn from(value: (ActivityKey, HashMap<PartiallyOrderedTrace, Fraction>)) -> Self {
-        let (activity_key, traces) = value;
+    fn from(value: (ActivityKey, Vec<PartiallyOrderedTrace>, Vec<Fraction>)) -> Self {
+        let (activity_key, traces, probabilities) = value;
         Self {
             activity_key,
             traces,
+            probabilities,
         }
     }
 }
