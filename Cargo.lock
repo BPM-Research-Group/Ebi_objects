@@ -1169,9 +1169,9 @@ dependencies = [
 
 [[package]]
 name = "process_mining"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3cbf01d35eb8772a85d31a719d02068d53bfd7715775e46241a165e45797dc2"
+checksum = "e61cd5ae91e4f8bba9d5f80c1437dad60f784a7092b92c299b8382d77ff030f0"
 dependencies = [
  "chrono",
  "csv",
