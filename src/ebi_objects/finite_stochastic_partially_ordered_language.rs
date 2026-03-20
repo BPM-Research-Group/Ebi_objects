@@ -431,6 +431,15 @@ impl PartiallyOrderedTrace {
         *self.edge_2_activity.get(edge)?
     }
 
+    pub fn start_states(&self) -> impl Iterator<Item = usize> {
+        (0..self.number_of_states).filter(|state| {
+            !self
+                .edge_2_outputs
+                .iter()
+                .any(|outputs| outputs.contains(&state))
+        })
+    }
+
     pub fn to_dot(
         &self,
         probability: &Fraction,
