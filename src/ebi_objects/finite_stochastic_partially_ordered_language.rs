@@ -21,7 +21,7 @@ use std::{fmt::Display, io::BufRead};
 
 pub const HEADER: &str = "finite stochastic partially ordered language";
 
-#[derive(Clone, ActivityKey)]
+#[derive(Clone, ActivityKey, Debug)]
 pub struct FiniteStochasticPartiallyOrderedLanguage {
     pub(crate) activity_key: ActivityKey,
     pub traces: Vec<PartiallyOrderedTrace>,
@@ -410,7 +410,7 @@ impl TestActivityKey for FiniteStochasticPartiallyOrderedLanguage {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct PartiallyOrderedTrace {
     pub number_of_states: usize,
     pub edge_2_inputs: Vec<Vec<usize>>,
