@@ -120,6 +120,9 @@ impl Exportable for PetriNetMarkupLanguage {
             EbiObject::FiniteStochasticLanguage(_) => {
                 Err(anyhow!("Cannot export finite stochastic language as PNML."))
             }
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(_) => Err(anyhow!(
+                "Cannot export finite stochastic partially ordered language as PNML."
+            )),
             EbiObject::LanguageOfAlignments(_) => {
                 Err(anyhow!("Cannot export language of alignments as PNML."))
             }

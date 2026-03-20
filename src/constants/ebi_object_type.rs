@@ -22,6 +22,7 @@ pub enum EbiObjectType {
     EventLogXes,
     FiniteLanguage,
     FiniteStochasticLanguage,
+    FiniteStochasticPartiallyOrderedLanguage,
     LabelledPetriNet,
     StochasticLabelledPetriNet,
     ProcessTree,
@@ -40,7 +41,6 @@ impl EbiObjectType {
             EbiObjectType::StochasticBusinessProcessModelAndNotation => "an",
             EbiObjectType::LabelledPetriNet => "a",
             EbiObjectType::StochasticLabelledPetriNet => "a",
-            EbiObjectType::FiniteStochasticLanguage => "a",
             EbiObjectType::StochasticDeterministicFiniteAutomaton => "a",
             EbiObjectType::StochasticNondeterministicFiniteAutomaton => "a",
             EbiObjectType::EventLog => "an",
@@ -50,6 +50,8 @@ impl EbiObjectType {
             EbiObjectType::EventLogTraceAttributes => "an",
             EbiObjectType::EventLogXes => "an",
             EbiObjectType::FiniteLanguage => "a",
+            EbiObjectType::FiniteStochasticLanguage => "a",
+            EbiObjectType::FiniteStochasticPartiallyOrderedLanguage => "a",
             EbiObjectType::DirectlyFollowsModel => "a",
             EbiObjectType::StochasticDirectlyFollowsModel => "a",
             EbiObjectType::LanguageOfAlignments => "",
@@ -96,7 +98,6 @@ impl Display for EbiObjectType {
                     "stochastic business process model and notation",
                 EbiObjectType::LabelledPetriNet => "labelled Petri net",
                 EbiObjectType::StochasticLabelledPetriNet => "stochastic labelled Petri net",
-                EbiObjectType::FiniteStochasticLanguage => "finite stochastic language",
                 EbiObjectType::StochasticDeterministicFiniteAutomaton =>
                     "stochastic deterministic finite automaton",
                 EbiObjectType::StochasticNondeterministicFiniteAutomaton =>
@@ -108,6 +109,8 @@ impl Display for EbiObjectType {
                 EbiObjectType::EventLogTraceAttributes => "event log with trace attributes",
                 EbiObjectType::EventLogXes => "XES event log",
                 EbiObjectType::FiniteLanguage => "finite language",
+                EbiObjectType::FiniteStochasticLanguage => "finite stochastic language",
+                EbiObjectType::FiniteStochasticPartiallyOrderedLanguage => "finite stochastic partially ordered language",
                 EbiObjectType::DirectlyFollowsModel => "directly follows model",
                 EbiObjectType::StochasticDirectlyFollowsModel =>
                     "stochastic directly follows model",

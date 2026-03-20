@@ -49,6 +49,9 @@ impl Exportable for ScalableVectorGraphics {
             EbiObject::FiniteStochasticLanguage(_) => {
                 Err(anyhow!("cannot export finite stochastic as SVG"))
             }
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(object) => {
+                object.to_svg()?.export(f)
+            }
             EbiObject::LabelledPetriNet(object) => object.to_svg()?.export(f),
             EbiObject::LanguageOfAlignments(_) => {
                 Err(anyhow!("cannot export language of alignments as SVG"))

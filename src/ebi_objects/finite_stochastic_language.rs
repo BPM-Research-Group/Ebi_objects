@@ -177,7 +177,7 @@ impl Importable for FiniteStochasticLanguage {
 
         let number_of_traces = lreader
             .next_line_index()
-            .context("failed to read number of places")?;
+            .context("Failed to read number of traces.")?;
 
         let mut traces = HashMap::new();
         let mut sum = Fraction::zero();
@@ -185,7 +185,7 @@ impl Importable for FiniteStochasticLanguage {
         for trace_i in 0..number_of_traces {
             let probability = lreader.next_line_weight().with_context(|| {
                 format!(
-                    "failed to read weight for trace {} at line {}",
+                    "Failed to read weight for trace {} at line {}.",
                     trace_i,
                     lreader.get_last_line_number()
                 )
@@ -205,7 +205,7 @@ impl Importable for FiniteStochasticLanguage {
                 ));
             }
 
-            sum += probability.clone();
+            sum += &probability;
 
             let number_of_events = lreader.next_line_index().with_context(|| {
                 format!(

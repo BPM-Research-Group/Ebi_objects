@@ -7,9 +7,10 @@ use crate::{
         directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
         event_log::EventLog, event_log_csv::EventLogCsv, event_log_ocel::EventLogOcel,
         event_log_xes::EventLogXes, executions::Executions, finite_language::FiniteLanguage,
-        finite_stochastic_language::FiniteStochasticLanguage, labelled_petri_net::LabelledPetriNet,
-        language_of_alignments::LanguageOfAlignments, process_tree::ProcessTree,
-        scalable_vector_graphics::ScalableVectorGraphics,
+        finite_stochastic_language::FiniteStochasticLanguage,
+        finite_stochastic_partially_ordered_language::FiniteStochasticPartiallyOrderedLanguage,
+        labelled_petri_net::LabelledPetriNet, language_of_alignments::LanguageOfAlignments,
+        process_tree::ProcessTree, scalable_vector_graphics::ScalableVectorGraphics,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
@@ -18,11 +19,11 @@ use crate::{
     },
     traits::infoable::Infoable,
 };
+use anyhow::Result;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::StochasticBusinessProcessModelAndNotation;
 use std::fmt::Display;
-use anyhow::Result;
 
 #[derive(Clone)]
 pub enum EbiObject {
@@ -30,7 +31,6 @@ pub enum EbiObject {
     StochasticBusinessProcessModelAndNotation(StochasticBusinessProcessModelAndNotation),
     LabelledPetriNet(LabelledPetriNet),
     StochasticLabelledPetriNet(StochasticLabelledPetriNet),
-    FiniteStochasticLanguage(FiniteStochasticLanguage),
     StochasticDeterministicFiniteAutomaton(StochasticDeterministicFiniteAutomaton),
     StochasticNondeterministicFiniteAutomaton(StochasticNondeterministicFiniteAutomaton),
     EventLog(EventLog),
@@ -40,6 +40,8 @@ pub enum EbiObject {
     EventLogXes(EventLogXes),
     EventLogOcel(EventLogOcel),
     FiniteLanguage(FiniteLanguage),
+    FiniteStochasticLanguage(FiniteStochasticLanguage),
+    FiniteStochasticPartiallyOrderedLanguage(FiniteStochasticPartiallyOrderedLanguage),
     DirectlyFollowsModel(DirectlyFollowsModel),
     StochasticDirectlyFollowsModel(StochasticDirectlyFollowsModel),
     LanguageOfAlignments(LanguageOfAlignments),
@@ -65,7 +67,6 @@ impl EbiObject {
             }
             EbiObject::LabelledPetriNet(_) => EbiObjectType::LabelledPetriNet,
             EbiObject::StochasticLabelledPetriNet(_) => EbiObjectType::StochasticLabelledPetriNet,
-            EbiObject::FiniteStochasticLanguage(_) => EbiObjectType::FiniteStochasticLanguage,
             EbiObject::StochasticDeterministicFiniteAutomaton(_) => {
                 EbiObjectType::StochasticDeterministicFiniteAutomaton
             }
@@ -79,6 +80,10 @@ impl EbiObject {
             EbiObject::EventLogTraceAttributes(_) => EbiObjectType::EventLogTraceAttributes,
             EbiObject::EventLogXes(_) => EbiObjectType::EventLogXes,
             EbiObject::FiniteLanguage(_) => EbiObjectType::FiniteLanguage,
+            EbiObject::FiniteStochasticLanguage(_) => EbiObjectType::FiniteStochasticLanguage,
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(_) => {
+                EbiObjectType::FiniteStochasticPartiallyOrderedLanguage
+            }
             EbiObject::DirectlyFollowsModel(_) => EbiObjectType::DirectlyFollowsModel,
             EbiObject::StochasticDirectlyFollowsModel(_) => {
                 EbiObjectType::StochasticDirectlyFollowsModel
@@ -108,7 +113,6 @@ impl Display for EbiObject {
             EbiObject::StochasticBusinessProcessModelAndNotation(o) => write!(f, "{}", o),
             EbiObject::LabelledPetriNet(o) => write!(f, "{}", o),
             EbiObject::StochasticLabelledPetriNet(o) => write!(f, "{}", o),
-            EbiObject::FiniteStochasticLanguage(o) => write!(f, "{}", o),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => write!(f, "{}", o),
             EbiObject::StochasticNondeterministicFiniteAutomaton(o) => write!(f, "{}", o),
             EbiObject::EventLog(o) => write!(f, "{}", o),
@@ -118,6 +122,8 @@ impl Display for EbiObject {
             EbiObject::EventLogTraceAttributes(o) => write!(f, "{}", o),
             EbiObject::EventLogXes(o) => write!(f, "{}", o),
             EbiObject::FiniteLanguage(o) => write!(f, "{}", o),
+            EbiObject::FiniteStochasticLanguage(o) => write!(f, "{}", o),
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(o) => write!(f, "{}", o),
             EbiObject::DirectlyFollowsModel(o) => write!(f, "{}", o),
             EbiObject::StochasticDirectlyFollowsModel(o) => write!(f, "{}", o),
             EbiObject::LanguageOfAlignments(o) => write!(f, "{}", o),
@@ -141,7 +147,6 @@ impl Infoable for EbiObject {
             EbiObject::StochasticBusinessProcessModelAndNotation(o) => o.info(f),
             EbiObject::LabelledPetriNet(o) => o.info(f),
             EbiObject::StochasticLabelledPetriNet(o) => o.info(f),
-            EbiObject::FiniteStochasticLanguage(o) => o.info(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => o.info(f),
             EbiObject::StochasticNondeterministicFiniteAutomaton(o) => o.info(f),
             EbiObject::EventLog(o) => o.info(f),
@@ -151,6 +156,8 @@ impl Infoable for EbiObject {
             EbiObject::EventLogTraceAttributes(o) => o.info(f),
             EbiObject::EventLogXes(o) => o.info(f),
             EbiObject::FiniteLanguage(o) => o.info(f),
+            EbiObject::FiniteStochasticLanguage(o) => o.info(f),
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(o) => o.info(f),
             EbiObject::DirectlyFollowsModel(o) => o.info(f),
             EbiObject::StochasticDirectlyFollowsModel(o) => o.info(f),
             EbiObject::LanguageOfAlignments(o) => o.info(f),
@@ -175,7 +182,6 @@ impl TestActivityKey for EbiObject {
             EbiObject::StochasticBusinessProcessModelAndNotation(o) => o.test_activity_key(),
             EbiObject::LabelledPetriNet(o) => o.test_activity_key(),
             EbiObject::StochasticLabelledPetriNet(o) => o.test_activity_key(),
-            EbiObject::FiniteStochasticLanguage(o) => o.test_activity_key(),
             EbiObject::StochasticDeterministicFiniteAutomaton(o) => o.test_activity_key(),
             EbiObject::StochasticNondeterministicFiniteAutomaton(o) => o.test_activity_key(),
             EbiObject::EventLog(o) => o.test_activity_key(),
@@ -185,6 +191,8 @@ impl TestActivityKey for EbiObject {
             EbiObject::EventLogTraceAttributes(o) => o.test_activity_key(),
             EbiObject::EventLogXes(o) => o.test_activity_key(),
             EbiObject::FiniteLanguage(o) => o.test_activity_key(),
+            EbiObject::FiniteStochasticLanguage(o) => o.test_activity_key(),
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(o) => o.test_activity_key(),
             EbiObject::DirectlyFollowsModel(o) => o.test_activity_key(),
             EbiObject::StochasticDirectlyFollowsModel(o) => o.test_activity_key(),
             EbiObject::LanguageOfAlignments(o) => o.test_activity_key(),

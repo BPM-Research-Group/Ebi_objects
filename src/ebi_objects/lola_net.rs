@@ -140,6 +140,9 @@ impl Exportable for LolaNet {
             EbiObject::FiniteStochasticLanguage(_) => Err(anyhow!(
                 "Cannot export finite stochastic language as Lolanet."
             )),
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(_) => Err(anyhow!(
+                "Cannot export finite stochastic partially ordered language as Lolanet."
+            )),
             EbiObject::LanguageOfAlignments(_) => {
                 Err(anyhow!("Cannot export language of alignments as Lolanet."))
             }

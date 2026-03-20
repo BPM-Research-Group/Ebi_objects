@@ -98,6 +98,9 @@ impl Exportable for BusinessProcessModelAndNotation {
             EbiObject::FiniteStochasticLanguage(_) => {
                 Err(anyhow!("Cannot export finite stochastic language as BPMN."))
             }
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(_) => Err(anyhow!(
+                "Cannot export finite stochastic partially ordered language as BPMN."
+            )),
             EbiObject::LanguageOfAlignments(_) => {
                 Err(anyhow!("Cannot export language of alignments as BPMN."))
             }

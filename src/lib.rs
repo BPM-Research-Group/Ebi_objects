@@ -51,6 +51,7 @@ pub mod ebi_objects {
     pub mod executions;
     pub mod finite_language;
     pub mod finite_stochastic_language;
+    pub mod finite_stochastic_partially_ordered_language;
     pub mod labelled_petri_net;
     pub mod language_of_alignments;
     pub mod lola_net;
@@ -145,8 +146,8 @@ pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 
 pub use ebi_activity_key;
 pub use ebi_arithmetic;
+pub use ebi_arithmetic::anyhow;
+pub use ebi_arithmetic::malachite;
+pub use ebi_arithmetic::rand;
 pub use ebi_bpmn;
 pub use ebi_derive;
-pub use ebi_arithmetic::anyhow;
-pub use ebi_arithmetic::rand;
-pub use ebi_arithmetic::malachite;

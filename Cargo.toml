@@ -1,6 +1,6 @@
 [package]
 name = "ebi_objects"
-version = "0.3.157"
+version = "0.3.158"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 keywords = ["stochastic-processes", "process-mining", "business-processes"]
@@ -33,7 +33,7 @@ testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" 
 ebi_activity_key = "0.0.1"
 ebi_arithmetic = "0.3.10"
 ebi_derive = "0.2.10"
-ebi_bpmn = "0.0.39"
+ebi_bpmn = "0.0.40"
 process_mining = "0.5.2"
 anyhow = "1.0.102"
 log = "0.4.28"

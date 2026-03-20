@@ -46,6 +46,9 @@ impl Exportable for PortableNetworkGraphics {
             EbiObject::FiniteStochasticLanguage(_) => {
                 Err(anyhow!("cannot export finite stochastic as PNG"))
             }
+            EbiObject::FiniteStochasticPartiallyOrderedLanguage(object) => {
+                object.to_png()?.export(f)
+            }
             EbiObject::LabelledPetriNet(object) => object.to_png()?.export(f),
             EbiObject::LanguageOfAlignments(_) => {
                 Err(anyhow!("cannot export language of alignments as PNG"))
