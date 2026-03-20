@@ -44,7 +44,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
     First, the probability of the trace.
     Second, the number of edges in the trace.
     Third, for each edge, 
-    (i) the word `silent' or the word `label ' directly followed by the activity label, or the phrase 'multiline label ' followed by the label, terminated with `\\#' (a `\\#' at the line end can be escaped with `\\#\\#').
+    (i) the word `silent' or the word `label ' directly followed by the activity label, or the phrase 'multiline label ' followed by the label, terminated with `\\$' (a `\\$' at the line end can be escaped with `\\$\\$').
     (ii) the number of input states,
     (iii) the input states, 
     (iv) the number of output states, and 
@@ -127,15 +127,14 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
             let mut max_state = 0;
 
             for edge_i in 0..number_of_edges {
-                let activity =
-                    read_activity(&mut lreader, &mut activity_key).with_context(|| {
-                        anyhow!(
-                            "Reading activity of edge {} of trace {} at line {}.",
-                            edge_i,
-                            trace_i,
-                            lreader.get_last_line_number()
-                        )
-                    })?;
+                let activity = lreader.next_activity(&mut activity_key).with_context(|| {
+                    anyhow!(
+                        "Reading activity of edge {} of trace {} at line {}.",
+                        edge_i,
+                        trace_i,
+                        lreader.get_last_line_number()
+                    )
+                })?;
                 edge_2_activity.push(activity);
 
                 //inputs
@@ -286,44 +285,13 @@ pub fn write_activity(
     if let Some(activity) = activity {
         let activity_label = activity_key.get_activity_label(&activity);
         if activity_label.contains("\n") {
-            let activity_label = activity_label.replace("#\n", "##\n");
-            writeln!(f, "multiline label {}#", activity_label)
+            let activity_label = activity_label.replace("$\n", "$$\n");
+            writeln!(f, "multiline label {}$", activity_label)
         } else {
             writeln!(f, "label {}", activity_label)
         }
     } else {
         writeln!(f, "silent")
-    }
-}
-
-pub fn read_activity(
-    lreader: &mut LineReader,
-    activity_key: &mut ActivityKey,
-) -> Result<Option<Activity>> {
-    let line = lreader
-        .next_line_string()
-        .with_context(|| format!("Failed to read activity."))?;
-
-    if line.trim_start().starts_with("label ") {
-        let label = line.trim_start()[6..].to_string();
-        let activity = activity_key.process_activity(&label);
-        Ok(Some(activity))
-    } else if line.trim_start().starts_with("multiline label ") {
-        let mut label = line.trim_start()[16..].to_string();
-        while !label.ends_with("#") && !label.ends_with("##") {
-            label += "\n";
-            label += &lreader.next_line_string().with_context(|| {
-                anyhow!("Was expecting a line ending with `#' to end a multiline label.")
-            })?;
-        }
-        label.pop(); //remove last #
-        label = label.replace("##\n", "#\n"); //un-escape ## at the end of the line to #
-
-        let activity = activity_key.process_activity(&label);
-        Ok(Some(activity))
-    } else {
-        //silent
-        Ok(None)
     }
 }
 
@@ -480,5 +448,22 @@ impl PartiallyOrderedTrace {
                 create_edge(graph, &midpoint, &state_2_node[*output], "");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::FiniteStochasticPartiallyOrderedLanguage;
+    use std::fs;
+
+    #[test]
+    fn spolang_import() {
+        let fin = fs::read_to_string(
+            "testfiles/regress_-_english_f28e862436f04ed9b8c4185607655706.bpmn.sbpmn.spolang",
+        )
+        .unwrap();
+        let _spolang = fin
+            .parse::<FiniteStochasticPartiallyOrderedLanguage>()
+            .unwrap();
     }
 }

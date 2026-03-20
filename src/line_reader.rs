@@ -1,3 +1,4 @@
+use ebi_activity_key::{Activity, ActivityKey};
 use ebi_arithmetic::Fraction;
 use ebi_arithmetic::anyhow::{Context, Result, anyhow};
 use std::io::BufRead;
@@ -112,5 +113,33 @@ impl<'a> LineReader<'a> {
             self.next_line_raw()?;
         }
         Ok(())
+    }
+
+    pub fn next_activity(&mut self, activity_key: &mut ActivityKey) -> Result<Option<Activity>> {
+        let line = self
+            .next_line_string()
+            .with_context(|| format!("Failed to read activity."))?;
+
+        if line.trim_start().starts_with("label ") {
+            let label = line.trim_start()[6..].to_string();
+            let activity = activity_key.process_activity(&label);
+            Ok(Some(activity))
+        } else if line.trim_start().starts_with("multiline label ") {
+            let mut label = line.trim_start()[16..].to_string();
+            while !label.ends_with("$") && !label.ends_with("$$") {
+                label += "\n";
+                label += &self.next_line_string().with_context(|| {
+                    anyhow!("Was expecting a line ending with `$' to end a multiline label.")
+                })?;
+            }
+            label.pop(); //remove last $
+            label = label.replace("$$\n", "$\n"); //un-escape $$ at the end of the line to $
+
+            let activity = activity_key.process_activity(&label);
+            Ok(Some(activity))
+        } else {
+            //silent
+            Ok(None)
+        }
     }
 }
