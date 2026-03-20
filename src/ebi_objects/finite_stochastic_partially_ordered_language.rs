@@ -395,6 +395,10 @@ impl PartiallyOrderedTrace {
         self.edge_2_activity.len()
     }
 
+    pub fn number_of_labelled_edges(&self) -> usize {
+        self.edge_2_activity.iter().filter(|x| x.is_some()).count()
+    }
+
     pub fn get_edge_activity(&self, edge: usize) -> Option<Activity> {
         *self.edge_2_activity.get(edge)?
     }
