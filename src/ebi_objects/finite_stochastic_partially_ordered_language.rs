@@ -437,13 +437,22 @@ impl PartiallyOrderedTrace {
         activity_key: &ActivityKey,
         graph: &mut VisualGraph,
     ) {
-        //start state
-        let start_state = create_place(graph, &format!("{:.4}", probability));
-
         //states
         let state_2_node = (0..self.number_of_states())
             .map(|_| create_dot(graph))
             .collect::<Vec<_>>();
+
+        //start state
+        let start_state = create_place(graph, &format!("{:.4}", probability));
+        for state in 0..self.number_of_states() {
+            if !self
+                .edge_2_outputs
+                .iter()
+                .any(|outputs| outputs.contains(&state))
+            {
+                create_edge(graph, &start_state, &state_2_node[state], "");
+            }
+        }
 
         //edges
         for edge in 0..self.number_of_edges() {
@@ -455,15 +464,11 @@ impl PartiallyOrderedTrace {
             };
 
             //connections
-            if !self.edge_2_inputs[edge].is_empty() {
-                for input in &self.edge_2_inputs[edge] {
-                    create_edge(graph, &state_2_node[*input], &midpoint, "");
-                }
-            } else {
-                create_edge(graph, &start_state, &midpoint, "");
+            for input in &self.edge_2_inputs[edge] {
+                create_edge(graph, &state_2_node[*input], &midpoint, "");
             }
             for output in &self.edge_2_outputs[edge] {
-                create_edge(graph, &state_2_node[*output], &midpoint, "");
+                create_edge(graph, &midpoint, &state_2_node[*output], "");
             }
         }
     }
