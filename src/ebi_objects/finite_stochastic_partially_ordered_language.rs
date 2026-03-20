@@ -9,8 +9,10 @@ use crate::{
     },
 };
 use anyhow::{Context, Error, Result, anyhow};
+#[cfg(any(test, feature = "testactivities"))]
+use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{
-    Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey, TestActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey,
     TranslateActivityKey,
 };
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
