@@ -462,10 +462,7 @@ mod tests {
 
     #[test]
     fn spolang_import() {
-        let fin = fs::read_to_string(
-            "testfiles/regress_-_english_f28e862436f04ed9b8c4185607655706.bpmn.sbpmn.spolang",
-        )
-        .unwrap();
+        let fin = fs::read_to_string("testfiles/flower.sbpmn.spolang").unwrap();
         let _spolang = fin
             .parse::<FiniteStochasticPartiallyOrderedLanguage>()
             .unwrap();
