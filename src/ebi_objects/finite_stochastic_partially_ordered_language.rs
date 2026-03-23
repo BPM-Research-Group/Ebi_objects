@@ -44,7 +44,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
     First, the probability of the trace.
     Second, the number of edges in the trace.
     Third, for each edge, 
-    (i) the word `silent' or the word `label ' directly followed by the activity label, or the phrase 'multiline label ' followed by the label, terminated with `\\$' (a `\\$' at the line end can be escaped with `\\$\\$').
+    (i) the word `silent' or the word `label ' directly followed by the activity label, or a line with `multiline label' followed by the label, terminated with a line `multiline\\$' (a `\\$' at each line end can be escaped with `\\$\\$').
     (ii) the number of input states,
     (iii) the input states, 
     (iv) the number of output states, and 
@@ -127,14 +127,16 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
             let mut max_state = 0;
 
             for edge_i in 0..number_of_edges {
-                let activity = lreader.next_activity_or_silent(&mut activity_key).with_context(|| {
-                    anyhow!(
-                        "Reading activity of edge {} of trace {} at line {}.",
-                        edge_i,
-                        trace_i,
-                        lreader.get_last_line_number()
-                    )
-                })?;
+                let activity = lreader
+                    .next_activity_or_silent(&mut activity_key)
+                    .with_context(|| {
+                        anyhow!(
+                            "Reading activity of edge {} of trace {} at line {}.",
+                            edge_i,
+                            trace_i,
+                            lreader.get_last_line_number()
+                        )
+                    })?;
                 edge_2_activity.push(activity);
 
                 //inputs
@@ -253,7 +255,11 @@ impl Display for FiniteStochasticPartiallyOrderedLanguage {
             writeln!(f, "#\tnumber of edges\n{}", trace.number_of_edges())?;
             for edge in 0..trace.number_of_edges() {
                 writeln!(f, "#\tedge {}", edge)?;
-                write_activity(f, trace.get_edge_activity(edge), &self.activity_key)?;
+                LineReader::write_activity_or_silent(
+                    f,
+                    trace.get_edge_activity(edge),
+                    &self.activity_key,
+                )?;
                 writeln!(
                     f,
                     "#\t\tnumber of input states\n{}",
@@ -274,24 +280,6 @@ impl Display for FiniteStochasticPartiallyOrderedLanguage {
         }
 
         write!(f, "")
-    }
-}
-
-pub fn write_activity(
-    f: &mut std::fmt::Formatter<'_>,
-    activity: Option<Activity>,
-    activity_key: &ActivityKey,
-) -> std::fmt::Result {
-    if let Some(activity) = activity {
-        let activity_label = activity_key.get_activity_label(&activity);
-        if activity_label.contains("\n") {
-            let activity_label = activity_label.replace("$\n", "$$\n");
-            writeln!(f, "multiline label {}$", activity_label)
-        } else {
-            writeln!(f, "label {}", activity_label)
-        }
-    } else {
-        writeln!(f, "silent")
     }
 }
 

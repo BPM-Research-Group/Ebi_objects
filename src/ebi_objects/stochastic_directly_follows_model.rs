@@ -9,7 +9,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
@@ -166,7 +166,10 @@ impl Importable for StochasticDirectlyFollowsModel {
     This first line is exactly `directly follows model'.\\
     The second line is a boolean indicating whether the model supports empty traces.\\
     The third line is the number of activities in the model.\\
-    The following lines each contain an activity. Duplicated labels are accepted.\\
+    The following lines each contain an activity. 
+    For a single-line activity, escape a starting `\\$' by doubling it to `\\$'.
+    For a multiline activity, start with a line `$multiline', and end with a line `multiline\\$'
+    To end any line end with `$', double it to `\\$\\$'.\\
     The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity, followed by a `w` and the weight of the start activity.\\
     The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity, followed by a `w` and the weight of the end activity.\\
     The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity, then a `w`, and then the weight of the transition.
@@ -215,10 +218,9 @@ impl Importable for StochasticDirectlyFollowsModel {
         let mut activity_key = ActivityKey::new();
         let mut node_2_activity = vec![];
         for activity in 0..number_of_nodes {
-            let label = lreader
-                .next_line_string()
-                .with_context(|| format!("could not read node {}", activity))?;
-            let activity = activity_key.process_activity(&label);
+            let activity = lreader
+                .next_activity(&mut activity_key)
+                .with_context(|| format!("Could not read node {}.", activity))?;
             node_2_activity.push(activity);
         }
 
@@ -361,12 +363,8 @@ impl Display for StochasticDirectlyFollowsModel {
         //activities
         writeln!(f, "# number of nodes\n{}", self.node_2_activity.len())?;
         for (a, activity) in self.node_2_activity.iter().enumerate() {
-            writeln!(
-                f,
-                "#node {}\n{}",
-                a,
-                self.activity_key.get_activity_label(activity)
-            )?;
+            writeln!(f, "#node {}", a,)?;
+            LineReader::write_multiline_activity(f, activity, &self.activity_key)?;
         }
 
         //start activities

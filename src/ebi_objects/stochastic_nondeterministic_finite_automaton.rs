@@ -9,7 +9,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
@@ -409,15 +409,12 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
                 self.targets[transition],
                 self.probabilities[transition]
             )?;
-            if let Some(act) = self.activities[transition] {
-                writeln!(
-                    f,
-                    "# activity\nlabel {}",
-                    self.activity_key.get_activity_label(&act)
-                )?;
-            } else {
-                writeln!(f, "# activity\nsilent")?;
-            }
+            writeln!(f, "# activity")?;
+            LineReader::write_activity_or_silent(
+                f,
+                self.activities[transition],
+                &self.activity_key,
+            )?;
         }
         Ok(())
     }
@@ -435,7 +432,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
     (i) the source state of the transition;
     (ii) the target state of the transition;
     (iii) the probability of the transition;
-    (iv) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled.
+    (iv) the word `silent' or the word `label ' directly followed by the activity label, or a line with `multiline label' followed by the label, terminated with a line `multiline\\$' (a `\\$' at each line end can be escaped with `\\$\\$').
 
     A stochastic non-deterministic finite automaton will have one probability for each (source, activity, target).
     
@@ -541,22 +538,9 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
             }
 
             //read label
-            let label_line = lreader
-                .next_line_string()
-                .with_context(|| format!("failed to read label of transition {}", transition))?;
-            let label = if label_line.trim_start().starts_with("label ") {
-                let label = label_line.trim_start()[6..].to_string();
-                let activity = result.activity_key.process_activity(&label);
-                Some(activity)
-            } else if label_line.trim_start().starts_with("silent") {
-                None
-            } else {
-                return Err(anyhow!(
-                    "could not read label of transition {}: expected 'silent' or 'label ', but found '{}'",
-                    transition,
-                    label_line
-                ));
-            };
+            let label = lreader
+                .next_activity_or_silent(&mut result.activity_key)
+                .with_context(|| anyhow!("Reading label of transition {}", transition))?;
 
             result
                 .add_transition(source, label, target, probability)

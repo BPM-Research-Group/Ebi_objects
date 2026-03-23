@@ -1,6 +1,7 @@
 use ebi_activity_key::{Activity, ActivityKey};
 use ebi_arithmetic::Fraction;
 use ebi_arithmetic::anyhow::{Context, Result, anyhow};
+use std::fmt;
 use std::io::BufRead;
 
 pub struct LineReader<'a> {
@@ -127,19 +128,27 @@ impl<'a> LineReader<'a> {
             let label = line.trim_start()[6..].to_string();
             let activity = activity_key.process_activity(&label);
             Ok(Some(activity))
-        } else if line.trim_start().starts_with("multiline label ") {
-            let mut label = line.trim_start()[16..].to_string();
-            while !label.ends_with("$") && !label.ends_with("$$") {
+        } else if line.trim_start() == "multiline label" {
+            let mut last_line = self
+                .next_line_string()
+                .with_context(|| anyhow!("Starting with multiline activity."))?;
+            let mut label = String::new();
+            let line_number = self.get_last_line_number();
+
+            while last_line != "multiline$" {
+                if last_line.ends_with("$") {
+                    last_line.pop();
+                }
+                label += &last_line;
                 label += "\n";
-                label += &self.next_line_string().with_context(|| {
-                    anyhow!("Was expecting a line ending with `$' to end a multiline label.")
+                last_line = self.next_line_string().with_context(|| {
+                    anyhow!("Was expecting a line `multiline$' to end a multiline label that started on line {}.", line_number)
                 })?;
             }
-            label.pop(); //remove last $
-            label = label.replace("$$\n", "$\n"); //un-escape $$ at the end of the line to $
 
+            label.pop(); //remove the last \n
             let activity = activity_key.process_activity(&label);
-            Ok(Some(activity))
+            return Ok(Some(activity));
         } else {
             //silent
             Ok(None)
@@ -147,35 +156,119 @@ impl<'a> LineReader<'a> {
     }
 
     pub fn next_activity(&mut self, activity_key: &mut ActivityKey) -> Result<Activity> {
-        let mut line = self
+        let l = self
             .next_line_string()
             .with_context(|| format!("Failed to read activity."))?;
+        let mut line = l.as_str();
+        let line_number = self.get_last_line_number();
 
-        //count starting $s
-        let ampersands = line.chars().count() - line.trim_start_matches("&").chars().count();
-        if ampersands % 2 == 0 {
-            //even number of ampersands -> single-line, but half their number
-            for _ in 0..ampersands / 2 {
-                line.remove(0);
-            }
-            let activity = activity_key.process_activity(&line);
-            Ok(activity)
-        } else {
-            //odd number of ampersands -> multiline
-            line.remove(0);
+        //decide on multiline
+        if line == "$multiline" {
+            //multiline
 
-            let mut label = line.trim_start()[1..].to_string();
-            while !label.trim_end().ends_with("$") && !label.trim_end().ends_with("$$") {
+            let mut last_line = self
+                .next_line_string()
+                .with_context(|| anyhow!("Starting with multiline activity."))?;
+            let mut label = String::new();
+
+            while last_line != "multiline$" {
+                if last_line.ends_with("$") {
+                    last_line.pop();
+                }
+                label += &last_line;
                 label += "\n";
-                label += &self.next_line_string().with_context(|| {
-                    anyhow!("Was expecting a line ending with `$' to end a multiline label.")
+                last_line = self.next_line_string().with_context(|| {
+                    anyhow!("Was expecting a line `multiline$' to end a multiline label that started on line {}.", line_number)
                 })?;
             }
-            label.pop(); //remove last $
-            label = label.replace("$$\n", "$\n"); //un-escape $$ at the end of the line to $
 
+            label.pop(); //remove the last \n
             let activity = activity_key.process_activity(&label);
-            Ok(activity)
+            return Ok(activity);
         }
+
+        if line.starts_with("$") {
+            line = &line[1..];
+        }
+
+        //single line
+        let activity = activity_key.process_activity(line);
+        Ok(activity)
+    }
+
+    pub fn write_multiline_activity(
+        f: &mut fmt::Formatter,
+        activity: &Activity,
+        activity_key: &ActivityKey,
+    ) -> fmt::Result {
+        let label = activity_key.deprocess_activity(activity);
+        if !label.contains("\n") {
+            if label.starts_with("$") {
+                writeln!(f, "${}", label)
+            } else {
+                writeln!(f, "{}", label)
+            }
+        } else {
+            writeln!(f, "$multiline")?;
+            write!(f, "{}", (label.to_owned() + "\n").replace("$\n", "$$\n"))?;
+            writeln!(f, "multiline$")
+        }
+    }
+
+    pub fn write_activity_or_silent(
+        f: &mut std::fmt::Formatter<'_>,
+        activity: Option<Activity>,
+        activity_key: &ActivityKey,
+    ) -> std::fmt::Result {
+        if let Some(activity) = activity {
+            let activity_label = activity_key.get_activity_label(&activity);
+            if activity_label.contains("\n") {
+                let activity_label = (activity_label.to_owned() + "\n").replace("$\n", "$$\n");
+                writeln!(f, "multiline label\n{}multiline$", activity_label)
+            } else {
+                writeln!(f, "label {}", activity_label)
+            }
+        } else {
+            writeln!(f, "silent")
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Exportable, FiniteStochasticLanguage, FiniteStochasticPartiallyOrderedLanguage};
+    use std::fs;
+
+    #[test]
+    fn activity_read_write_slang() {
+        let fin = fs::read_to_string("testfiles/multiline.slang").unwrap();
+        let mut slang = fin.parse::<FiniteStochasticLanguage>().unwrap();
+
+        let act = slang
+            .activity_key
+            .process_activity("a\nbcde\nfghi$$\nmultiline$");
+        let act2 = slang.activity_key.process_activity("$multiline");
+        println!("{:?}", slang.activity_key);
+        assert!(slang.activity_key.get_id_from_activity(act) < 2);
+        assert!(slang.activity_key.get_id_from_activity(act2) < 2);
+
+        let mut fout: Vec<u8> = vec![];
+        slang.export(&mut fout).unwrap();
+        assert_eq!(String::from_utf8_lossy(&fout), fin);
+    }
+
+    #[test]
+    fn activity_read_write_psolang() {
+        let fin = fs::read_to_string("testfiles/multiline.spolang").unwrap();
+        let mut slang = fin
+            .parse::<FiniteStochasticPartiallyOrderedLanguage>()
+            .unwrap();
+
+        let act = slang.activity_key.process_activity("a$\nbcde$\nmultiline$");
+        assert!(slang.activity_key.get_id_from_activity(act) < 2);
+
+        let mut fout: Vec<u8> = vec![];
+        slang.export(&mut fout).unwrap();
+        assert_eq!(String::from_utf8_lossy(&fout), fin);
     }
 }

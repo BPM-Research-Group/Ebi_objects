@@ -343,7 +343,7 @@ impl Importable for StochasticLabelledPetriNet {
     The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
     The next line is the number of transitions in the net.
     Then, for each transition, the following lines are next: 
-    (i) the word `silent' or the word `label' followed by a space and the name of the activity with which the transition is labelled;
+    (i) the word `silent' or the word `label ' directly followed by the activity label, or a line with `multiline label' followed by the label, terminated with a line `multiline\\$' (a `\\$' at each line end can be escaped with `\\$\\$');
     (ii) the weight of the transition, which may be any fraction or decimal number, even 0 or negative;
     (iii) the number of input places, followed by a line for each input place with the index of the place;
     (iiii) the number of output places, followed by a line for each output place with the index of the place.
@@ -415,18 +415,11 @@ impl Importable for StochasticLabelledPetriNet {
             vec![vec![]; number_of_transitions];
 
         for transition in 0..number_of_transitions {
-            let label_line = lreader
-                .next_line_string()
-                .with_context(|| format!("failed to read label of transition {}", transition))?;
-
-            //read label
-            if label_line.trim_start().starts_with("label ") {
-                let label = label_line.trim_start()[6..].to_string();
-                let activity = activity_key.process_activity(&label);
-                labels.push(Some(activity));
-            } else {
-                labels.push(None);
-            }
+            labels.push(
+                lreader
+                    .next_activity_or_silent(&mut activity_key)
+                    .with_context(|| anyhow!("Reading label of transition {}.", transition))?,
+            );
 
             //read weight
             {

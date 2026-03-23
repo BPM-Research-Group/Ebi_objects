@@ -116,7 +116,7 @@ impl Display for FiniteLanguage {
 
             writeln!(f, "# number of events\n{}", trace.len())?;
             for activity in trace {
-                writeln!(f, "{}", self.activity_key.get_activity_label(activity))?;
+                LineReader::write_multiline_activity(f, activity, &self.activity_key)?;
             }
         }
 
@@ -131,6 +131,9 @@ impl Importable for FiniteLanguage {
     The second line is the number of traces in the language.
     For each trace, the first line contains the number of events in the trace.
     Then, each subsequent line contains the activity name of one event.
+    For a single-line event, escape a starting `\\$' by doubling it to `\\$'.
+    For a multiline event, start with a line `$multiline', and end with a line `multiline\\$'
+    To end any line end with `$', double it to `\\$\\$'.
     
     For instance:
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lang}";
@@ -180,18 +183,10 @@ impl Importable for FiniteLanguage {
             trace.reserve_exact(number_of_events);
 
             for event_i in 0..number_of_events {
-                let event = lreader.next_line_string().with_context(|| {
-                    format!(
-                        "failed to read event {} of trace {} at line {}",
-                        event_i,
-                        trace_i,
-                        lreader.get_last_line_number()
-                    )
-                })?;
-                trace.push(event);
+                trace.push(lreader.next_activity(&mut activity_key).with_context(|| {
+                    format!("failed to read event {} of trace {}", event_i, trace_i)
+                })?);
             }
-
-            let trace = activity_key.process_trace(&trace);
 
             if !traces.insert(trace) {
                 return Err(anyhow!(

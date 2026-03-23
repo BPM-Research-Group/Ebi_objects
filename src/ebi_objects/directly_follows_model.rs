@@ -188,7 +188,9 @@ impl Importable for DirectlyFollowsModel {
     This first line is exactly `directly follows model'.\\
     The second line is a boolean indicating whether the model supports empty traces.\\
     The third line is the number of activities in the model.\\
-    The following lines each contain an activity. Duplicated labels are accepted.\\
+    For a single-line activity, escape a starting `$' by doubling it to `$'.
+    For a multiline activity, start with a line `$multiline', and end with a line `multiline$'
+    To end any line end with `$', double it to `$$'.\\
     The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity.\\
     The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity.\\
     The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity.
@@ -319,12 +321,8 @@ impl Display for DirectlyFollowsModel {
         //activities
         writeln!(f, "# number of activites\n{}", self.node_2_activity.len())?;
         for (a, activity) in self.node_2_activity.iter().enumerate() {
-            writeln!(
-                f,
-                "#activity {}\n{}",
-                a,
-                self.activity_key.get_activity_label(activity)
-            )?;
+            writeln!(f, "#activity {}", a)?;
+            LineReader::write_multiline_activity(f, activity, &self.activity_key)?;
         }
 
         //start activities

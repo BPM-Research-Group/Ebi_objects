@@ -18,7 +18,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
+use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
@@ -143,6 +143,9 @@ impl Importable for FiniteStochasticLanguage {
     For each trace, the first line is the probability of the trace as a positive fraction or a decimal value.
     The second line contains the number of events in the trace.
     Then, each subsequent line contains the activity name of one event.
+    For a single-line event, escape a starting `\\$' by doubling it to `\\$'.
+    For a multiline event, start with a line `$multiline', and end with a line `multiline\\$'
+    To end any line end with `$', double it to `\\$\\$'.
 
     The sum of the probabilities of the traces in the language needs to be $\\leq$ 1.
     
@@ -219,18 +222,11 @@ impl Importable for FiniteStochasticLanguage {
             trace.reserve_exact(number_of_events);
 
             for event_i in 0..number_of_events {
-                let event = lreader.next_line_string().with_context(|| {
-                    format!(
-                        "failed to read event {} of trace {} at line {}",
-                        event_i,
-                        trace_i,
-                        lreader.get_last_line_number()
-                    )
-                })?;
-                trace.push(event);
+                trace.push(lreader.next_activity(&mut activity_key).with_context(|| {
+                    format!("failed to read event {} of trace {}", event_i, trace_i,)
+                })?);
             }
 
-            let trace = activity_key.process_trace(&trace);
             if traces.insert(trace, probability).is_some() {
                 return Err(anyhow!(
                     "trace {} ending at line {} appears twice in language",
@@ -314,7 +310,7 @@ impl fmt::Display for FiniteStochasticLanguage {
 
             writeln!(f, "# number of events\n{}", trace.len())?;
             for event in trace {
-                writeln!(f, "{}", self.activity_key.get_activity_label(event))?;
+                LineReader::write_multiline_activity(f, event, &self.activity_key)?
             }
         }
 
