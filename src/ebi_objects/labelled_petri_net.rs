@@ -20,7 +20,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Context, Ok, Result, anyhow, Error};
+use ebi_arithmetic::anyhow::{Context, Error, Ok, Result, anyhow};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{
@@ -35,7 +35,7 @@ pub const HEADER: &str = "labelled Petri net";
 #[derive(Clone, Debug, ActivityKey)]
 pub struct LabelledPetriNet {
     pub activity_key: ActivityKey,
-    pub initial_marking: Marking,
+    pub initial_marking: Option<Marking>,
     pub labels: Vec<Option<Activity>>,
     pub place2output_transitions: Vec<Vec<usize>>,
     pub transition2input_places: Vec<Vec<usize>>,
@@ -48,7 +48,7 @@ impl LabelledPetriNet {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            initial_marking: Marking::new(0),
+            initial_marking: Some(Marking::new(0)),
             labels: vec![],
             place2output_transitions: vec![],
             transition2input_places: vec![],
@@ -61,7 +61,7 @@ impl LabelledPetriNet {
     pub fn new_empty_language() -> Self {
         return Self {
             activity_key: ActivityKey::new(),
-            initial_marking: Marking::new(0),
+            initial_marking: None,
             labels: vec![None],
             transition2input_places: vec![vec![]],
             transition2output_places: vec![vec![]],
@@ -79,7 +79,7 @@ impl LabelledPetriNet {
         self.transition2input_places.len()
     }
 
-    pub fn get_initial_marking(&self) -> &Marking {
+    pub fn get_initial_marking(&self) -> &Option<Marking> {
         &self.initial_marking
     }
 
@@ -94,11 +94,13 @@ impl LabelledPetriNet {
     pub fn add_place(&mut self) -> usize {
         let place = self.get_number_of_places();
         self.place2output_transitions.push(vec![]);
-        self.initial_marking.add_place();
+        if let Some(initial_marking) = &mut self.initial_marking {
+            initial_marking.add_place();
+        }
         place
     }
 
-    pub fn get_initial_marking_mut(&mut self) -> &mut Marking {
+    pub fn get_initial_marking_mut(&mut self) -> &mut Option<Marking> {
         &mut self.initial_marking
     }
 
@@ -332,53 +334,57 @@ impl fmt::Display for LabelledPetriNet {
         writeln!(f, "{}", HEADER)?;
         writeln!(f, "# number of places\n{}", self.get_number_of_places())?;
 
-        writeln!(f, "# initial marking")?;
-        for place in self.initial_marking.get_place2token() {
-            writeln!(f, "{}", place)?;
-        }
-
-        writeln!(
-            f,
-            "# number of transitions\n{}",
-            self.transition2input_places.len()
-        )?;
-
-        for transition in 0..self.transition2input_places.len() {
-            writeln!(f, "# transition {}", transition)?;
-
-            if let Some(activity) = self.get_transition_label(transition) {
-                writeln!(
-                    f,
-                    "label {}",
-                    self.activity_key.get_activity_label(&activity)
-                )?;
-            } else {
-                writeln!(f, "silent")?;
+        if let Some(initial_marking) = &self.initial_marking {
+            writeln!(f, "# initial marking")?;
+            for place in initial_marking.get_place2token() {
+                writeln!(f, "{}", place)?;
             }
 
-            let number_of_input_places = self.transition2input_places[transition]
-                .iter()
-                .enumerate()
-                .map(|(pos, _)| self.transition2input_places_cardinality[transition][pos])
-                .sum::<u64>();
-            writeln!(f, "# number of input places\n{}", number_of_input_places)?;
-            for (pos, place) in self.transition2input_places[transition].iter().enumerate() {
-                for _ in 0..self.transition2input_places_cardinality[transition][pos] {
-                    writeln!(f, "{}", place)?;
+            writeln!(
+                f,
+                "# number of transitions\n{}",
+                self.transition2input_places.len()
+            )?;
+
+            for transition in 0..self.transition2input_places.len() {
+                writeln!(f, "# transition {}", transition)?;
+
+                if let Some(activity) = self.get_transition_label(transition) {
+                    writeln!(
+                        f,
+                        "label {}",
+                        self.activity_key.get_activity_label(&activity)
+                    )?;
+                } else {
+                    writeln!(f, "silent")?;
+                }
+
+                let number_of_input_places = self.transition2input_places[transition]
+                    .iter()
+                    .enumerate()
+                    .map(|(pos, _)| self.transition2input_places_cardinality[transition][pos])
+                    .sum::<u64>();
+                writeln!(f, "# number of input places\n{}", number_of_input_places)?;
+                for (pos, place) in self.transition2input_places[transition].iter().enumerate() {
+                    for _ in 0..self.transition2input_places_cardinality[transition][pos] {
+                        writeln!(f, "{}", place)?;
+                    }
+                }
+
+                let number_of_output_places = self.transition2output_places[transition]
+                    .iter()
+                    .enumerate()
+                    .map(|(pos, _)| self.transition2output_places_cardinality[transition][pos])
+                    .sum::<u64>();
+                writeln!(f, "# number of output places\n{}", number_of_output_places)?;
+                for (pos, place) in self.transition2output_places[transition].iter().enumerate() {
+                    for _ in 0..self.transition2output_places_cardinality[transition][pos] {
+                        writeln!(f, "{}", place)?;
+                    }
                 }
             }
-
-            let number_of_output_places = self.transition2output_places[transition]
-                .iter()
-                .enumerate()
-                .map(|(pos, _)| self.transition2output_places_cardinality[transition][pos])
-                .sum::<u64>();
-            writeln!(f, "# number of output places\n{}", number_of_output_places)?;
-            for (pos, place) in self.transition2output_places[transition].iter().enumerate() {
-                for _ in 0..self.transition2output_places_cardinality[transition][pos] {
-                    writeln!(f, "{}", place)?;
-                }
-            }
+        } else {
+            writeln!(f, "empty language")?;
         }
 
         write!(f, "")
@@ -388,7 +394,8 @@ impl fmt::Display for LabelledPetriNet {
 impl Importable for LabelledPetriNet {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A labelled Petri net is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `labelled Petri net'.
-    The second line is the number of places in the net.
+    If the second is line is exactly `empty language', then the model is considered to have an empty language and parsing stops.
+    Otherwise, the second line is the number of places in the net.
     The lines thereafter contain the initial marking: each place has its own line with the number of tokens on that place in the initial marking.
     The next line is the number of transitions in the net.
     Then, for each transition, the following lines are next: 
@@ -428,9 +435,16 @@ impl Importable for LabelledPetriNet {
 
         let mut activity_key = ActivityKey::new();
 
-        let number_of_places = lreader
-            .next_line_index()
-            .context("failed to read number of places")?;
+        let number_of_places_line = lreader
+            .next_line_string()
+            .with_context(|| "Attempting to read `empty language' or a number of places.")?;
+        let number_of_places = if number_of_places_line.trim() == "empty language" {
+            return Ok(Self::new_empty_language());
+        } else {
+            number_of_places_line
+                .parse::<usize>()
+                .with_context(|| anyhow!("Failed to read number of places."))?
+        };
         let mut place2output_transitions = vec![vec![]; number_of_places];
 
         //read initial marking
@@ -549,9 +563,9 @@ impl Importable for LabelledPetriNet {
 
         Ok(LabelledPetriNet {
             activity_key,
-            initial_marking: Marking {
+            initial_marking: Some(Marking {
                 place2token: initial_marking,
-            },
+            }),
             labels,
             place2output_transitions,
             transition2input_places,
@@ -567,65 +581,71 @@ impl Graphable for LabelledPetriNet {
     fn to_dot(&self) -> Result<VisualGraph> {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
-        let mut places = vec![];
-        for place in 0..self.get_number_of_places() {
-            let label = if let Some(marked) = self.initial_marking.place2token.get(place) {
-                if marked > &0 {
-                    marked.to_string()
+        if let Some(initial_marking) = &self.initial_marking {
+            let mut places = vec![];
+            for place in 0..self.get_number_of_places() {
+                let label = if let Some(marked) = initial_marking.place2token.get(place) {
+                    if marked > &0 {
+                        marked.to_string()
+                    } else {
+                        "".to_string()
+                    }
                 } else {
                     "".to_string()
-                }
-            } else {
-                "".to_string()
-            };
+                };
 
-            places.push(graphable::create_place(&mut graph, &label));
-        }
-
-        for transition in 0..self.transition2input_places.len() {
-            let node = if let Some(activity) = self.get_transition_label(transition) {
-                graphable::create_transition(
-                    &mut graph,
-                    self.activity_key.get_activity_label(&activity),
-                    "",
-                )
-            } else {
-                graphable::create_silent_transition(&mut graph, "")
-            };
-
-            for (pos, inplace) in self.transition2input_places[transition].iter().enumerate() {
-                let place_node = places.get(*inplace).unwrap();
-                if self.transition2input_places_cardinality[transition][pos] > 1 {
-                    graphable::create_edge(
-                        &mut graph,
-                        place_node,
-                        &node,
-                        &format!(
-                            "{}",
-                            self.transition2input_places_cardinality[transition][pos]
-                        ),
-                    );
-                } else {
-                    graphable::create_edge(&mut graph, place_node, &node, "");
-                }
+                places.push(graphable::create_place(&mut graph, &label));
             }
 
-            for (pos, outplace) in self.transition2output_places[transition].iter().enumerate() {
-                let place_node = places.get(*outplace).unwrap();
-                if self.transition2output_places_cardinality[transition][pos] > 1 {
-                    graphable::create_edge(
+            for transition in 0..self.transition2input_places.len() {
+                let node = if let Some(activity) = self.get_transition_label(transition) {
+                    graphable::create_transition(
                         &mut graph,
-                        &node,
-                        place_node,
-                        &format!(
-                            "{}",
-                            self.transition2output_places_cardinality[transition][pos]
-                        ),
-                    );
+                        self.activity_key.get_activity_label(&activity),
+                        "",
+                    )
                 } else {
-                    graphable::create_edge(&mut graph, &node, place_node, "");
+                    graphable::create_silent_transition(&mut graph, "")
+                };
+
+                for (pos, inplace) in self.transition2input_places[transition].iter().enumerate() {
+                    let place_node = places.get(*inplace).unwrap();
+                    if self.transition2input_places_cardinality[transition][pos] > 1 {
+                        graphable::create_edge(
+                            &mut graph,
+                            place_node,
+                            &node,
+                            &format!(
+                                "{}",
+                                self.transition2input_places_cardinality[transition][pos]
+                            ),
+                        );
+                    } else {
+                        graphable::create_edge(&mut graph, place_node, &node, "");
+                    }
+                }
+
+                for (pos, outplace) in self.transition2output_places[transition].iter().enumerate()
+                {
+                    let place_node = places.get(*outplace).unwrap();
+                    if self.transition2output_places_cardinality[transition][pos] > 1 {
+                        graphable::create_edge(
+                            &mut graph,
+                            &node,
+                            place_node,
+                            &format!(
+                                "{}",
+                                self.transition2output_places_cardinality[transition][pos]
+                            ),
+                        );
+                    } else {
+                        graphable::create_edge(&mut graph, &node, place_node, "");
+                    }
                 }
             }
+        } else {
+            //empty initial marking
+            graphable::create_transition(&mut graph, "empty language", "");
         }
 
         Ok(graph)

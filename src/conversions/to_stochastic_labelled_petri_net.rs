@@ -6,9 +6,8 @@ use crate::{
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     },
-    marking::Marking,
 };
-use ebi_arithmetic::{Fraction, One, Signed};
+use ebi_arithmetic::Signed;
 
 impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet {
     fn from(value: StochasticDeterministicFiniteAutomaton) -> Self {
@@ -40,6 +39,8 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
             let source = state2place[initial_state];
             result
                 .get_initial_marking_mut()
+                .as_mut()
+                .unwrap()
                 .increase(source, 1)
                 .unwrap();
 
@@ -67,18 +68,8 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
 
             StochasticLabelledPetriNet::from((result, weights))
         } else {
-            //SDFA has an empty language, return a livelocked SLPN
-            Self {
-                activity_key: value.activity_key,
-                initial_marking: Marking::new(0),
-                labels: vec![None],
-                transition2input_places: vec![vec![]],
-                transition2output_places: vec![vec![]],
-                transition2input_places_cardinality: vec![vec![]],
-                transition2output_places_cardinality: vec![vec![]],
-                place2output_transitions: vec![],
-                weights: vec![Fraction::one()],
-            }
+            //SDFA has an empty language, return an SLPN with the empty language
+            Self::new_empty_language()
         }
     }
 }
@@ -99,6 +90,8 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
         let sink = result.add_place();
         result
             .get_initial_marking_mut()
+            .as_mut()
+            .unwrap()
             .increase(source, 1)
             .unwrap();
 
@@ -196,18 +189,8 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
         log::info!("convert SNFA to SLPN");
 
         if value.initial_state.is_none() {
-            //SNFA has an empty language, return a livelocked SLPN
-            return Self {
-                activity_key: value.activity_key,
-                initial_marking: Marking::new(0),
-                labels: vec![None],
-                transition2input_places: vec![vec![]],
-                transition2output_places: vec![vec![]],
-                transition2input_places_cardinality: vec![vec![]],
-                transition2output_places_cardinality: vec![vec![]],
-                place2output_transitions: vec![],
-                weights: vec![Fraction::one()],
-            };
+            //SNFA has an empty language, return an SLPN with the empty language
+            return Self::new_empty_language();
         }
 
         let mut result = LabelledPetriNet::new();
@@ -216,6 +199,8 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
         let source = result.add_place();
         result
             .get_initial_marking_mut()
+            .as_mut()
+            .unwrap()
             .increase(source, 1)
             .unwrap();
 

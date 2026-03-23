@@ -21,91 +21,96 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
     fn try_from(lpn: &LabelledPetriNet) -> std::result::Result<Self, Self::Error> {
         log::info!("Convert LPN into PNML.");
 
-        let mut result = PetriNet::new();
+        if let Some(initial_marking) = &lpn.initial_marking {
+            let mut result = PetriNet::new();
 
-        //create places
-        let mut place2new_place = HashMap::new();
-        {
-            for place in 0..lpn.get_number_of_places() {
-                let new_place = result.add_place(None);
-                place2new_place.insert(place, new_place);
+            //create places
+            let mut place2new_place = HashMap::new();
+            {
+                for place in 0..lpn.get_number_of_places() {
+                    let new_place = result.add_place(None);
+                    place2new_place.insert(place, new_place);
+                }
             }
-        }
 
-        //create transitions
-        for transition in 0..lpn.transition2input_places.len() {
-            let new_transition = result.add_transition(
-                match lpn.get_transition_label(transition) {
-                    Some(activity) => {
-                        Some(lpn.activity_key.get_activity_label(&activity).to_string())
+            //create transitions
+            for transition in 0..lpn.transition2input_places.len() {
+                let new_transition = result.add_transition(
+                    match lpn.get_transition_label(transition) {
+                        Some(activity) => {
+                            Some(lpn.activity_key.get_activity_label(&activity).to_string())
+                        }
+                        None => None,
+                    },
+                    None,
+                );
+
+                //incoming
+                {
+                    //transform to a map of places and arc weights
+                    let mut map = HashMap::new();
+                    for (pos, place) in lpn.transition2input_places[transition].iter().enumerate() {
+                        *map.entry(*place).or_insert(0) += u32::try_from(
+                            lpn.transition2input_places_cardinality[transition][pos],
+                        )?;
                     }
-                    None => None,
-                },
-                None,
-            );
 
-            //incoming
-            {
-                //transform to a map of places and arc weights
-                let mut map = HashMap::new();
-                for (pos, place) in lpn.transition2input_places[transition].iter().enumerate() {
-                    *map.entry(*place).or_insert(0) +=
-                        u32::try_from(lpn.transition2input_places_cardinality[transition][pos])?;
+                    //add
+                    for (place, weight) in map {
+                        let new_place = place2new_place
+                            .get(&place)
+                            .ok_or(anyhow!("Non-existing place referenced."))?;
+                        result.add_arc(
+                            ArcType::place_to_transition(*new_place, new_transition),
+                            Some(weight),
+                        );
+                    }
                 }
 
-                //add
-                for (place, weight) in map {
+                //outgoing
+                {
+                    //transform to a map of places and arc weights
+                    let mut map = HashMap::new();
+                    for (pos, place) in lpn.transition2output_places[transition].iter().enumerate()
+                    {
+                        *map.entry(*place).or_insert(0) += u32::try_from(
+                            lpn.transition2output_places_cardinality[transition][pos],
+                        )?;
+                    }
+
+                    //add
+                    for (place, weight) in map {
+                        let new_place = place2new_place
+                            .get(&place)
+                            .ok_or(anyhow!("Non-existing place referenced."))?;
+                        result.add_arc(
+                            ArcType::transition_to_place(new_transition, *new_place),
+                            // Some(weight.to_u32().ok_or(anyhow!("value out of bounds"))?),
+                            Some(weight),
+                        );
+                    }
+                }
+            }
+
+            //initial marking
+            let mut new_initial_marking = petri_net::Marking::new();
+            for (place, cardinality) in initial_marking.get_place2token().into_iter().enumerate() {
+                if cardinality > &0u64 {
                     let new_place = place2new_place
                         .get(&place)
                         .ok_or(anyhow!("Non-existing place referenced."))?;
-                    result.add_arc(
-                        ArcType::place_to_transition(*new_place, new_transition),
-                        Some(weight),
-                    );
+                    new_initial_marking.insert(*new_place, *cardinality);
                 }
             }
+            result.initial_marking = Some(new_initial_marking);
 
-            //outgoing
-            {
-                //transform to a map of places and arc weights
-                let mut map = HashMap::new();
-                for (pos, place) in lpn.transition2output_places[transition].iter().enumerate() {
-                    *map.entry(*place).or_insert(0) +=
-                        u32::try_from(lpn.transition2output_places_cardinality[transition][pos])?;
-                }
-
-                //add
-                for (place, weight) in map {
-                    let new_place = place2new_place
-                        .get(&place)
-                        .ok_or(anyhow!("Non-existing place referenced."))?;
-                    result.add_arc(
-                        ArcType::transition_to_place(new_transition, *new_place),
-                        // Some(weight.to_u32().ok_or(anyhow!("value out of bounds"))?),
-                        Some(weight),
-                    );
-                }
-            }
+            Ok(result)
+        } else {
+            //PNML does not support the no-initial marking option. Return a livelocked PNML instead.
+            let mut result = PetriNet::new();
+            result.add_transition(None, None);
+            Ok(result)
         }
-
-        //initial marking
-        let mut new_initial_marking = petri_net::Marking::new();
-        for (place, cardinality) in lpn
-            .initial_marking
-            .get_place2token()
-            .into_iter()
-            .enumerate()
-        {
-            if cardinality > &0u64 {
-                let new_place = place2new_place
-                    .get(&place)
-                    .ok_or(anyhow!("Non-existing place referenced."))?;
-                new_initial_marking.insert(*new_place, *cardinality);
-            }
-        }
-        result.initial_marking = Some(new_initial_marking);
-
-        Ok(result)
     }
 }
 
