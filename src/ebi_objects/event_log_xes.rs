@@ -14,9 +14,12 @@ use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
 use intmap::IntMap;
-use process_mining::core::event_data::case_centric::{
-    Event, EventLogClassifier, Trace,
-    xes::{XESImportOptions, export_xes_event_log, import_xes},
+use process_mining::{
+    EventLog,
+    core::event_data::case_centric::{
+        Event, EventLogClassifier, Trace,
+        xes::{XESImportOptions, export_xes_event_log, stream_xes_bufread},
+    },
 };
 use std::{
     fmt,
@@ -137,17 +140,21 @@ For instance:
     where
         Self: Sized,
     {
-        let log = import_xes(
-            reader,
-            XESImportOptions {
-                verbose: false,
-                ..Default::default()
-            },
-        );
-        let log = match log {
+        let import_options = XESImportOptions {
+            verbose: false,
+            ..Default::default()
+        };
+        let (mut stream, log_data) = match stream_xes_bufread(reader, false, import_options) {
             Ok(l) => l,
             Err(e) => return Err(anyhow!("{}", e)),
         };
+        let traces = stream.collect::<Vec<_>>();
+        if traces.is_empty() && log_data.xes_version.is_none() {
+            return Err(anyhow!(
+                "If an XES log has no traces, it must have a xes.version attribute on its log tag, in order to distinguish it from Ocel."
+            ));
+        }
+        let log = EventLog::from_traces_and_log_data(traces, log_data);
 
         //create the classifier
         let key = parameter_values
