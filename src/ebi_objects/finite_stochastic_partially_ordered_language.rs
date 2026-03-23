@@ -51,7 +51,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
     (v) the output states.
     
     For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lpn}";
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/model.sbpmn.spolang}";
 
     fn import_as_object(
         reader: &mut dyn BufRead,
@@ -127,7 +127,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
             let mut max_state = 0;
 
             for edge_i in 0..number_of_edges {
-                let activity = lreader.next_activity(&mut activity_key).with_context(|| {
+                let activity = lreader.next_activity_or_silent(&mut activity_key).with_context(|| {
                     anyhow!(
                         "Reading activity of edge {} of trace {} at line {}.",
                         edge_i,

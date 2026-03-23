@@ -115,7 +115,10 @@ impl<'a> LineReader<'a> {
         Ok(())
     }
 
-    pub fn next_activity(&mut self, activity_key: &mut ActivityKey) -> Result<Option<Activity>> {
+    pub fn next_activity_or_silent(
+        &mut self,
+        activity_key: &mut ActivityKey,
+    ) -> Result<Option<Activity>> {
         let line = self
             .next_line_string()
             .with_context(|| format!("Failed to read activity."))?;
@@ -140,6 +143,39 @@ impl<'a> LineReader<'a> {
         } else {
             //silent
             Ok(None)
+        }
+    }
+
+    pub fn next_activity(&mut self, activity_key: &mut ActivityKey) -> Result<Activity> {
+        let mut line = self
+            .next_line_string()
+            .with_context(|| format!("Failed to read activity."))?;
+
+        //count starting $s
+        let ampersands = line.chars().count() - line.trim_start_matches("&").chars().count();
+        if ampersands % 2 == 0 {
+            //even number of ampersands -> single-line, but half their number
+            for _ in 0..ampersands / 2 {
+                line.remove(0);
+            }
+            let activity = activity_key.process_activity(&line);
+            Ok(activity)
+        } else {
+            //odd number of ampersands -> multiline
+            line.remove(0);
+
+            let mut label = line.trim_start()[1..].to_string();
+            while !label.trim_end().ends_with("$") && !label.trim_end().ends_with("$$") {
+                label += "\n";
+                label += &self.next_line_string().with_context(|| {
+                    anyhow!("Was expecting a line ending with `$' to end a multiline label.")
+                })?;
+            }
+            label.pop(); //remove last $
+            label = label.replace("$$\n", "$\n"); //un-escape $$ at the end of the line to $
+
+            let activity = activity_key.process_activity(&label);
+            Ok(activity)
         }
     }
 }

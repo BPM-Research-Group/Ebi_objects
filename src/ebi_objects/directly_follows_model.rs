@@ -240,10 +240,9 @@ impl Importable for DirectlyFollowsModel {
         let mut activity_key = ActivityKey::new();
         let mut node_2_activity = vec![];
         for activity in 0..number_of_nodes {
-            let label = lreader
-                .next_line_string()
+            let activity = lreader
+                .next_activity(&mut activity_key)
                 .with_context(|| format!("could not read activity {}", activity))?;
-            let activity = activity_key.process_activity(&label);
             node_2_activity.push(activity);
         }
 
