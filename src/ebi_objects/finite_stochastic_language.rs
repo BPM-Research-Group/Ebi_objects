@@ -137,15 +137,15 @@ impl PartialEq for FiniteStochasticLanguage {
 }
 
 impl Importable for FiniteStochasticLanguage {
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A finite language is a line-based structure. Lines starting with a \\# are ignored.
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A finite stochastic language is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `finite stochastic language'.
     The second line is the number of traces in the language.
     For each trace, the first line is the probability of the trace as a positive fraction or a decimal value.
     The second line contains the number of events in the trace.
     Then, each subsequent line contains the activity name of one event.
     For a single-line event, escape a starting `\\$' by doubling it to `\\$'.
-    For a multiline event, start with a line `$multiline', and end with a line `multiline\\$'
-    To end any line end with `$', double it to `\\$\\$'.
+    For a multiline event, start with a line `\\$multiline', and end with a line `multiline\\$'
+    To end any line end with `\\$', double it to `\\$\\$'.
 
     The sum of the probabilities of the traces in the language needs to be $\\leq$ 1.
     

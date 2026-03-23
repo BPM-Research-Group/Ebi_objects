@@ -162,14 +162,14 @@ impl StochasticDirectlyFollowsModel {
 }
 
 impl Importable for StochasticDirectlyFollowsModel {
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A stochstic directly follows model is a line-based structure. Lines starting with a \\# are ignored.
+    const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A stochastic directly follows model is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `directly follows model'.\\
     The second line is a boolean indicating whether the model supports empty traces.\\
     The third line is the number of activities in the model.\\
     The following lines each contain an activity. 
     For a single-line activity, escape a starting `\\$' by doubling it to `\\$'.
-    For a multiline activity, start with a line `$multiline', and end with a line `multiline\\$'
-    To end any line end with `$', double it to `\\$\\$'.\\
+    For a multiline activity, start with a line `\\$multiline', and end with a line `multiline\\$'
+    To end any line end with `\\$', double it to `\\$\\$'.\\
     The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity, followed by a `w` and the weight of the start activity.\\
     The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity, followed by a `w` and the weight of the end activity.\\
     The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity, then a `w`, and then the weight of the transition.

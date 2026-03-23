@@ -132,8 +132,8 @@ impl Importable for FiniteLanguage {
     For each trace, the first line contains the number of events in the trace.
     Then, each subsequent line contains the activity name of one event.
     For a single-line event, escape a starting `\\$' by doubling it to `\\$'.
-    For a multiline event, start with a line `$multiline', and end with a line `multiline\\$'
-    To end any line end with `$', double it to `\\$\\$'.
+    For a multiline event, start with a line `\\$multiline', and end with a line `multiline\\$'
+    To end any line end with `\\$', double it to `\\$\\$'.
     
     For instance:
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/aa-ab-ba.lang}";
