@@ -162,80 +162,91 @@ impl Exportable for LolaNet {
     }
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
-        writeln!(f, "PLACE")?;
-        let mut it = (0..self.0.get_number_of_places()).into_iter().peekable();
-        while let Some(place) = it.next() {
-            write!(f, "place.{}", place)?;
-            if it.peek().is_some() {
-                writeln!(f, ",")?;
-            } else {
-                writeln!(f, ";")?;
+        if let Some(initial_marking) = &self.0.initial_marking {
+            writeln!(f, "PLACE")?;
+            let mut it = (0..self.0.get_number_of_places()).into_iter().peekable();
+            while let Some(place) = it.next() {
+                write!(f, "place.{}", place)?;
+                if it.peek().is_some() {
+                    writeln!(f, ",")?;
+                } else {
+                    writeln!(f, ";")?;
+                }
             }
-        }
 
-        writeln!(f, "MARKING")?;
-        writeln!(
-            f,
-            "{};",
-            (0..self.0.get_number_of_places())
-                .into_iter()
-                .filter_map(|place| {
-                    if self.0.get_initial_marking().place2token[place] > 0 {
-                        Some(self.0.get_initial_marking().place2token[place])
-                    } else {
-                        None
-                    }
-                })
-                .join(",\n")
-        )?;
+            writeln!(f, "MARKING")?;
+            writeln!(
+                f,
+                "{};",
+                (0..self.0.get_number_of_places())
+                    .into_iter()
+                    .filter_map(|place| {
+                        if initial_marking.place2token[place] > 0 {
+                            Some(initial_marking.place2token[place])
+                        } else {
+                            None
+                        }
+                    })
+                    .join(",\n")
+            )?;
 
-        for transition in 0..self.0.transition2input_places.len() {
-            write!(f, "TRANSITION")?;
-            if let Some(activity) = self.0.labels[transition] {
-                //labelled transition
+            for transition in 0..self.0.transition2input_places.len() {
+                write!(f, "TRANSITION")?;
+                if let Some(activity) = self.0.labels[transition] {
+                    //labelled transition
+                    writeln!(
+                        f,
+                        "{}.{}",
+                        Self::escape_transition_label(
+                            self.0.activity_key().get_activity_label(&activity)
+                        ),
+                        transition
+                    )?;
+                } else {
+                    //silent transition
+                    writeln!(f, "silent.{}", transition)?;
+                }
+
                 writeln!(
                     f,
-                    "{}.{}",
-                    Self::escape_transition_label(
-                        self.0.activity_key().get_activity_label(&activity)
-                    ),
-                    transition
+                    "CONSUME {};",
+                    self.0.transition2input_places[transition]
+                        .iter()
+                        .enumerate()
+                        .map(|(place_pos, place)| {
+                            let arc_weight =
+                                self.0.transition2input_places_cardinality[transition][place_pos];
+                            format!("place.{}: {}", place, arc_weight)
+                        })
+                        .join(", ")
                 )?;
-            } else {
-                //silent transition
-                writeln!(f, "silent.{}", transition)?;
+
+                writeln!(
+                    f,
+                    "PRODUCE {};",
+                    self.0.transition2output_places[transition]
+                        .iter()
+                        .enumerate()
+                        .map(|(place_pos, place)| {
+                            let arc_weight =
+                                self.0.transition2output_places_cardinality[transition][place_pos];
+                            format!("place.{}: {}", place, arc_weight)
+                        })
+                        .join(", ")
+                )?;
             }
 
-            writeln!(
-                f,
-                "CONSUME {};",
-                self.0.transition2input_places[transition]
-                    .iter()
-                    .enumerate()
-                    .map(|(place_pos, place)| {
-                        let arc_weight =
-                            self.0.transition2input_places_cardinality[transition][place_pos];
-                        format!("place.{}: {}", place, arc_weight)
-                    })
-                    .join(", ")
-            )?;
-
-            writeln!(
-                f,
-                "PRODUCE {};",
-                self.0.transition2output_places[transition]
-                    .iter()
-                    .enumerate()
-                    .map(|(place_pos, place)| {
-                        let arc_weight =
-                            self.0.transition2output_places_cardinality[transition][place_pos];
-                        format!("place.{}: {}", place, arc_weight)
-                    })
-                    .join(", ")
-            )?;
+            Ok(())
+        } else {
+            //empty language; construct livelock
+            writeln!(f, "PLACE")?;
+            writeln!(f, "MARKING")?;
+            write!(f, "TRANSITION")?;
+            writeln!(f, "silent.0")?;
+            writeln!(f, "CONSUME;",)?;
+            writeln!(f, "PRODUCE;",)?;
+            Ok(())
         }
-
-        Ok(())
     }
 }
 
@@ -391,9 +402,9 @@ impl<'a> Tokeniser<'a> {
                         //process last place assignment
                         if let Some(place_s) = place {
                             if let Some(c) = cardinality {
-                                marking.increase(*place_s, c)?;
+                                marking.as_mut().unwrap().increase(*place_s, c)?;
                             } else {
-                                marking.increase(*place_s, 1)?;
+                                marking.as_mut().unwrap().increase(*place_s, 1)?;
                             }
                             return Ok(());
                         } else {
@@ -404,9 +415,9 @@ impl<'a> Tokeniser<'a> {
                         //place assignment finished
                         if let Some(place_s) = place {
                             if let Some(c) = cardinality {
-                                marking.increase(*place_s, c)?;
+                                marking.as_mut().unwrap().increase(*place_s, c)?;
                             } else {
-                                marking.increase(*place_s, 1)?;
+                                marking.as_mut().unwrap().increase(*place_s, 1)?;
                             }
                             cardinality = None;
                             place = None;

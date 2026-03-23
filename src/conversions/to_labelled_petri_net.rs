@@ -36,6 +36,8 @@ macro_rules! tree {
                 let sink = result.add_place();
                 result
                     .get_initial_marking_mut()
+                    .as_mut()
+                    .unwrap()
                     .increase(source, 1)
                     .unwrap();
 
@@ -286,6 +288,8 @@ macro_rules! dfm {
                 let sink = result.add_place();
                 result
                     .get_initial_marking_mut()
+                    .as_mut()
+                    .unwrap()
                     .increase(source, 1)
                     .unwrap();
 
@@ -399,17 +403,7 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
         let source = if let Some(s) = value.initial_state {
             s
         } else {
-            //DFA has an empty language, return a livelocked LPN
-            return Self {
-                activity_key: value.activity_key,
-                initial_marking: Marking::new(0),
-                labels: vec![None],
-                transition2input_places: vec![vec![]],
-                transition2output_places: vec![vec![]],
-                transition2input_places_cardinality: vec![vec![]],
-                transition2output_places_cardinality: vec![vec![]],
-                place2output_transitions: vec![],
-            };
+            return Self::new_empty_language();
         };
 
         let mut result = LabelledPetriNet::new();
@@ -434,6 +428,8 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
         //initial marking
         result
             .get_initial_marking_mut()
+            .as_mut()
+            .unwrap()
             .increase(source, 1)
             .unwrap();
 
@@ -534,6 +530,8 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
                     .ok_or(anyhow!("Undeclared place found in the initial marking."))?;
                 result
                     .get_initial_marking_mut()
+                    .as_mut()
+                    .unwrap()
                     .increase(*new_place, *cardinality)?;
             }
         }
