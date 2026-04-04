@@ -201,7 +201,7 @@ impl Importable for DeterministicFiniteAutomaton {
     \\item \\texttt{finalStates} being a list of indices of the final states.
     A final state is not necessarily a deadlock state.
     \\item \\texttt{transitions} being a list of transitions. 
-    Each transition is an object with \\texttt{from} being the source state index of the transition, \\texttt{to} being the target state index of the transition, and \texttt{{label}} being the activity of the transition. 
+    Each transition is an object with \\texttt{from} being the source state index of the transition, \\texttt{to} being the target state index of the transition, and \\texttt{{label}} being the activity of the transition. 
     Silent transitions are not supported.
     The file format supports deadlocks and livelocks.
     \\end{itemize}

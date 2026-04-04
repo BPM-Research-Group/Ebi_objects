@@ -185,14 +185,14 @@ impl TranslateActivityKey for DirectlyFollowsModel {
 
 impl Importable for DirectlyFollowsModel {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = concat!("A directly follows model is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `directly follows model'.\\
-    The second line is a boolean indicating whether the model supports empty traces.\\
-    The third line is the number of activities in the model.\\
+    This first line is exactly `directly follows model'.\\\\
+    The second line is a boolean indicating whether the model supports empty traces.\\\\
+    The third line is the number of activities in the model.\\\\
     For a single-line activity, escape a starting `\\$' by doubling it to `\\$'.
     For a multiline activity, start with a line `\\$multiline', and end with a line `multiline\\$'
-    To end any line end with `\\$', double it to `\\$\\$'.\\
-    The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity.\\
-    The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity.\\
+    To end any line end with `\\$', double it to `\\$\\$'.\\\\
+    The next line contains the number of start activities, followed by, for each start activity, a line with the index of the start activity.\\\\
+    The next line contains the number of end activities, followed by, for each end activity, a line with the index of the end activity.\\\\
     The next line contains the number of edges, followed by, for each edge, a line with first the index of the source activity, then the `>` symbol, then the index of the target activity.
     
     For instance:
