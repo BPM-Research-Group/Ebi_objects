@@ -31,7 +31,7 @@ pub const DEFAULT_PARAMETER_ACTIVITY: &str = "concept:name";
 pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
     name: "xes_event_classifier",
     short_name: "ec",
-    explanation: "The attribute that defines, for each event, what its activity is",
+    explanation: "The attribute that defines, for each event, what its activity is.",
     allowed_values: None,
     default_value: DEFAULT_PARAMETER_ACTIVITY,
 };
