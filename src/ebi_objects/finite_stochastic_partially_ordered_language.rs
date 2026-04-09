@@ -2,9 +2,7 @@ use crate::{
     EbiObject, Exportable, Graphable, Importable, Infoable,
     line_reader::LineReader,
     traits::{
-        graphable::{
-            create_dot, create_edge, create_place, create_silent_transition, create_transition,
-        },
+        graphable::{create_edge, create_place, create_transition},
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
@@ -40,15 +38,18 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A finite stochastic partially ordered language is a line-based structure. Lines starting with a \\# are ignored.
     This first line is exactly `finite stochastic partially ordered language'.
     The second line is the number of traces in the language.
-    Then, for each trace, the following items are next, each on their own line.
-    First, the probability of the trace.
-    Second, the number of edges in the trace.
-    Third, for each edge, 
-    (i) the word `silent' or the word `label ' directly followed by the activity label, or a line with `multiline label' followed by the label, terminated with a line `multiline\\$' (a `\\$' at each line end can be escaped with `\\$\\$').
-    (ii) the number of input states,
-    (iii) the input states, 
-    (iv) the number of output states, and 
-    (v) the output states.
+    Then, for each trace, the following items are next, each on their own line.\\
+    First, the probability of the trace.\\
+    Second, the number of nodes in the trace.\\
+    Third, for each node:
+    \\begin{enumerate}
+    \\item The activity.
+    For a single-line event, escape a starting `\\$' by doubling it to `\\$'.
+    For a multiline event, start with a line `\\$multiline', and end with a line `multiline\\$'
+    To end any line end with `\\$', double it to `\\$\\$'.
+    \\item The number of input edges,
+    \\item For each input edge, on its own line, the index of the source node of the edge.
+    \\end{enumerate}
     
     For instance:
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/model.sbpmn.spolang}";
@@ -113,94 +114,65 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
 
             sum += &probability;
 
-            let number_of_edges = lreader.next_line_index().with_context(|| {
-                format!(
-                    "Failed to read number of edges for trace {} at line {}.",
+            let number_of_nodes = lreader.next_line_index().with_context(|| {
+                anyhow!(
+                    "Failed to read number of nodes for trace {} at line {}.",
                     trace_i,
-                    lreader.get_last_line_number(),
+                    lreader.get_last_line_number()
                 )
             })?;
 
-            let mut edge_2_inputs = Vec::with_capacity(number_of_edges);
-            let mut edge_2_outputs = Vec::with_capacity(number_of_edges);
-            let mut edge_2_activity = Vec::with_capacity(number_of_edges);
-            let mut max_state = 0;
+            let mut node_2_activity = Vec::with_capacity(number_of_nodes);
+            let mut node_2_predecessors = Vec::with_capacity(number_of_nodes);
+            for node_i in 0..number_of_nodes {
+                let activity = lreader.next_activity(&mut activity_key).with_context(|| {
+                    anyhow!(
+                        "Reading activity of node {} of trace {} at line {}.",
+                        node_i,
+                        trace_i,
+                        lreader.get_last_line_number()
+                    )
+                })?;
+                node_2_activity.push(activity);
 
-            for edge_i in 0..number_of_edges {
-                let activity = lreader
-                    .next_activity_or_silent(&mut activity_key)
-                    .with_context(|| {
+                let number_of_predecessors = lreader.next_line_index().with_context(|| {
+                    anyhow!(
+                        "Failed to read number of predecessors of node {} of trace {} at line {}.",
+                        node_i,
+                        trace_i,
+                        lreader.get_last_line_number()
+                    )
+                })?;
+
+                let mut predecessors = Vec::with_capacity(number_of_predecessors);
+                for predecessor_i in 0..number_of_predecessors {
+                    let predecessor = lreader.next_line_index().with_context(|| {
                         anyhow!(
-                            "Reading activity of edge {} of trace {} at line {}.",
-                            edge_i,
+                            "Failed to read predecessor {} of node {} of trace {} at line {}.",
+                            predecessor_i,
+                            node_i,
                             trace_i,
                             lreader.get_last_line_number()
                         )
                     })?;
-                edge_2_activity.push(activity);
-
-                //inputs
-                {
-                    let number_of_inputs = lreader.next_line_index().with_context(|| {
-                        format!(
-                            "Failed to read number of input states for edge {} of trace {} at line {}.",
-                            edge_i,
+                    if predecessor >= node_i {
+                        return Err(anyhow!(
+                            "The source {} of the predecessor {} of node {} of trace {} at line {} lies beyond its target node. Only forward-facing edges are allowed.",
+                            predecessor,
+                            predecessor_i,
+                            node_i,
                             trace_i,
-                            lreader.get_last_line_number(),
-                        )
-                    })?;
-
-                    let mut inputs = Vec::with_capacity(number_of_inputs);
-                    for input_i in 0..number_of_inputs {
-                        let input = lreader.next_line_index().with_context(|| {
-                            anyhow!(
-                                "Failed to read input state {} of edge {} of trace {} at line {}.",
-                                input_i,
-                                edge_i,
-                                trace_i,
-                                lreader.get_last_line_number()
-                            )
-                        })?;
-                        max_state = max_state.max(input);
-                        inputs.push(input);
+                            lreader.get_last_line_number()
+                        ));
                     }
-                    edge_2_inputs.push(inputs);
+                    predecessors.push(predecessor);
                 }
-
-                //outputs
-                {
-                    let number_of_outputs = lreader.next_line_index().with_context(|| {
-                        format!(
-                            "Failed to read number of output states for edge {} of trace {} at line {}.",
-                            edge_i,
-                            trace_i,
-                            lreader.get_last_line_number(),
-                        )
-                    })?;
-
-                    let mut outputs = Vec::with_capacity(number_of_outputs);
-                    for output_i in 0..number_of_outputs {
-                        let output = lreader.next_line_index().with_context(|| {
-                            anyhow!(
-                                "Failed to read output state {} of edge {} of trace {} at line {}.",
-                                output_i,
-                                edge_i,
-                                trace_i,
-                                lreader.get_last_line_number()
-                            )
-                        })?;
-                        max_state = max_state.max(output);
-                        outputs.push(output);
-                    }
-                    edge_2_outputs.push(outputs);
-                }
+                node_2_predecessors.push(predecessors);
             }
 
             traces.push(PartiallyOrderedTrace {
-                number_of_states: max_state + 1,
-                edge_2_inputs,
-                edge_2_outputs,
-                edge_2_activity,
+                node_2_activity,
+                node_2_predecessors,
             });
             probabilities.push(probability);
         }
@@ -252,29 +224,19 @@ impl Display for FiniteStochasticPartiallyOrderedLanguage {
         {
             writeln!(f, "# trace {}", pos)?;
             writeln!(f, "#\tprobability\n{}", probability)?;
-            writeln!(f, "#\tnumber of edges\n{}", trace.number_of_edges())?;
-            for edge in 0..trace.number_of_edges() {
-                writeln!(f, "#\tedge {}", edge)?;
-                LineReader::write_activity_or_silent(
-                    f,
-                    trace.get_edge_activity(edge),
-                    &self.activity_key,
-                )?;
-                writeln!(
-                    f,
-                    "#\t\tnumber of input states\n{}",
-                    trace.edge_2_inputs[edge].len()
-                )?;
-                for input in &trace.edge_2_inputs[edge] {
-                    writeln!(f, "{}", input)?;
-                }
-                writeln!(
-                    f,
-                    "#\t\tnumber of output states\n{}",
-                    trace.edge_2_outputs[edge].len()
-                )?;
-                for output in &trace.edge_2_outputs[edge] {
-                    writeln!(f, "{}", output)?;
+            writeln!(f, "#\tnumber of nodes\n{}", trace.number_of_nodes())?;
+            for (node_i, (activity, predecessors)) in trace
+                .node_2_activity
+                .iter()
+                .zip(&trace.node_2_predecessors)
+                .enumerate()
+            {
+                writeln!(f, "#\tnode {}", node_i)?;
+                LineReader::write_multiline_activity(f, activity, &self.activity_key)?;
+                writeln!(f, "#\t\tnumber of predecessors\n{}", predecessors.len())?;
+                writeln!(f, "#\t\tpredecessors")?;
+                for predecessor in predecessors {
+                    writeln!(f, "{}", predecessor)?;
                 }
             }
         }
@@ -288,10 +250,10 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
         writeln!(f, "Number of traces\t{}", self.traces.len())?;
         writeln!(
             f,
-            "Number of states\t{}",
+            "Number of nodes\t{}",
             self.traces
                 .iter()
-                .map(|t| t.number_of_states())
+                .map(|t| t.number_of_nodes())
                 .sum::<usize>()
         )?;
         writeln!(
@@ -342,10 +304,8 @@ impl TranslateActivityKey for FiniteStochasticPartiallyOrderedLanguage {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
         self.traces.iter_mut().for_each(|trace| {
-            trace.edge_2_activity.iter_mut().for_each(|activity| {
-                if let Some(activity) = activity {
-                    *activity = translator.translate_activity(activity);
-                }
+            trace.node_2_activity.iter_mut().for_each(|activity| {
+                *activity = translator.translate_activity(activity);
             })
         });
 
@@ -357,47 +317,47 @@ impl TranslateActivityKey for FiniteStochasticPartiallyOrderedLanguage {
 impl TestActivityKey for FiniteStochasticPartiallyOrderedLanguage {
     fn test_activity_key(&self) {
         self.traces.iter().for_each(|trace| {
-            trace.edge_2_activity.iter().for_each(|activity| {
-                if let Some(activity) = activity {
-                    self.activity_key().assert_activity_is_of_key(activity)
-                }
-            })
+            trace
+                .node_2_activity
+                .iter()
+                .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
         });
     }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct PartiallyOrderedTrace {
-    pub number_of_states: usize,
-    pub edge_2_inputs: Vec<Vec<usize>>,
-    pub edge_2_outputs: Vec<Vec<usize>>,
-    pub edge_2_activity: Vec<Option<Activity>>,
+    pub node_2_activity: Vec<Activity>,
+    pub node_2_predecessors: Vec<Vec<usize>>,
 }
 
 impl PartiallyOrderedTrace {
-    pub fn number_of_states(&self) -> usize {
-        self.number_of_states
+    pub fn number_of_nodes(&self) -> usize {
+        self.node_2_activity.len()
     }
 
     pub fn number_of_edges(&self) -> usize {
-        self.edge_2_activity.len()
+        self.node_2_predecessors.iter().map(|l| l.len()).sum()
     }
 
-    pub fn number_of_labelled_edges(&self) -> usize {
-        self.edge_2_activity.iter().filter(|x| x.is_some()).count()
+    /**
+     * Returns the activity of the node. Returns None if the node does not exist.
+     */
+    pub fn get_state_activity(&self, node: usize) -> Option<&Activity> {
+        self.node_2_activity.get(node)
     }
 
-    pub fn get_edge_activity(&self, edge: usize) -> Option<Activity> {
-        *self.edge_2_activity.get(edge)?
-    }
-
-    pub fn start_states(&self) -> impl Iterator<Item = usize> {
-        (0..self.number_of_states).filter(|state| {
-            !self
-                .edge_2_outputs
-                .iter()
-                .any(|outputs| outputs.contains(&state))
-        })
+    pub fn start_nodes(&self) -> impl Iterator<Item = usize> {
+        self.node_2_predecessors
+            .iter()
+            .enumerate()
+            .filter_map(|(index, predecessors)| {
+                if predecessors.is_empty() {
+                    Some(index)
+                } else {
+                    None
+                }
+            })
     }
 
     pub fn to_dot(
@@ -406,38 +366,26 @@ impl PartiallyOrderedTrace {
         activity_key: &ActivityKey,
         graph: &mut VisualGraph,
     ) {
-        //states
-        let state_2_node = (0..self.number_of_states())
-            .map(|_| create_dot(graph))
+        //nodes
+        let node_2_dot = self
+            .node_2_activity
+            .iter()
+            .map(|activity| {
+                let label = activity_key.deprocess_activity(activity);
+                create_transition(graph, label, "")
+            })
             .collect::<Vec<_>>();
 
-        //start state
-        let start_state = create_place(graph, &format!("{:.4}", probability));
-        for state in 0..self.number_of_states() {
-            if !self
-                .edge_2_outputs
-                .iter()
-                .any(|outputs| outputs.contains(&state))
-            {
-                create_edge(graph, &start_state, &state_2_node[state], "");
-            }
+        //start node
+        let start_node = create_place(graph, &format!("{:.4}", probability));
+        for node in self.start_nodes() {
+            create_edge(graph, &start_node, &node_2_dot[node], "");
         }
 
         //edges
-        for edge in 0..self.number_of_edges() {
-            //midpoint
-            let midpoint = if let Some(activity) = self.edge_2_activity[edge] {
-                create_transition(graph, activity_key.deprocess_activity(&activity), "")
-            } else {
-                create_silent_transition(graph, "")
-            };
-
-            //connections
-            for input in &self.edge_2_inputs[edge] {
-                create_edge(graph, &state_2_node[*input], &midpoint, "");
-            }
-            for output in &self.edge_2_outputs[edge] {
-                create_edge(graph, &midpoint, &state_2_node[*output], "");
+        for target in 0..self.number_of_edges() {
+            for source in &self.node_2_predecessors[target] {
+                create_edge(graph, &node_2_dot[*source], &node_2_dot[target], "");
             }
         }
     }
