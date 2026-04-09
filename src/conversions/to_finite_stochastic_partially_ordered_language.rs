@@ -1,12 +1,12 @@
-use std::{collections::BTreeSet, usize};
-
 use crate::{
     FiniteStochasticPartiallyOrderedLanguage,
     ebi_objects::finite_stochastic_partially_ordered_language::PartiallyOrderedTrace,
 };
+use bitvec::{bitvec, prelude::Lsb0};
 use ebi_activity_key::{Activity, ActivityKey};
 use ebi_arithmetic::Fraction;
 use ebi_bpmn::partially_ordered_run::PartiallyOrderedRun;
+use std::{collections::BTreeSet, usize};
 
 impl From<(ActivityKey, Vec<PartiallyOrderedTrace>, Vec<Fraction>)>
     for FiniteStochasticPartiallyOrderedLanguage
@@ -28,13 +28,64 @@ struct PartiallyOrderedLabelledTrace {
 
 impl From<PartiallyOrderedRun> for PartiallyOrderedLabelledTrace {
     fn from(value: PartiallyOrderedRun) -> Self {
+        let edge_sequence = edge_execution_sequence(&value);
+
         let PartiallyOrderedRun {
             edge_2_inputs,
-            edge_2_outputs,
             edge_2_activity,
+            state_2_output_edge,
             ..
         } = value;
+
+        //create the nodes
+        let mut edge_2_node = vec![0; edge_2_inputs.len()];
+        let node_2_activity = edge_sequence
+            .iter()
+            .enumerate()
+            .map(|(node, edge)| {
+                edge_2_node[*edge] = node;
+                edge_2_activity[*edge]
+            })
+            .collect();
+
+        let mut node_2_predecessors = vec![vec![]; edge_2_inputs.len()];
+        for (edge, input_states) in edge_2_inputs.iter().enumerate() {
+            for input_state in input_states {
+                if let Some(predecessor_edge) = state_2_output_edge[*input_state] {
+                    node_2_predecessors[edge_2_node[edge]].push(edge_2_node[predecessor_edge]);
+                }
+            }
+        }
+
+        Self {
+            node_2_activity,
+            node_2_predecessors,
+        }
     }
+}
+
+fn edge_execution_sequence(run: &PartiallyOrderedRun) -> Vec<usize> {
+    let mut state_states = bitvec![];
+    let mut state_edges = bitvec![];
+    let mut result = vec![];
+    while result.len() != run.number_of_edges() {
+        'outer: for edge in 0..run.number_of_edges() {
+            if !state_edges[edge] {
+                for input in &run.edge_2_inputs[edge] {
+                    if !state_states[*input] {
+                        continue 'outer;
+                    }
+                }
+                //execute edge
+                result.push(edge);
+                for output in &run.edge_2_outputs[edge] {
+                    state_states.set(*output, true);
+                }
+                state_edges.set(edge, true);
+            }
+        }
+    }
+    result
 }
 
 impl From<PartiallyOrderedLabelledTrace> for PartiallyOrderedTrace {
@@ -89,5 +140,48 @@ impl From<PartiallyOrderedRun> for PartiallyOrderedTrace {
     fn from(value: PartiallyOrderedRun) -> Self {
         let labelled_trace = PartiallyOrderedLabelledTrace::from(value);
         labelled_trace.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        conversions::to_finite_stochastic_partially_ordered_language::PartiallyOrderedLabelledTrace,
+        ebi_objects::finite_stochastic_partially_ordered_language::PartiallyOrderedTrace,
+    };
+    use ebi_activity_key::ActivityKey;
+
+    #[test]
+    fn poltrace_2_potrace_empty() {
+        let ltrace = PartiallyOrderedLabelledTrace {
+            node_2_activity: vec![],
+            node_2_predecessors: vec![],
+        };
+
+        let trace = PartiallyOrderedTrace {
+            node_2_activity: vec![],
+            node_2_predecessors: vec![],
+        };
+
+        assert_eq!(PartiallyOrderedTrace::from(ltrace), trace);
+    }
+
+    #[test]
+    fn poltrace_2_potrace() {
+        let mut activity_key = ActivityKey::new();
+        let abc = activity_key.process_activity("abc");
+        let def = activity_key.process_activity("def");
+
+        let ltrace = PartiallyOrderedLabelledTrace {
+            node_2_activity: vec![Some(abc), None, Some(def)],
+            node_2_predecessors: vec![vec![], vec![0], vec![1]],
+        };
+
+        let trace = PartiallyOrderedTrace {
+            node_2_activity: vec![abc, def],
+            node_2_predecessors: vec![vec![], vec![0]],
+        };
+
+        assert_eq!(PartiallyOrderedTrace::from(ltrace), trace);
     }
 }
