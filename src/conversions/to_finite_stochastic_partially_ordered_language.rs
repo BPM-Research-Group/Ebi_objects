@@ -145,7 +145,6 @@ impl From<PartiallyOrderedLabelledTrace> for PartiallyOrderedTrace {
 impl From<PartiallyOrderedRun> for PartiallyOrderedTrace {
     fn from(value: PartiallyOrderedRun) -> Self {
         let labelled_trace = PartiallyOrderedLabelledTrace::from(value);
-        println!("{:?}", labelled_trace);
         labelled_trace.into()
     }
 }
