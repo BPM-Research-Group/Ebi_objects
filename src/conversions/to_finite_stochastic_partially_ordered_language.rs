@@ -21,6 +21,7 @@ impl From<(ActivityKey, Vec<PartiallyOrderedTrace>, Vec<Fraction>)>
     }
 }
 
+#[derive(Debug)]
 struct PartiallyOrderedLabelledTrace {
     pub node_2_activity: Vec<Option<Activity>>,
     pub node_2_predecessors: Vec<Vec<usize>>,
@@ -33,7 +34,7 @@ impl From<PartiallyOrderedRun> for PartiallyOrderedLabelledTrace {
         let PartiallyOrderedRun {
             edge_2_inputs,
             edge_2_activity,
-            state_2_output_edge,
+            state_2_input_edge,
             ..
         } = value;
 
@@ -51,7 +52,7 @@ impl From<PartiallyOrderedRun> for PartiallyOrderedLabelledTrace {
         let mut node_2_predecessors = vec![vec![]; edge_2_inputs.len()];
         for (edge, input_states) in edge_2_inputs.iter().enumerate() {
             for input_state in input_states {
-                if let Some(predecessor_edge) = state_2_output_edge[*input_state] {
+                if let Some(predecessor_edge) = state_2_input_edge[*input_state] {
                     node_2_predecessors[edge_2_node[edge]].push(edge_2_node[predecessor_edge]);
                 }
             }
@@ -144,6 +145,7 @@ impl From<PartiallyOrderedLabelledTrace> for PartiallyOrderedTrace {
 impl From<PartiallyOrderedRun> for PartiallyOrderedTrace {
     fn from(value: PartiallyOrderedRun) -> Self {
         let labelled_trace = PartiallyOrderedLabelledTrace::from(value);
+        println!("{:?}", labelled_trace);
         labelled_trace.into()
     }
 }
@@ -156,7 +158,7 @@ mod tests {
         conversions::to_finite_stochastic_partially_ordered_language::PartiallyOrderedLabelledTrace,
         ebi_objects::finite_stochastic_partially_ordered_language::PartiallyOrderedTrace,
     };
-    use ebi_activity_key::ActivityKey;
+    use ebi_activity_key::{ActivityKey, HasActivityKey};
     use ebi_bpmn::{
         StochasticBusinessProcessModelAndNotation, partially_ordered_run::PartiallyOrderedRun,
     };
@@ -204,5 +206,113 @@ mod tests {
 
         let run = PartiallyOrderedRun::new_random(&sbpmn).unwrap();
         let _ = PartiallyOrderedTrace::from(run);
+    }
+
+    #[test]
+    fn porun() {
+        let fin = fs::read_to_string("testfiles/flower.sbpmn").unwrap();
+        let sbpmn = fin
+            .parse::<StochasticBusinessProcessModelAndNotation>()
+            .unwrap();
+        let a = sbpmn.activity_key().process_activity_attempt("a").unwrap();
+
+        let mut run = PartiallyOrderedRun::from_initial_marking(&sbpmn).unwrap();
+        run.execute_free_transitions_exhaustively(&sbpmn).unwrap();
+
+        {
+            let trace = PartiallyOrderedTrace::from(run.clone());
+            println!("{:?}", run);
+            println!("{:?}", trace);
+            let front_states = run.front_states();
+            let marking = run.get_marking(&front_states, &sbpmn).unwrap();
+            let enabled_transitions = sbpmn.get_enabled_transitions(&marking).unwrap();
+            println!("{:?}", enabled_transitions);
+            assert_eq!(trace.number_of_events(), 0);
+            println!("==========");
+
+            run.execute_transition(5, &marking, &front_states, &sbpmn)
+                .unwrap();
+            run.execute_free_transitions_exhaustively(&sbpmn).unwrap();
+        }
+
+        {
+            let trace = PartiallyOrderedTrace::from(run.clone());
+            println!("{:?}", run);
+            println!("{:?}", trace);
+            let front_states = run.front_states();
+            let marking = run.get_marking(&front_states, &sbpmn).unwrap();
+            let enabled_transitions = sbpmn.get_enabled_transitions(&marking).unwrap();
+            println!("{:?}", enabled_transitions);
+            assert_eq!(
+                trace,
+                PartiallyOrderedTrace {
+                    node_2_activity: vec![a],
+                    node_2_predecessors: vec![vec![]]
+                }
+            );
+            println!("==========");
+
+            run.execute_transition(5, &marking, &front_states, &sbpmn)
+                .unwrap();
+            run.execute_free_transitions_exhaustively(&sbpmn).unwrap();
+        }
+
+        {
+            let trace = PartiallyOrderedTrace::from(run.clone());
+            println!("{:?}", run);
+            println!("{:?}", trace);
+            let front_states = run.front_states();
+            let marking = run.get_marking(&front_states, &sbpmn).unwrap();
+            assert_eq!(
+                trace,
+                PartiallyOrderedTrace {
+                    node_2_activity: vec![a, a],
+                    node_2_predecessors: vec![vec![], vec![0]]
+                }
+            );
+            println!("==========");
+
+            run.execute_transition(5, &marking, &front_states, &sbpmn)
+                .unwrap();
+            run.execute_free_transitions_exhaustively(&sbpmn).unwrap();
+        }
+
+        {
+            let trace = PartiallyOrderedTrace::from(run.clone());
+            println!("{:?}", run);
+            println!("{:?}", trace);
+            let front_states = run.front_states();
+            let marking = run.get_marking(&front_states, &sbpmn).unwrap();
+            let enabled_transitions = sbpmn.get_enabled_transitions(&marking).unwrap();
+            println!("{:?}", enabled_transitions);
+            assert_eq!(
+                trace,
+                PartiallyOrderedTrace {
+                    node_2_activity: vec![a, a, a],
+                    node_2_predecessors: vec![vec![], vec![0], vec![1]]
+                }
+            );
+            println!("==========");
+
+            run.execute_transition(4, &marking, &front_states, &sbpmn)
+                .unwrap();
+            run.execute_free_transitions_exhaustively(&sbpmn).unwrap();
+        }
+
+        let trace = PartiallyOrderedTrace::from(run.clone());
+        println!("{:?}", run);
+        println!("{:?}", trace);
+        let front_states = run.front_states();
+        let marking = run.get_marking(&front_states, &sbpmn).unwrap();
+        let enabled_transitions = sbpmn.get_enabled_transitions(&marking).unwrap();
+        println!("{:?}", enabled_transitions);
+        assert_eq!(
+            trace,
+            PartiallyOrderedTrace {
+                node_2_activity: vec![a, a, a],
+                node_2_predecessors: vec![vec![], vec![0], vec![1]]
+            }
+        );
+        println!("==========");
     }
 }

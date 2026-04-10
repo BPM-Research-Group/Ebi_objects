@@ -224,7 +224,7 @@ impl Display for FiniteStochasticPartiallyOrderedLanguage {
         {
             writeln!(f, "# trace {}", pos)?;
             writeln!(f, "#\tprobability\n{}", probability)?;
-            writeln!(f, "#\tnumber of nodes\n{}", trace.number_of_nodes())?;
+            writeln!(f, "#\tnumber of nodes\n{}", trace.number_of_events())?;
             for (node_i, (activity, predecessors)) in trace
                 .node_2_activity
                 .iter()
@@ -253,7 +253,7 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
             "Number of nodes\t{}",
             self.traces
                 .iter()
-                .map(|t| t.number_of_nodes())
+                .map(|t| t.number_of_events())
                 .sum::<usize>()
         )?;
         writeln!(
@@ -332,7 +332,7 @@ pub struct PartiallyOrderedTrace {
 }
 
 impl PartiallyOrderedTrace {
-    pub fn number_of_nodes(&self) -> usize {
+    pub fn number_of_events(&self) -> usize {
         self.node_2_activity.len()
     }
 
