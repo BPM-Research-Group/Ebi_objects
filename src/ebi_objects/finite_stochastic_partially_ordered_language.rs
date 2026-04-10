@@ -40,15 +40,15 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
     The second line is the number of traces in the language.
     Then, for each trace, the following items are next, each on their own line.\\
     First, the probability of the trace.\\
-    Second, the number of nodes in the trace.\\
-    Third, for each node:
+    Second, the number of events in the trace.\\
+    Third, for each event:
     \\begin{enumerate}
     \\item The activity.
     For a single-line event, escape a starting `\\$' by doubling it to `\\$'.
     For a multiline event, start with a line `\\$multiline', and end with a line `multiline\\$'
     To end any line end with `\\$', double it to `\\$\\$'.
     \\item The number of input edges,
-    \\item For each input edge, on its own line, the index of the source node of the edge.
+    \\item For each input edge, on its own line, the index of the source event of the edge.
     \\end{enumerate}
     
     For instance:
@@ -114,31 +114,31 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
 
             sum += &probability;
 
-            let number_of_nodes = lreader.next_line_index().with_context(|| {
+            let number_of_events = lreader.next_line_index().with_context(|| {
                 anyhow!(
-                    "Failed to read number of nodes for trace {} at line {}.",
+                    "Failed to read number of events for trace {} at line {}.",
                     trace_i,
                     lreader.get_last_line_number()
                 )
             })?;
 
-            let mut node_2_activity = Vec::with_capacity(number_of_nodes);
-            let mut node_2_predecessors = Vec::with_capacity(number_of_nodes);
-            for node_i in 0..number_of_nodes {
+            let mut event_2_activity = Vec::with_capacity(number_of_events);
+            let mut event_2_predecessors = Vec::with_capacity(number_of_events);
+            for event_i in 0..number_of_events {
                 let activity = lreader.next_activity(&mut activity_key).with_context(|| {
                     anyhow!(
-                        "Reading activity of node {} of trace {} at line {}.",
-                        node_i,
+                        "Reading activity of event {} of trace {} at line {}.",
+                        event_i,
                         trace_i,
                         lreader.get_last_line_number()
                     )
                 })?;
-                node_2_activity.push(activity);
+                event_2_activity.push(activity);
 
                 let number_of_predecessors = lreader.next_line_index().with_context(|| {
                     anyhow!(
-                        "Failed to read number of predecessors of node {} of trace {} at line {}.",
-                        node_i,
+                        "Failed to read number of predecessors of event {} of trace {} at line {}.",
+                        event_i,
                         trace_i,
                         lreader.get_last_line_number()
                     )
@@ -148,31 +148,31 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
                 for predecessor_i in 0..number_of_predecessors {
                     let predecessor = lreader.next_line_index().with_context(|| {
                         anyhow!(
-                            "Failed to read predecessor {} of node {} of trace {} at line {}.",
+                            "Failed to read predecessor {} of event {} of trace {} at line {}.",
                             predecessor_i,
-                            node_i,
+                            event_i,
                             trace_i,
                             lreader.get_last_line_number()
                         )
                     })?;
-                    if predecessor >= node_i {
+                    if predecessor >= event_i {
                         return Err(anyhow!(
-                            "The source {} of the predecessor {} of node {} of trace {} at line {} lies beyond its target node. Only forward-facing edges are allowed.",
+                            "The source {} of the predecessor {} of event {} of trace {} at line {} lies beyond its target event. Only forward-facing edges are allowed.",
                             predecessor,
                             predecessor_i,
-                            node_i,
+                            event_i,
                             trace_i,
                             lreader.get_last_line_number()
                         ));
                     }
                     predecessors.push(predecessor);
                 }
-                node_2_predecessors.push(predecessors);
+                event_2_predecessors.push(predecessors);
             }
 
             traces.push(PartiallyOrderedTrace {
-                node_2_activity,
-                node_2_predecessors,
+                event_2_activity: event_2_activity,
+                event_2_predecessors: event_2_predecessors,
             });
             probabilities.push(probability);
         }
@@ -224,14 +224,14 @@ impl Display for FiniteStochasticPartiallyOrderedLanguage {
         {
             writeln!(f, "# trace {}", pos)?;
             writeln!(f, "#\tprobability\n{}", probability)?;
-            writeln!(f, "#\tnumber of nodes\n{}", trace.number_of_events())?;
-            for (node_i, (activity, predecessors)) in trace
-                .node_2_activity
+            writeln!(f, "#\tnumber of events\n{}", trace.number_of_events())?;
+            for (event_i, (activity, predecessors)) in trace
+                .event_2_activity
                 .iter()
-                .zip(&trace.node_2_predecessors)
+                .zip(&trace.event_2_predecessors)
                 .enumerate()
             {
-                writeln!(f, "#\tnode {}", node_i)?;
+                writeln!(f, "#\tevent {}", event_i)?;
                 LineReader::write_multiline_activity(f, activity, &self.activity_key)?;
                 writeln!(f, "#\t\tnumber of predecessors\n{}", predecessors.len())?;
                 writeln!(f, "#\t\tpredecessors")?;
@@ -250,7 +250,7 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
         writeln!(f, "Number of traces\t{}", self.traces.len())?;
         writeln!(
             f,
-            "Number of nodes\t{}",
+            "Number of events\t{}",
             self.traces
                 .iter()
                 .map(|t| t.number_of_events())
@@ -304,7 +304,7 @@ impl TranslateActivityKey for FiniteStochasticPartiallyOrderedLanguage {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
         self.traces.iter_mut().for_each(|trace| {
-            trace.node_2_activity.iter_mut().for_each(|activity| {
+            trace.event_2_activity.iter_mut().for_each(|activity| {
                 *activity = translator.translate_activity(activity);
             })
         });
@@ -318,7 +318,7 @@ impl TestActivityKey for FiniteStochasticPartiallyOrderedLanguage {
     fn test_activity_key(&self) {
         self.traces.iter().for_each(|trace| {
             trace
-                .node_2_activity
+                .event_2_activity
                 .iter()
                 .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity))
         });
@@ -327,28 +327,28 @@ impl TestActivityKey for FiniteStochasticPartiallyOrderedLanguage {
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct PartiallyOrderedTrace {
-    pub node_2_activity: Vec<Activity>,
-    pub node_2_predecessors: Vec<Vec<usize>>,
+    pub event_2_activity: Vec<Activity>,
+    pub event_2_predecessors: Vec<Vec<usize>>,
 }
 
 impl PartiallyOrderedTrace {
     pub fn number_of_events(&self) -> usize {
-        self.node_2_activity.len()
+        self.event_2_activity.len()
     }
 
     pub fn number_of_edges(&self) -> usize {
-        self.node_2_predecessors.iter().map(|l| l.len()).sum()
+        self.event_2_predecessors.iter().map(|l| l.len()).sum()
     }
 
     /**
-     * Returns the activity of the node. Returns None if the node does not exist.
+     * Returns the activity of the event. Returns None if the event does not exist.
      */
-    pub fn get_state_activity(&self, node: usize) -> Option<&Activity> {
-        self.node_2_activity.get(node)
+    pub fn get_event_activity(&self, event: usize) -> Option<&Activity> {
+        self.event_2_activity.get(event)
     }
 
-    pub fn start_nodes(&self) -> impl Iterator<Item = usize> {
-        self.node_2_predecessors
+    pub fn start_events(&self) -> impl Iterator<Item = usize> {
+        self.event_2_predecessors
             .iter()
             .enumerate()
             .filter_map(|(index, predecessors)| {
@@ -366,9 +366,9 @@ impl PartiallyOrderedTrace {
         activity_key: &ActivityKey,
         graph: &mut VisualGraph,
     ) {
-        //nodes
-        let node_2_dot = self
-            .node_2_activity
+        //events
+        let event_2_dot = self
+            .event_2_activity
             .iter()
             .map(|activity| {
                 let label = activity_key.deprocess_activity(activity);
@@ -376,16 +376,16 @@ impl PartiallyOrderedTrace {
             })
             .collect::<Vec<_>>();
 
-        //start node
-        let start_node = create_place(graph, &format!("{:.4}", probability));
-        for node in self.start_nodes() {
-            create_edge(graph, &start_node, &node_2_dot[node], "");
+        //start event
+        let start_event = create_place(graph, &format!("{:.4}", probability));
+        for event in self.start_events() {
+            create_edge(graph, &start_event, &event_2_dot[event], "");
         }
 
         //edges
         for target in 0..self.number_of_edges() {
-            for source in &self.node_2_predecessors[target] {
-                create_edge(graph, &node_2_dot[*source], &node_2_dot[target], "");
+            for source in &self.event_2_predecessors[target] {
+                create_edge(graph, &event_2_dot[*source], &event_2_dot[target], "");
             }
         }
     }

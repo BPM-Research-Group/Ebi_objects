@@ -136,8 +136,8 @@ impl From<PartiallyOrderedLabelledTrace> for PartiallyOrderedTrace {
         }
 
         Self {
-            node_2_activity: new_node_2_activity,
-            node_2_predecessors: new_node_2_predecessors,
+            event_2_activity: new_node_2_activity,
+            event_2_predecessors: new_node_2_predecessors,
         }
     }
 }
@@ -171,8 +171,8 @@ mod tests {
         };
 
         let trace = PartiallyOrderedTrace {
-            node_2_activity: vec![],
-            node_2_predecessors: vec![],
+            event_2_activity: vec![],
+            event_2_predecessors: vec![],
         };
 
         assert_eq!(PartiallyOrderedTrace::from(ltrace), trace);
@@ -190,8 +190,8 @@ mod tests {
         };
 
         let trace = PartiallyOrderedTrace {
-            node_2_activity: vec![abc, def],
-            node_2_predecessors: vec![vec![], vec![0]],
+            event_2_activity: vec![abc, def],
+            event_2_predecessors: vec![vec![], vec![0]],
         };
 
         assert_eq!(PartiallyOrderedTrace::from(ltrace), trace);
@@ -246,8 +246,8 @@ mod tests {
             assert_eq!(
                 trace,
                 PartiallyOrderedTrace {
-                    node_2_activity: vec![a],
-                    node_2_predecessors: vec![vec![]]
+                    event_2_activity: vec![a],
+                    event_2_predecessors: vec![vec![]]
                 }
             );
             println!("==========");
@@ -266,8 +266,8 @@ mod tests {
             assert_eq!(
                 trace,
                 PartiallyOrderedTrace {
-                    node_2_activity: vec![a, a],
-                    node_2_predecessors: vec![vec![], vec![0]]
+                    event_2_activity: vec![a, a],
+                    event_2_predecessors: vec![vec![], vec![0]]
                 }
             );
             println!("==========");
@@ -288,8 +288,8 @@ mod tests {
             assert_eq!(
                 trace,
                 PartiallyOrderedTrace {
-                    node_2_activity: vec![a, a, a],
-                    node_2_predecessors: vec![vec![], vec![0], vec![1]]
+                    event_2_activity: vec![a, a, a],
+                    event_2_predecessors: vec![vec![], vec![0], vec![1]]
                 }
             );
             println!("==========");
@@ -309,8 +309,8 @@ mod tests {
         assert_eq!(
             trace,
             PartiallyOrderedTrace {
-                node_2_activity: vec![a, a, a],
-                node_2_predecessors: vec![vec![], vec![0], vec![1]]
+                event_2_activity: vec![a, a, a],
+                event_2_predecessors: vec![vec![], vec![0], vec![1]]
             }
         );
         println!("==========");
