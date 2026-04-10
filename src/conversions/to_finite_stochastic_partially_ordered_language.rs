@@ -2,7 +2,7 @@ use crate::{
     FiniteStochasticPartiallyOrderedLanguage,
     ebi_objects::finite_stochastic_partially_ordered_language::PartiallyOrderedTrace,
 };
-use bitvec::{bitvec, prelude::Lsb0};
+use bitvec::bitvec;
 use ebi_activity_key::{Activity, ActivityKey};
 use ebi_arithmetic::Fraction;
 use ebi_bpmn::partially_ordered_run::PartiallyOrderedRun;
