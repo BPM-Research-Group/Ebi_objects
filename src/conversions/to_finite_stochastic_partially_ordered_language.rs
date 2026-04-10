@@ -65,8 +65,13 @@ impl From<PartiallyOrderedRun> for PartiallyOrderedLabelledTrace {
 }
 
 fn edge_execution_sequence(run: &PartiallyOrderedRun) -> Vec<usize> {
-    let mut state_states = bitvec![];
-    let mut state_edges = bitvec![];
+    let mut state_states = bitvec![0; run.number_of_states()];
+    for state in 0..run.number_of_states() {
+        if run.state_2_input_edge[state].is_none() {
+            state_states.set(state, true);
+        }
+    }
+    let mut state_edges = bitvec![0; run.number_of_states()];
     let mut result = vec![];
     while result.len() != run.number_of_edges() {
         'outer: for edge in 0..run.number_of_edges() {
@@ -145,11 +150,16 @@ impl From<PartiallyOrderedRun> for PartiallyOrderedTrace {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use crate::{
         conversions::to_finite_stochastic_partially_ordered_language::PartiallyOrderedLabelledTrace,
         ebi_objects::finite_stochastic_partially_ordered_language::PartiallyOrderedTrace,
     };
     use ebi_activity_key::ActivityKey;
+    use ebi_bpmn::{
+        StochasticBusinessProcessModelAndNotation, partially_ordered_run::PartiallyOrderedRun,
+    };
 
     #[test]
     fn poltrace_2_potrace_empty() {
@@ -183,5 +193,16 @@ mod tests {
         };
 
         assert_eq!(PartiallyOrderedTrace::from(ltrace), trace);
+    }
+
+    #[test]
+    fn porun_2_potrace() {
+        let fin = fs::read_to_string("testfiles/flower.sbpmn").unwrap();
+        let sbpmn = fin
+            .parse::<StochasticBusinessProcessModelAndNotation>()
+            .unwrap();
+
+        let run = PartiallyOrderedRun::new_random(&sbpmn).unwrap();
+        let _ = PartiallyOrderedTrace::from(run);
     }
 }
