@@ -264,8 +264,7 @@ mod tests {
             .parse::<FiniteStochasticPartiallyOrderedLanguage>()
             .unwrap();
 
-        let act = slang.activity_key.process_activity("Check easy claim
-(5 min)");
+        let act = slang.activity_key.process_activity("Check easy claim\n(5 min)");
         assert!(slang.activity_key.get_id_from_activity(act) < 3);
 
         let mut fout: Vec<u8> = vec![];
