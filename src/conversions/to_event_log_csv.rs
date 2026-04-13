@@ -3,7 +3,7 @@ use crate::{
     EventLogXes,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log_csv::{self, DEFAULT_QUOTE_CHARACTER, DEFAULT_SEPARATOR, EventLogCsv},
+        event_log_csv::{self, DEFAULT_QUOTE_CHARACTER, DEFAULT_SEPARATOR, EventLogCsv}, event_log_event_attributes::EventLogEventAttributes,
     },
 };
 use ebi_arithmetic::anyhow::{Error, anyhow};
@@ -136,6 +136,10 @@ impl TryFrom<EventLogXes> for EventLogCsv {
             quote_character: DEFAULT_QUOTE_CHARACTER.as_bytes()[0],
         })
     }
+}
+
+impl TryFrom<EventLogEventAttributes> for EventLogCsv {
+    
 }
 
 impl TryFrom<CompressedEventLogXes> for EventLogCsv {

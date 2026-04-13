@@ -4,7 +4,8 @@ use crate::{
     ebi_objects::{
         compressed_event_log::CompressedEventLog,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, event_log_csv::EventLogCsv, event_log_ocel::EventLogOcel,
+        event_log::EventLog, event_log_csv::EventLogCsv,
+        event_log_event_attributes::EventLogEventAttributes, event_log_ocel::EventLogOcel,
         event_log_python::EventLogPython,
     },
 };
@@ -101,6 +102,15 @@ impl From<EventLogCsv> for EventLog {
         Self {
             activity_key: value.activity_key,
             traces,
+        }
+    }
+}
+
+impl From<EventLogEventAttributes> for EventLog {
+    fn from(value: EventLogEventAttributes) -> Self {
+        Self {
+            activity_key: value.activity_key,
+            traces: value.traces.into_iter().map(|(trace, _)| trace).collect(),
         }
     }
 }

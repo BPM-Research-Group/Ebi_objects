@@ -2,7 +2,9 @@ use crate::{
     CompressedEventLogXes, EventLog, EventLogCsv, EventLogTraceAttributes, EventLogXes,
     ebi_objects::{
         compressed_event_log::CompressedEventLog,
+        compressed_event_log_event_attributes::CompressedEventLogEventAttributes,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+        event_log_event_attributes::EventLogEventAttributes,
     },
 };
 use ebi_arithmetic::anyhow::Error;
@@ -23,6 +25,8 @@ via!(CompressedEventLogTraceAttributes);
 via!(EventLog);
 via!(EventLogTraceAttributes);
 via!(EventLogXes);
+via!(EventLogEventAttributes);
+via!(CompressedEventLogEventAttributes);
 
 impl TryFrom<EventLogCsv> for CompressedEventLog {
     type Error = Error;

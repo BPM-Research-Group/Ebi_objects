@@ -109,6 +109,9 @@ impl Exportable for PetriNetMarkupLanguage {
             }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as PNML.")),
+            EbiObject::EventLogEventAttributes(_) => {
+                Err(anyhow!("Cannot export event log as PNML."))
+            }
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as PNML.")),
             EbiObject::EventLogTraceAttributes(_) => {

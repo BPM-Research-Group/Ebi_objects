@@ -87,6 +87,7 @@ impl Exportable for BusinessProcessModelAndNotation {
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::EventLogEventAttributes(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogTraceAttributes(_) => {

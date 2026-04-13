@@ -11,12 +11,14 @@ pub mod constants {
 pub mod conversions {
     pub mod to_business_process_model_and_notation;
     pub mod to_compressed_event_log;
+    pub mod to_compressed_event_log_event_attributes;
     pub mod to_compressed_event_log_trace_attributes;
     pub mod to_compressed_event_log_xes;
     pub mod to_deterministic_finite_automaton;
     pub mod to_directly_follows_model;
     pub mod to_event_log;
     pub mod to_event_log_csv;
+    pub mod to_event_log_event_attributes;
     pub mod to_event_log_ocel;
     pub mod to_event_log_python;
     pub mod to_event_log_trace_attributes;
@@ -39,6 +41,7 @@ pub mod conversions {
 pub mod ebi_objects {
     pub mod business_process_model_and_notation;
     pub mod compressed_event_log;
+    pub mod compressed_event_log_event_attributes;
     pub mod compressed_event_log_trace_attributes;
     pub mod compressed_event_log_xes;
     pub mod deterministic_finite_automaton;
@@ -46,6 +49,7 @@ pub mod ebi_objects {
     pub mod directly_follows_model;
     pub mod event_log;
     pub mod event_log_csv;
+    pub mod event_log_event_attributes;
     pub mod event_log_ocel;
     pub mod event_log_python;
     pub mod event_log_trace_attributes;
@@ -72,21 +76,25 @@ pub mod ebi_objects {
     pub mod stochastic_process_tree;
 }
 pub mod iterators {
-    pub mod attribute_iterator;
+    pub mod event_attribute_iterator;
     pub mod parallel_ref_probability_trace_iterator;
     pub mod parallel_ref_trace_iterator;
     pub mod parallel_trace_iterator;
     pub mod ref_trace_iterator;
+    pub mod trace_attribute_iterator;
     pub mod trace_iterator;
 }
 pub mod traits {
-    pub mod attribute_iterators;
+    pub mod attributes;
+    pub mod event_attribute_iterators;
+    pub mod event_attributes;
     pub mod exportable;
     pub mod graphable;
     pub mod importable;
     pub mod infoable;
     pub mod number_of_traces;
     pub mod start_end_activities;
+    pub mod trace_attribute_iterators;
     pub mod trace_attributes;
     pub mod trace_iterators;
 }
@@ -100,12 +108,12 @@ pub use crate::attribute_key::attribute_key::AttributeKey;
 pub use crate::attribute_key::data_type::DataType;
 pub use crate::constants::ebi_object::EbiObject;
 pub use crate::constants::ebi_object_type::EbiObjectType;
-pub use crate::traits::attribute_iterators::*;
 pub use crate::traits::exportable::Exportable;
 pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
 pub use crate::traits::infoable::Infoable;
 pub use crate::traits::number_of_traces::NumberOfTraces;
+pub use crate::traits::trace_attribute_iterators::*;
 pub use crate::traits::trace_attributes::*;
 pub use crate::traits::trace_iterators::*;
 pub use ebi_activity_key::Activity;

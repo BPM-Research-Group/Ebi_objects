@@ -4,21 +4,21 @@ use crate::{
     IntoRefTraceIterator, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     iterators::{
-        attribute_iterator::{
-            CategoricalAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
-        },
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
         ref_trace_iterator::RefTraceIterator,
+        trace_attribute_iterator::{
+            CategoricalTraceAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
+        },
     },
     log_infoable_startend, log_infoable_stats,
     traits::{
+        attributes::Attributes,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
         number_of_traces::NumberOfTraces,
         start_end_activities::StartEndActivities,
         trace_attributes::TraceAttributes,
     },
 };
-use chrono::{DateTime, FixedOffset};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_arithmetic::anyhow::{Error, Result, anyhow};
@@ -283,9 +283,9 @@ impl IntoAttributeTraceIterator for EventLogTraceAttributes {
     fn iter_categorical_and_traces(
         &self,
         attribute: Attribute,
-    ) -> std::iter::Zip<RefTraceIterator<'_>, CategoricalAttributeIterator<'_>> {
+    ) -> std::iter::Zip<RefTraceIterator<'_>, CategoricalTraceAttributeIterator<'_>> {
         let x: RefTraceIterator = RefTraceIterator::VecTupleIntMap((&self.traces).into());
-        let y: CategoricalAttributeIterator = (self, attribute).into();
+        let y: CategoricalTraceAttributeIterator = (self, attribute).into();
         x.zip(y)
     }
 
@@ -309,7 +309,7 @@ impl IntoAttributeTraceIterator for EventLogTraceAttributes {
 }
 
 impl IntoAttributeIterator for EventLogTraceAttributes {
-    fn iter_categorical(&self, attribute: Attribute) -> CategoricalAttributeIterator<'_> {
+    fn iter_categorical(&self, attribute: Attribute) -> CategoricalTraceAttributeIterator<'_> {
         (self, attribute).into()
     }
 
@@ -328,17 +328,10 @@ impl TraceAttributes for EventLogTraceAttributes {
         trace_index: usize,
         attribute: Attribute,
     ) -> Option<String> {
-        match self.traces.get(trace_index)?.1.get(attribute)? {
-            AttributeValue::String(x) => Some(x.to_owned()),
-            AttributeValue::Date(_) => None,
-            AttributeValue::Int(x) => Some(x.to_string()),
-            AttributeValue::Float(x) => Some(x.to_string()),
-            AttributeValue::Boolean(x) => Some(x.to_string()),
-            AttributeValue::ID(_) => None,
-            AttributeValue::List(_) => None,
-            AttributeValue::Container(_) => None,
-            AttributeValue::None() => None,
-        }
+        self.traces
+            .get(trace_index)?
+            .1
+            .get_attribute_categorical(attribute)
     }
 
     fn get_trace_attribute_time(
@@ -346,17 +339,10 @@ impl TraceAttributes for EventLogTraceAttributes {
         trace_index: usize,
         attribute: Attribute,
     ) -> Option<chrono::DateTime<chrono::FixedOffset>> {
-        match self.traces.get(trace_index)?.1.get(attribute)? {
-            AttributeValue::String(x) => Some(x.parse::<DateTime<FixedOffset>>().ok()?),
-            AttributeValue::Date(x) => Some(*x),
-            AttributeValue::Int(_) => None,
-            AttributeValue::Float(_) => None,
-            AttributeValue::Boolean(_) => None,
-            AttributeValue::ID(_) => None,
-            AttributeValue::List(_) => None,
-            AttributeValue::Container(_) => None,
-            AttributeValue::None() => None,
-        }
+        self.traces
+            .get(trace_index)?
+            .1
+            .get_attribute_time(attribute)
     }
 
     fn get_trace_attribute_numeric(
@@ -364,17 +350,10 @@ impl TraceAttributes for EventLogTraceAttributes {
         trace_index: usize,
         attribute: Attribute,
     ) -> Option<ebi_arithmetic::Fraction> {
-        match self.traces.get(trace_index)?.1.get(attribute)? {
-            AttributeValue::String(x) => Some(x.parse::<Fraction>().ok()?),
-            AttributeValue::Date(_) => None,
-            AttributeValue::Int(x) => Some(Fraction::from(*x)),
-            AttributeValue::Float(x) => Some(x.to_string().parse::<Fraction>().ok()?),
-            AttributeValue::Boolean(_) => None,
-            AttributeValue::ID(_) => None,
-            AttributeValue::List(_) => None,
-            AttributeValue::Container(_) => None,
-            AttributeValue::None() => None,
-        }
+        self.traces
+            .get(trace_index)?
+            .1
+            .get_attribute_numeric(attribute)
     }
 }
 

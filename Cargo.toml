@@ -30,10 +30,10 @@ testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ebi_activity_key = "0.0.1"
+ebi_activity_key = "0.0.2"
 ebi_arithmetic = "0.3.10"
 ebi_derive = "0.2.10"
-ebi_bpmn = "0.0.45"
+ebi_bpmn = "0.0.46"
 process_mining = "0.5.4"
 anyhow = "1.0.102"
 log = "0.4.28"
@@ -55,6 +55,7 @@ csv = "1.4.0"
 resvg = "0.47.0"
 tiny-skia = "0.12.0" 
 bitvec = "1.0.1"
+pastey = "0.2.0"
 
 [profile.release]
 debug = false

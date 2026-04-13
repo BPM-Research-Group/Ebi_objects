@@ -37,6 +37,7 @@ impl Exportable for PortableNetworkGraphics {
             EbiObject::StochasticDirectlyFollowsModel(object) => object.to_png()?.export(f),
             EbiObject::EventLog(_) => Err(anyhow!("cannot export event log as PNG")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("cannot export event log as PNG")),
+            EbiObject::EventLogEventAttributes(_) => Err(anyhow!("cannot export event log as PNG")),
             EbiObject::EventLogOcel(_) => Err(anyhow!("cannot export event log as PNG")),
             EbiObject::EventLogPython(_) => Err(anyhow!("cannot export event log as PNG")),
             EbiObject::EventLogTraceAttributes(_) => Err(anyhow!("cannot export event log as PNG")),

@@ -1,8 +1,8 @@
 use crate::{
     Attribute,
     iterators::{
-        attribute_iterator::{
-            CategoricalAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
+        trace_attribute_iterator::{
+            CategoricalTraceAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
         ref_trace_iterator::RefTraceIterator,
     },
@@ -12,7 +12,7 @@ pub trait IntoAttributeIterator {
     /// Iterator over the categorical attribute values of traces,
     /// i.e. for traces that do not have the attribute set, a None is included.
     /// A call to .flatten() transforms this to remove those values.
-    fn iter_categorical(&self, attribute: Attribute) -> CategoricalAttributeIterator<'_>;
+    fn iter_categorical(&self, attribute: Attribute) -> CategoricalTraceAttributeIterator<'_>;
 
     /// Iterator over tbe numeric attribute values of traces,
     /// i.e. for traces that do not have the attribute set, a None is included.
@@ -26,13 +26,13 @@ pub trait IntoAttributeIterator {
 }
 
 pub trait IntoAttributeTraceIterator {
-    /// Iterator over traces and their time attribute values,
+    /// Iterator over traces and their categorical attribute values,
     /// i.e. for traces that do not have the attribute set, a None is included.
     /// A call to .flatten() transforms this to remove those values.
     fn iter_categorical_and_traces(
         &self,
         attribute: Attribute,
-    ) -> std::iter::Zip<RefTraceIterator<'_>, CategoricalAttributeIterator<'_>>;
+    ) -> std::iter::Zip<RefTraceIterator<'_>, CategoricalTraceAttributeIterator<'_>>;
 
     /// Iterator over traces and their numeric attribute values,
     /// i.e. for traces that do not have the attribute set, a None is included.

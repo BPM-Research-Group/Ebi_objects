@@ -340,9 +340,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "ebi_activity_key"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "070fcc38f3aa2c2763b4f0fdd09d4b44ee744d09af3c785381a41cb4997eaf77"
+checksum = "41eab2d4244b7796f898c473fa432cdd7741b18fb23f95663bd32eda50ae12b9"
 dependencies = [
  "intmap",
  "uuid",
@@ -364,9 +364,9 @@ dependencies = [
 
 [[package]]
 name = "ebi_bpmn"
-version = "0.0.45"
+version = "0.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd99d9330ee1fdf50a8c51fc63d30a91e649d7030e184cdda0c19c11651a8271"
+checksum = "922862ad1b66e86a1bb243136e3d73bde20af79193c6e16dc0d2317c106384a0"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -411,6 +411,7 @@ dependencies = [
  "itertools",
  "layout-rs",
  "log",
+ "pastey",
  "process_mining",
  "quick-xml 0.39.2",
  "rayon",
@@ -1070,6 +1071,12 @@ dependencies = [
  "smallvec",
  "windows-link",
 ]
+
+[[package]]
+name = "pastey"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b867cad97c0791bbd3aaa6472142568c6c9e8f71937e98379f584cfb0cf35bec"
 
 [[package]]
 name = "pdf-writer"

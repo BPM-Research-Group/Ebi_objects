@@ -1,9 +1,8 @@
+use crate::constants::ebi_object::EbiObject;
 use ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_arithmetic::{ConstFraction, Fraction};
 use std::{collections::HashMap, fmt::Debug, hash::Hash, io::BufRead};
 use strum_macros::Display;
-
-use crate::constants::ebi_object::EbiObject;
 
 pub trait Importable {
     ///Defines the parameters that the importer expects.

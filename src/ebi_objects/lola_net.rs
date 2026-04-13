@@ -127,6 +127,9 @@ impl Exportable for LolaNet {
             }
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
+            EbiObject::EventLogEventAttributes(_) => {
+                Err(anyhow!("Cannot export event log as Lolanet."))
+            }
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as Lolanet.")),
             EbiObject::EventLogTraceAttributes(_) => {

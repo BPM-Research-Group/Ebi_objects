@@ -9,6 +9,7 @@ pub enum RefTraceIterator<'a> {
     Vec(std::slice::Iter<'a, Vec<Activity>>),
     VecTupleHashMap(VecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>),
     VecTupleIntMap(VecTupleIterator<'a, Vec<Activity>, IntMap<Attribute, AttributeValue>>),
+    VecTupleVecIntMap(VecTupleIterator<'a, Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>>),
     HashSet(std::collections::hash_set::Iter<'a, Vec<Activity>>),
     Keys(std::collections::hash_map::Keys<'a, Vec<Activity>, Fraction>),
 }
@@ -21,6 +22,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.next(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.next(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.next(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.next(),
             RefTraceIterator::HashSet(iter) => iter.next(),
             RefTraceIterator::Keys(iter) => iter.next(),
         }
@@ -31,6 +33,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.size_hint(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.size_hint(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.size_hint(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.size_hint(),
             RefTraceIterator::HashSet(iter) => iter.size_hint(),
             RefTraceIterator::Keys(iter) => iter.size_hint(),
         }
@@ -44,6 +47,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.count(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.count(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.count(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.count(),
             RefTraceIterator::HashSet(iter) => iter.count(),
             RefTraceIterator::Keys(iter) => iter.count(),
         }
@@ -57,6 +61,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.last(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.last(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.last(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.last(),
             RefTraceIterator::HashSet(iter) => iter.last(),
             RefTraceIterator::Keys(iter) => iter.last(),
         }
@@ -67,6 +72,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.nth(n),
             RefTraceIterator::VecTupleHashMap(iter) => iter.nth(n),
             RefTraceIterator::VecTupleIntMap(iter) => iter.nth(n),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.nth(n),
             RefTraceIterator::HashSet(iter) => iter.nth(n),
             RefTraceIterator::Keys(iter) => iter.nth(n),
         }
@@ -80,6 +86,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.collect(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.collect(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.collect(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.collect(),
             RefTraceIterator::HashSet(iter) => iter.collect(),
             RefTraceIterator::Keys(iter) => iter.collect(),
         }
@@ -94,6 +101,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.position(predicate),
             RefTraceIterator::VecTupleHashMap(iter) => iter.position(predicate),
             RefTraceIterator::VecTupleIntMap(iter) => iter.position(predicate),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.position(predicate),
             RefTraceIterator::HashSet(iter) => iter.position(predicate),
             RefTraceIterator::Keys(iter) => iter.position(predicate),
         }
@@ -108,6 +116,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.sum(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.sum(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.sum(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.sum(),
             RefTraceIterator::HashSet(iter) => iter.sum(),
             RefTraceIterator::Keys(iter) => iter.sum(),
         }
@@ -122,6 +131,7 @@ impl<'a> Iterator for RefTraceIterator<'a> {
             RefTraceIterator::Vec(iter) => iter.product(),
             RefTraceIterator::VecTupleHashMap(iter) => iter.product(),
             RefTraceIterator::VecTupleIntMap(iter) => iter.product(),
+            RefTraceIterator::VecTupleVecIntMap(iter) => iter.product(),
             RefTraceIterator::HashSet(iter) => iter.product(),
             RefTraceIterator::Keys(iter) => iter.product(),
         }
@@ -142,6 +152,14 @@ impl<'a> From<&'a Vec<(Vec<Activity>, IntMap<Attribute, AttributeValue>)>>
     for VecTupleIterator<'a, Vec<Activity>, IntMap<Attribute, AttributeValue>>
 {
     fn from(value: &'a Vec<(Vec<Activity>, IntMap<Attribute, AttributeValue>)>) -> Self {
+        Self(value.iter())
+    }
+}
+
+impl<'a> From<&'a Vec<(Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>)>>
+    for VecTupleIterator<'a, Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>>
+{
+    fn from(value: &'a Vec<(Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>)>) -> Self {
         Self(value.iter())
     }
 }

@@ -8,7 +8,7 @@ use crate::{
 };
 use intmap::IntMap;
 
-/// An iterator over traces, where the traces do not exist in memory untill they are necessary.
+/// An iterator over traces, where the traces do not exist in memory until they are necessary.
 pub enum TraceIterator<'a> {
     Csv(TraceIteratorCsv<'a>),
     Xes(TraceIteratorXes<'a>),

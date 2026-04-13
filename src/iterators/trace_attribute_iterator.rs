@@ -3,13 +3,13 @@ use ebi_arithmetic::Fraction;
 
 use crate::{Attribute, EventLogTraceAttributes, NumberOfTraces, TraceAttributes};
 
-pub struct CategoricalAttributeIterator<'a> {
+pub struct CategoricalTraceAttributeIterator<'a> {
     log: &'a EventLogTraceAttributes,
     attribute: Attribute,
     next: usize,
 }
 
-impl<'a> Iterator for CategoricalAttributeIterator<'a> {
+impl<'a> Iterator for CategoricalTraceAttributeIterator<'a> {
     type Item = Option<String>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -26,7 +26,7 @@ impl<'a> Iterator for CategoricalAttributeIterator<'a> {
     }
 }
 
-impl<'a> From<(&'a EventLogTraceAttributes, Attribute)> for CategoricalAttributeIterator<'a> {
+impl<'a> From<(&'a EventLogTraceAttributes, Attribute)> for CategoricalTraceAttributeIterator<'a> {
     fn from(value: (&'a EventLogTraceAttributes, Attribute)) -> Self {
         Self {
             log: value.0,
