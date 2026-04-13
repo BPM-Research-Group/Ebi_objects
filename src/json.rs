@@ -1,8 +1,10 @@
+use anyhow::Context;
+use chrono::{DateTime, FixedOffset};
 use ebi_arithmetic::Fraction;
 use ebi_arithmetic::anyhow::{Result, anyhow};
 use serde_json::{Map, Value};
 
-pub fn read_field_number(json: &Value, field: &str) -> Result<usize> {
+pub fn read_field_index(json: &Value, field: &str) -> Result<usize> {
     match &json[field] {
         Value::Null => return Err(anyhow!("field not found")),
         Value::Bool(_) => return Err(anyhow!("field is a boolean, where number expected")),
@@ -62,7 +64,37 @@ pub fn read_field_string<'a>(json: &'a Value, field: &str) -> Result<String> {
     }
 }
 
-pub fn read_number(json: &Value) -> Result<usize> {
+pub fn read_field_string_or_null<'a>(json: &'a Value, field: &str) -> Result<Option<String>> {
+    match &json[field] {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where literal expected")),
+        Value::Number(n) => return Ok(Some(n.to_string())),
+        Value::String(s) => return Ok(Some(s.to_string())),
+        Value::Array(_) => return Err(anyhow!("field is a list, where literal expected")),
+        Value::Object(_) => return Err(anyhow!("field is an object, where literal expected")),
+    }
+}
+
+pub fn read_field_time_or_null<'a>(
+    json: &'a Value,
+    field: &str,
+) -> Result<Option<DateTime<FixedOffset>>> {
+    match &json[field] {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("Field is a boolean, where a time was expected.")),
+        Value::Number(_) => return Err(anyhow!("Field is a number, where a time was expected.")),
+        Value::String(s) => {
+            return Ok(Some(
+                s.parse()
+                    .with_context(|| anyhow!("field cannot be parsed as a time."))?,
+            ));
+        }
+        Value::Array(_) => return Err(anyhow!("Field is a list, where a time was expected.")),
+        Value::Object(_) => return Err(anyhow!("Field is an object, where a time was expected.")),
+    }
+}
+
+pub fn read_index(json: &Value) -> Result<usize> {
     match &json {
         Value::Null => return Err(anyhow!("field not found")),
         Value::Bool(_) => return Err(anyhow!("field is a boolean, where number expected")),

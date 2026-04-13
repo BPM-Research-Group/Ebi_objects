@@ -228,15 +228,15 @@ impl Importable for DeterministicFiniteAutomaton {
 
         let mut result = DeterministicFiniteAutomaton::new();
 
-        result.set_initial_state(json::read_field_number(&json, "initialState").ok());
+        result.set_initial_state(json::read_field_index(&json, "initialState").ok());
 
         //read transitions
         let jtrans = json::read_field_list(&json, "transitions")
             .context("failed to read list of transitions")?;
         for jtransition in jtrans {
             let from =
-                json::read_field_number(jtransition, "from").context("could not read from")?;
-            let to = json::read_field_number(jtransition, "to").context("could not read to")?;
+                json::read_field_index(jtransition, "from").context("could not read from")?;
+            let to = json::read_field_index(jtransition, "to").context("could not read to")?;
             let label =
                 json::read_field_string(jtransition, "label").context("could not read label")?;
             let activity = result.activity_key.process_activity(label.as_str());
@@ -251,7 +251,7 @@ impl Importable for DeterministicFiniteAutomaton {
         let jfinal_states = json::read_field_list(&json, "finalStates")
             .with_context(|| "failed to read list of final states")?;
         for jfinal_state in jfinal_states {
-            let state = json::read_number(jfinal_state).context("could not read final state")?;
+            let state = json::read_index(jfinal_state).context("could not read final state")?;
 
             result.ensure_states(state);
 

@@ -259,13 +259,14 @@ mod tests {
 
     #[test]
     fn activity_read_write_psolang() {
-        let fin = fs::read_to_string("testfiles/multiline.spolang").unwrap();
+        let fin = fs::read_to_string("testfiles/model.sbpmn.spolang").unwrap();
         let mut slang = fin
             .parse::<FiniteStochasticPartiallyOrderedLanguage>()
             .unwrap();
 
-        let act = slang.activity_key.process_activity("a$\nbcde$\nmultiline$");
-        assert!(slang.activity_key.get_id_from_activity(act) < 2);
+        let act = slang.activity_key.process_activity("Check easy claim
+(5 min)");
+        assert!(slang.activity_key.get_id_from_activity(act) < 3);
 
         let mut fout: Vec<u8> = vec![];
         slang.export(&mut fout).unwrap();

@@ -21,6 +21,7 @@ pub mod conversions {
     pub mod to_event_log_python;
     pub mod to_event_log_trace_attributes;
     pub mod to_event_log_xes;
+    pub mod to_executions;
     pub mod to_finite_language;
     pub mod to_finite_stochastic_language;
     pub mod to_finite_stochastic_partially_ordered_language;

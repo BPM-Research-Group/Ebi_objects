@@ -324,13 +324,13 @@ impl Importable for StochasticDeterministicFiniteAutomaton {
 
         let mut result = StochasticDeterministicFiniteAutomaton::new();
 
-        result.set_initial_state(json::read_field_number(&json, "initialState").ok());
+        result.set_initial_state(json::read_field_index(&json, "initialState").ok());
         let jtrans = json::read_field_list(&json, "transitions")
             .context("failed to read list of transitions")?;
         for (i, jtransition) in jtrans.iter().enumerate() {
-            let from = json::read_field_number(jtransition, "from")
+            let from = json::read_field_index(jtransition, "from")
                 .with_context(|| format!("could not read source of transition {}", i))?;
-            let to = json::read_field_number(jtransition, "to")
+            let to = json::read_field_index(jtransition, "to")
                 .with_context(|| format!("could not read destination of transition {}", i))?;
             let label = json::read_field_string(jtransition, "label")
                 .with_context(|| format!("could not read label of transition {}", i))?;
