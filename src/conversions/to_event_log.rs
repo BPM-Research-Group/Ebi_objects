@@ -2,11 +2,7 @@ use crate::{
     Activity, ActivityKey, CompressedEventLogXes, EventLogTraceAttributes, EventLogXes,
     IntoTraceIterator,
     ebi_objects::{
-        compressed_event_log::CompressedEventLog,
-        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, event_log_csv::EventLogCsv,
-        event_log_event_attributes::EventLogEventAttributes, event_log_ocel::EventLogOcel,
-        event_log_python::EventLogPython,
+        compressed_event_log::CompressedEventLog, compressed_event_log_event_attributes::CompressedEventLogEventAttributes, compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, event_log::EventLog, event_log_csv::EventLogCsv, event_log_event_attributes::EventLogEventAttributes, event_log_ocel::EventLogOcel, event_log_python::EventLogPython
     },
 };
 use process_mining::{OCEL, core::event_data::case_centric::EventLogClassifier};
@@ -25,6 +21,14 @@ impl From<CompressedEventLogTraceAttributes> for EventLog {
         value.log.into()
     }
 }
+
+impl From<CompressedEventLogEventAttributes> for EventLog {
+    fn from(value: CompressedEventLogEventAttributes) -> Self {
+        log::info!("Convert compressed event log with trace attributes into event log.");
+        value.log.into()
+    }
+}
+
 
 impl From<EventLogTraceAttributes> for EventLog {
     fn from(value: EventLogTraceAttributes) -> Self {

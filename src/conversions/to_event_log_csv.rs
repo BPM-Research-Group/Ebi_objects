@@ -3,7 +3,8 @@ use crate::{
     EventLogXes,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log_csv::{self, DEFAULT_QUOTE_CHARACTER, DEFAULT_SEPARATOR, EventLogCsv}, event_log_event_attributes::EventLogEventAttributes,
+        event_log_csv::{self, DEFAULT_QUOTE_CHARACTER, DEFAULT_SEPARATOR, EventLogCsv},
+        event_log_event_attributes::EventLogEventAttributes,
     },
 };
 use ebi_arithmetic::anyhow::{Error, anyhow};
@@ -139,7 +140,40 @@ impl TryFrom<EventLogXes> for EventLogCsv {
 }
 
 impl TryFrom<EventLogEventAttributes> for EventLogCsv {
-    
+    type Error = Error;
+
+    fn try_from(value: EventLogEventAttributes) -> Result<Self, Self::Error> {
+        let EventLogEventAttributes {
+            activity_key,
+            attribute_key,
+            activity_attribute: activity_attributes,
+            traces,
+        } = value;
+        //transform the traces
+        let mut data = Vec::with_capacity(traces.len());
+        for (trace_id, (_, trace_attributes)) in traces.into_iter().enumerate() {
+            if trace_attributes.len() == 0 {
+                return Err(anyhow!(
+                    "cannot convert this event log to csv; a csv file does not support empty traces"
+                ));
+            }
+
+            let mut new_events = Vec::with_capacity(trace_attributes.len());
+            for event in trace_attributes {
+                new_events.push(event.into_iter().map(|(a, b)| (a, b.to_string())).collect());
+            }
+            data.push((trace_id.to_string(), new_events));
+        }
+
+        Ok(EventLogCsv {
+            activity_attribute: activity_attributes,
+            activity_key,
+            attribute_key,
+            traces: data,
+            separator: event_log_csv::DEFAULT_SEPARATOR.as_bytes()[0],
+            quote_character: event_log_csv::DEFAULT_QUOTE_CHARACTER.as_bytes()[0],
+        })
+    }
 }
 
 impl TryFrom<CompressedEventLogXes> for EventLogCsv {

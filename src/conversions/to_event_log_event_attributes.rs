@@ -1,5 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::{
-    AttributeKey, CompressedEventLogXes, EventLogCsv, EventLogOcel, EventLogXes, IntoTraceIterator,
+    AttributeKey, CompressedEventLogXes, EventLogCsv, EventLogOcel, EventLogXes,
     ebi_objects::{
         compressed_event_log_event_attributes::CompressedEventLogEventAttributes,
         event_log_event_attributes::EventLogEventAttributes,
@@ -7,7 +9,10 @@ use crate::{
 };
 use ebi_activity_key::{Activity, ActivityKey};
 use intmap::IntMap;
-use process_mining::core::event_data::case_centric::{AttributeValue, EventLogClassifier};
+use process_mining::{
+    OCEL,
+    core::event_data::case_centric::{AttributeValue, EventLogClassifier},
+};
 
 impl From<CompressedEventLogEventAttributes> for EventLogEventAttributes {
     fn from(value: CompressedEventLogEventAttributes) -> Self {
@@ -66,15 +71,123 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogEventAttri
             })
             .collect();
 
+        let activity_attributes = attribute_key
+            .label_to_attribute(classifier.keys.iter().next().unwrap_or(&String::new()))
+            .unwrap_or(attribute_key.id_to_attribute(0));
+
         Self {
             traces,
             activity_key,
+            activity_attribute: activity_attributes,
             attribute_key,
         }
     }
 }
 
-impl From<EventLogOcel> for EventLogEventAttributes {}
+impl From<EventLogOcel> for EventLogEventAttributes {
+    fn from(value: EventLogOcel) -> Self {
+        log::info!("Convert OCEL event log into event log.");
+        let EventLogOcel {
+            mut activity_key,
+            rust4pm_log,
+            object_type,
+        } = value;
+        let OCEL {
+            event_types: _,
+            object_types: _,
+            events,
+            objects,
+        } = rust4pm_log;
+
+        //gather attributes
+        let mut attribute_key = AttributeKey::new();
+        let attribute_object_id = attribute_key.process_attribute_column(0, "a");
+        let activity_attribute = attribute_key.id_to_attribute(0);
+
+        let mut object_id2attributes = HashMap::new();
+        for object in objects.iter() {
+            let mut attributes = IntMap::new();
+            for rust4pm_attribute in &object.attributes {
+                let attribute_value = AttributeKey::ocel_attribute_value2attribute_value(
+                    rust4pm_attribute.value.clone(),
+                );
+                let attribute = attribute_key
+                    .process_attribute_value(&rust4pm_attribute.name, &attribute_value);
+
+                attributes.insert(attribute, attribute_value);
+            }
+            object_id2attributes.insert(object.id.clone(), attributes);
+        }
+
+        //gather list of objects
+        let objects = objects
+            .into_iter()
+            .filter_map(|ob| {
+                if ob.object_type == object_type {
+                    Some(ob.id)
+                } else {
+                    None
+                }
+            })
+            .collect::<HashSet<_>>();
+
+        //gather traces and attributes
+        let mut object_id2trace_activities = HashMap::new();
+        let mut object_id2trace_attributes = HashMap::new();
+        for event in events {
+            for relation in event.relationships {
+                if objects.contains(&relation.object_id) {
+                    //activity trace
+                    object_id2trace_activities
+                        .entry(relation.object_id.clone())
+                        .or_insert_with(|| vec![])
+                        .push(activity_key.process_activity(&event.event_type));
+
+                    //attribute trace
+                    let mut attributes = IntMap::new();
+                    for rust4pm_attribute in &event.attributes {
+                        let attribute_value = AttributeKey::ocel_attribute_value2attribute_value(
+                            rust4pm_attribute.value.clone(),
+                        );
+                        let attribute = attribute_key
+                            .process_attribute_value(&rust4pm_attribute.name, &attribute_value);
+
+                        attributes.insert(attribute, attribute_value);
+                    }
+                    attributes.insert_checked(
+                        attribute_object_id,
+                        AttributeValue::String(relation.object_id.clone()),
+                    );
+                    object_id2trace_attributes
+                        .entry(relation.object_id)
+                        .or_insert_with(|| vec![])
+                        .push(attributes);
+                }
+            }
+        }
+
+        //merge traces with attributes
+        let mut traces = vec![];
+        for (object_id, _) in object_id2attributes {
+            //no events -> empty trace
+            if !object_id2trace_activities.contains_key(&object_id) {
+                traces.push((vec![], vec![]));
+            }
+        }
+        for (object_id, trace) in object_id2trace_activities {
+            let attributes = object_id2trace_attributes.get(&object_id).unwrap();
+            traces.push((trace, attributes.clone()));
+        }
+
+        //construct result
+        Self {
+            activity_key,
+            attribute_key,
+            traces,
+            activity_attribute,
+        }
+    }
+}
 
 impl From<EventLogCsv> for EventLogEventAttributes {
     fn from(value: EventLogCsv) -> Self {
@@ -122,6 +235,7 @@ impl From<EventLogCsv> for EventLogEventAttributes {
         Self {
             activity_key,
             attribute_key,
+            activity_attribute,
             traces,
         }
     }
