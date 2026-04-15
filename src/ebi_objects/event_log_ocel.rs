@@ -121,13 +121,17 @@ impl EventLogOcel {
             None
         }
     }
+
+    pub const IMPORTER_PARAMETERS_EVENT_ATTRIBUTES: &[ImporterParameter] = &[
+        OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE,
+        OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE,
+        OCEL_IMPORTER_PARAMETER_TIME_ATTRIBUTE,
+    ];
 }
 
 impl Importable for EventLogOcel {
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
         OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE,
-        OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE,
-        OCEL_IMPORTER_PARAMETER_TIME_ATTRIBUTE,
     ];
 
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An object-centric event log file follows the Ocel 2.0 format~\\cite{DBLP:journals/corr/abs-2403-01975}. 

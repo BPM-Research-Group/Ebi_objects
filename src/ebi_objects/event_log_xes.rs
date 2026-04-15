@@ -64,6 +64,12 @@ pub struct EventLogXes {
 }
 
 impl EventLogXes {
+    pub const XES_IMPORTER_PARAMETER_EVENTS: &[ImporterParameter] = &[
+        XES_IMPORTER_PARAMETER_ACTIVITY,
+        XES_IMPORTER_PARAMETER_RESOURCE,
+        XES_IMPORTER_PARAMETER_TIME,
+    ];
+
     pub fn event_classifier(&self) -> &EventLogClassifier {
         &self.classifier
     }
@@ -144,11 +150,7 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
 
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
-        XES_IMPORTER_PARAMETER_ACTIVITY,
-        XES_IMPORTER_PARAMETER_RESOURCE,
-        XES_IMPORTER_PARAMETER_TIME,
-    ];
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[XES_IMPORTER_PARAMETER_ACTIVITY];
 
     fn import_as_object(
         reader: &mut dyn BufRead,

@@ -19,6 +19,7 @@ use crate::{
     },
 };
 use anyhow::{Error, Result, anyhow};
+use chrono::{DateTime, FixedOffset};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{
@@ -58,6 +59,26 @@ impl EventLogEventAttributes {
             })
         })
     }
+
+    /// Returns the time of the given event, if the event and the trace exist, it has a time-parseable attribute, and the attribute was declared correctly on import.
+    pub fn get_time(
+        &self,
+        trace_index: usize,
+        event_index: usize,
+    ) -> Option<&DateTime<FixedOffset>> {
+        let time_attribute = self.time_attribute?;
+        let attributes = &self.traces[trace_index].1[event_index];
+        let value = attributes.get(time_attribute)?;
+        value.try_as_date()
+    }
+
+    /// Returns the resource of the given event, if the event and the trace exist, it has a resource attribute, and the attribute was declared correctly on import.
+    pub fn get_resource(&self, trace_index: usize, event_index: usize) -> Option<&String> {
+        let resource_attribute = self.resource_attribute?;
+        let attributes = &self.traces[trace_index].1[event_index];
+        let value = attributes.get(resource_attribute)?;
+        value.try_as_string()
+    }
 }
 
 impl TranslateActivityKey for EventLogEventAttributes {
@@ -76,7 +97,7 @@ impl TranslateActivityKey for EventLogEventAttributes {
 impl Importable for EventLogEventAttributes {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = EventLogXes::FILE_FORMAT_SPECIFICATION_LATEX;
 
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = EventLogXes::IMPORTER_PARAMETERS;
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = EventLogXes::XES_IMPORTER_PARAMETER_EVENTS;
 
     fn import_as_object(
         reader: &mut dyn BufRead,

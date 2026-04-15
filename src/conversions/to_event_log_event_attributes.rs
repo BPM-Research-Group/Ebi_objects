@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    AttributeKey, CompressedEventLogXes, EventLogCsv, EventLogOcel, EventLogXes,
-    ebi_objects::{
+    AttributeKey, CompressedEventLogXes, EventLogCsv, EventLogOcel, EventLogPython, EventLogXes, ebi_objects::{
         compressed_event_log_event_attributes::CompressedEventLogEventAttributes,
         event_log_event_attributes::EventLogEventAttributes,
-    },
+    }
 };
 use ebi_activity_key::{Activity, ActivityKey};
 use intmap::IntMap;
@@ -23,6 +22,12 @@ impl From<CompressedEventLogEventAttributes> for EventLogEventAttributes {
 impl From<CompressedEventLogXes> for EventLogEventAttributes {
     fn from(value: CompressedEventLogXes) -> Self {
         EventLogXes::into(value.log)
+    }
+}
+
+impl From<EventLogPython> for EventLogEventAttributes {
+    fn from(value: EventLogPython) -> Self {
+        value.log.into()
     }
 }
 
@@ -117,7 +122,7 @@ impl From<EventLogOcel> for EventLogEventAttributes {
         //gather attributes
         let mut attribute_key = AttributeKey::new();
         let case_object_id_attribute = attribute_key.process_attribute_column(0, "a");
-        let activity_attribute = attribute_key.id_to_attribute(1);
+        let activity_attribute = attribute_key.process_attribute_column(1, "a");
         let resource_attribute = attribute_key.process_attribute_column(2, "a");
 
         let mut object_id2attributes = HashMap::new();
