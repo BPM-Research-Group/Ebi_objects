@@ -269,35 +269,40 @@ impl Importable for EventLogCsv {
             })?;
 
         //find the resource column
-        let (resource_parameter_value, resource_parameter_given) = parameter_values
-            .get(&CSV_IMPORTER_PARAMETER_RESOURCE)
-            .ok_or_else(|| anyhow!("parameter not found"))?;
-        let resource_attribute = if let Some(att) =
-            Self::find_column(&attribute_key, &resource_parameter_value.as_string()?)
+        let resource_attribute = if let Some((resource_parameter_value, resource_parameter_given)) =
+            parameter_values.get(&CSV_IMPORTER_PARAMETER_RESOURCE)
         {
-            Some(att)
-        } else if *resource_parameter_given {
-            return Err(anyhow!(
-                "Resource attribute `{}` not found as a column.",
-                resource_parameter_value.as_string()?
-            ));
+            if let Some(att) =
+                Self::find_column(&attribute_key, &resource_parameter_value.as_string()?)
+            {
+                Some(att)
+            } else if *resource_parameter_given {
+                return Err(anyhow!(
+                    "Resource attribute `{}` not found as a column.",
+                    resource_parameter_value.as_string()?
+                ));
+            } else {
+                None
+            }
         } else {
             None
         };
 
         //find the time column
-        let (time_parameter_value, time_parameter_given) = parameter_values
-            .get(&CSV_IMPORTER_PARAMETER_TIMESTAMP)
-            .ok_or_else(|| anyhow!("parameter not found"))?;
-        let time_attribute = if let Some(att) =
-            Self::find_column(&attribute_key, &time_parameter_value.as_string()?)
+        let time_attribute = if let Some((time_parameter_value, time_parameter_given)) =
+            parameter_values.get(&CSV_IMPORTER_PARAMETER_TIMESTAMP)
         {
-            Some(att)
-        } else if *time_parameter_given {
-            return Err(anyhow!(
-                "Time attribute `{}` not found as a column.",
-                time_parameter_value.as_string()?
-            ));
+            if let Some(att) = Self::find_column(&attribute_key, &time_parameter_value.as_string()?)
+            {
+                Some(att)
+            } else if *time_parameter_given {
+                return Err(anyhow!(
+                    "Time attribute `{}` not found as a column.",
+                    time_parameter_value.as_string()?
+                ));
+            } else {
+                None
+            }
         } else {
             None
         };

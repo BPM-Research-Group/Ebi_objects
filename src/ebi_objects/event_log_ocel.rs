@@ -4,7 +4,9 @@ use crate::{
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
     log_infoable_startend, log_infoable_stats,
     traits::{
-        importable::{ImporterParameter, ImporterParameterValues, from_string},
+        importable::{
+            ImporterParameter, ImporterParameterValue, ImporterParameterValues, from_string,
+        },
         start_end_activities::StartEndActivities,
     },
 };
@@ -130,9 +132,7 @@ impl EventLogOcel {
 }
 
 impl Importable for EventLogOcel {
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
-        OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE,
-    ];
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE];
 
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An object-centric event log file follows the Ocel 2.0 format~\\cite{DBLP:journals/corr/abs-2403-01975}. 
 Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
@@ -169,28 +169,41 @@ For instance:
                         "Case object-type `{}` not found.",
                         case_object_type_parameter_value
                     )
-                })?.clone();
+                })?
+                .clone();
 
         //find resource object type
-        let (resource_object_type_parameter_value, resource_object_type_parameter_given) =
-            parameter_values
-                .get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE)
-                .ok_or_else(|| anyhow!("expected parameter not found"))?;
-        let resource_object_type = Self::find_object_type(
-            &log.object_types,
-            &resource_object_type_parameter_value.as_string()?,
-        ).cloned();
-        if *resource_object_type_parameter_given && resource_object_type.is_none() {
-            return Err(anyhow!(
-                "Resource object-type `{}` not found.",
-                resource_object_type_parameter_value.as_string()?
-            ));
-        }
+        let resource_object_type = if let Some((
+            resource_object_type_parameter_value,
+            resource_object_type_parameter_given,
+        )) =
+            parameter_values.get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE)
+        {
+            let x = Self::find_object_type(
+                &log.object_types,
+                &resource_object_type_parameter_value.as_string()?,
+            )
+            .cloned();
+
+            if *resource_object_type_parameter_given && x.is_none() {
+                return Err(anyhow!(
+                    "Resource object-type `{}` not found.",
+                    resource_object_type_parameter_value.as_string()?
+                ));
+            }
+
+            x
+        } else {
+            None
+        };
 
         //obtain timestamp attribute
         let time_parameter_value = parameter_values
             .get(&OCEL_IMPORTER_PARAMETER_TIME_ATTRIBUTE)
-            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .unwrap_or(&(
+                ImporterParameterValue::String(OCEL_DEFAULT_TIMESTAMP_ATTRIBUTE.to_string()),
+                false,
+            ))
             .0
             .as_string()?;
 

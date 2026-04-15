@@ -3,7 +3,7 @@ use crate::{
     ebi_objects::{
         event_log_python::EventLogPython,
         event_log_xes::{
-            EventLogXes, XES_DEFAULT_PARAMETER_RESOURCE, XES_DEFAULT_PARAMETER_TIMESTAMP,
+            EventLogXes, XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE, XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE,
         },
     },
 };
@@ -74,18 +74,18 @@ impl TryFrom<EventLogCsv> for EventLogXes {
                 .attribute_key
                 .attribute_to_label(&att)
                 .cloned()
-                .unwrap_or(XES_DEFAULT_PARAMETER_RESOURCE.to_string())
+                .unwrap_or(XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE.to_string())
         } else {
-            XES_DEFAULT_PARAMETER_RESOURCE.to_string()
+            XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE.to_string()
         };
         let time = if let Some(att) = value.time_attribute {
             value
                 .attribute_key
                 .attribute_to_label(&att)
                 .cloned()
-                .unwrap_or(XES_DEFAULT_PARAMETER_TIMESTAMP.to_string())
+                .unwrap_or(XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE.to_string())
         } else {
-            XES_DEFAULT_PARAMETER_TIMESTAMP.to_string()
+            XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE.to_string()
         };
 
         Ok((result, classifier, resource, time).into())

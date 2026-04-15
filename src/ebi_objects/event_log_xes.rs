@@ -4,7 +4,9 @@ use crate::{
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
     log_infoable_startend, log_infoable_stats,
     traits::{
-        importable::{ImporterParameter, ImporterParameterValues, from_string},
+        importable::{
+            ImporterParameter, ImporterParameterValue, ImporterParameterValues, from_string,
+        },
         start_end_activities::StartEndActivities,
     },
 };
@@ -27,8 +29,8 @@ use std::{
 };
 
 pub const XES_DEFAULT_PARAMETER_ACTIVITY: &str = "concept:name";
-pub const XES_DEFAULT_PARAMETER_TIMESTAMP: &str = "time:timestamp";
-pub const XES_DEFAULT_PARAMETER_RESOURCE: &str = "org:resource";
+pub const XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE: &str = "time:timestamp";
+pub const XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE: &str = "org:resource";
 
 pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
     name: "xes_event_classifier",
@@ -43,7 +45,7 @@ pub const XES_IMPORTER_PARAMETER_RESOURCE: ImporterParameter = ImporterParameter
     short_name: "xr",
     explanation: "The attribute that defines, for each event, what its resource is.",
     allowed_values: None,
-    default_value: XES_DEFAULT_PARAMETER_RESOURCE,
+    default_value: XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE,
 };
 
 pub const XES_IMPORTER_PARAMETER_TIME: ImporterParameter = ImporterParameter::String {
@@ -51,7 +53,7 @@ pub const XES_IMPORTER_PARAMETER_TIME: ImporterParameter = ImporterParameter::St
     short_name: "xt",
     explanation: "The attribute that defines, for each event, what its timestamp is.",
     allowed_values: None,
-    default_value: XES_DEFAULT_PARAMETER_TIMESTAMP,
+    default_value: XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE,
 };
 
 #[derive(ActivityKey, Clone)]
@@ -193,12 +195,22 @@ For instance:
 
         let resource = parameter_values
             .get(&XES_IMPORTER_PARAMETER_RESOURCE)
-            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .unwrap_or(&(
+                ImporterParameterValue::String(
+                    XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE.to_string(),
+                ),
+                false,
+            ))
             .0
             .as_string()?;
         let time = parameter_values
             .get(&XES_IMPORTER_PARAMETER_TIME)
-            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .unwrap_or(&(
+                ImporterParameterValue::String(
+                    XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE.to_string(),
+                ),
+                false,
+            ))
             .0
             .as_string()?;
 
