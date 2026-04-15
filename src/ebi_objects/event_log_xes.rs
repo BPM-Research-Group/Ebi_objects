@@ -27,6 +27,8 @@ use std::{
 };
 
 pub const DEFAULT_PARAMETER_ACTIVITY: &str = "concept:name";
+pub const DEFAULT_PARAMETER_TIMESTAMP: &str = "time:timestamp";
+pub const DEFAULT_PARAMETER_RESOURCE: &str = "org:resource";
 
 pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
     name: "xes_event_classifier",
@@ -36,11 +38,29 @@ pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter
     default_value: DEFAULT_PARAMETER_ACTIVITY,
 };
 
+pub const XES_IMPORTER_PARAMETER_RESOURCE: ImporterParameter = ImporterParameter::String {
+    name: "xes_resource",
+    short_name: "r",
+    explanation: "The attribute that defines, for each event, what its resource is.",
+    allowed_values: None,
+    default_value: DEFAULT_PARAMETER_RESOURCE,
+};
+
+pub const XES_IMPORTER_PARAMETER_TIME: ImporterParameter = ImporterParameter::String {
+    name: "xes_time",
+    short_name: "t",
+    explanation: "The attribute that defines, for each event, what its timestamp is.",
+    allowed_values: None,
+    default_value: DEFAULT_PARAMETER_TIMESTAMP,
+};
+
 #[derive(ActivityKey, Clone)]
 pub struct EventLogXes {
     pub(crate) classifier: EventLogClassifier,
     pub(crate) activity_key: ActivityKey,
     pub rust4pm_log: process_mining::EventLog,
+    pub time: String,
+    pub resource: String,
 }
 
 impl EventLogXes {
@@ -124,7 +144,11 @@ Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
 For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/a-b.xes}";
 
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[XES_IMPORTER_PARAMETER_ACTIVITY];
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
+        XES_IMPORTER_PARAMETER_ACTIVITY,
+        XES_IMPORTER_PARAMETER_RESOURCE,
+        XES_IMPORTER_PARAMETER_TIME,
+    ];
 
     fn import_as_object(
         reader: &mut dyn BufRead,
@@ -165,7 +189,16 @@ For instance:
             keys: vec![key.clone().as_string()?],
         };
 
-        Ok((log, classifier).into())
+        let resource = parameter_values
+            .get(&XES_IMPORTER_PARAMETER_RESOURCE)
+            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .as_string()?;
+        let time = parameter_values
+            .get(&XES_IMPORTER_PARAMETER_TIME)
+            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .as_string()?;
+
+        Ok((log, classifier, resource, time).into())
     }
 }
 from_string!(EventLogXes);

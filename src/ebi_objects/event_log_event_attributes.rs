@@ -42,6 +42,8 @@ pub struct EventLogEventAttributes {
     pub activity_key: ActivityKey,
     pub attribute_key: AttributeKey,
     pub activity_attribute: Attribute,
+    pub resource_attribute: Option<Attribute>,
+    pub time_attribute: Option<Attribute>,
     pub traces: Vec<(Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>)>,
 }
 

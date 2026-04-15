@@ -146,8 +146,9 @@ impl TryFrom<EventLogEventAttributes> for EventLogCsv {
         let EventLogEventAttributes {
             activity_key,
             attribute_key,
-            activity_attribute: activity_attributes,
+            activity_attribute,
             traces,
+            ..
         } = value;
         //transform the traces
         let mut data = Vec::with_capacity(traces.len());
@@ -166,7 +167,7 @@ impl TryFrom<EventLogEventAttributes> for EventLogCsv {
         }
 
         Ok(EventLogCsv {
-            activity_attribute: activity_attributes,
+            activity_attribute,
             activity_key,
             attribute_key,
             traces: data,

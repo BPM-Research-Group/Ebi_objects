@@ -28,6 +28,7 @@ use std::{
 };
 
 pub const OCEL_DEFAULT_OBJECT_TYPE: &str = "0";
+pub const OCEL_DEFAULT_RESOURCE_OBJECT_TYPE: &str = "1";
 
 pub const OCEL_IMPORTER_PARAMETER_OBJECT_TYPE: ImporterParameter = ImporterParameter::String {
     name: "ocel_object_type",
@@ -35,6 +36,23 @@ pub const OCEL_IMPORTER_PARAMETER_OBJECT_TYPE: ImporterParameter = ImporterParam
     explanation: "The object type that defines what a trace is. May be given as the name of the object type (which takes preference) or as the index of the object-type in the order of declaration.",
     allowed_values: None,
     default_value: OCEL_DEFAULT_OBJECT_TYPE,
+};
+
+pub const OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE: ImporterParameter =
+    ImporterParameter::String {
+        name: "ocel_resource_object_type",
+        short_name: "ort",
+        explanation: "The object type that defines what a resource is. May be given as the name of the object type (which takes preference) or as the index of the object-type in the order of declaration.",
+        allowed_values: None,
+        default_value: OCEL_DEFAULT_RESOURCE_OBJECT_TYPE,
+    };
+
+pub const OCEL_IMPORTER_PARAMETER_TIME: ImporterParameter = ImporterParameter::String {
+    name: "ocel_time",
+    short_name: "ot",
+    explanation: "The attribute that denotes the timestamp of an event.",
+    allowed_values: None,
+    default_value: OCEL_DEFAULT_RESOURCE_OBJECT_TYPE,
 };
 
 /// An OCEL event log is a wrapper for a Rust4PM OCEL struct.
@@ -47,6 +65,9 @@ pub struct EventLogOcel {
     pub rust4pm_log: process_mining::OCEL,
     /// The object type that determines the traces, in case an event log is extracted.
     pub object_type: ObjectType,
+    ///
+    pub(crate) resource_object_type: ObjectType,
+    pub(crate) time_attribute: String,
 }
 
 impl EventLogOcel {
@@ -87,7 +108,11 @@ impl EventLogOcel {
 }
 
 impl Importable for EventLogOcel {
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[OCEL_IMPORTER_PARAMETER_OBJECT_TYPE];
+    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
+        OCEL_IMPORTER_PARAMETER_OBJECT_TYPE,
+        OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE,
+        OCEL_IMPORTER_PARAMETER_TIME,
+    ];
 
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An object-centric event log file follows the Ocel 2.0 format~\\cite{DBLP:journals/corr/abs-2403-01975}. 
 Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
@@ -126,6 +151,28 @@ For instance:
         } else {
             return Err(anyhow!("object-type {} not found", read_object_type));
         };
+
+        //find resource object type
+        let read_resource_object_type = parameter_values
+            .get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE)
+            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .as_string()?;
+
+        let resource_object_type = if log
+            .object_types
+            .iter()
+            .any(|t| t.name == read_resource_object_type)
+        {
+            Some(read_object_type)
+        } else if let Ok(rank) = read_object_type.parse::<usize>()
+            && rank < log.object_types.len()
+        {
+            Some(log.object_types[rank].name.clone())
+        } else {
+            None
+        };
+
+        parameter_values.get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE);
 
         Ok((log, object_type).into())
     }

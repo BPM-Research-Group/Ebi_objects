@@ -1,6 +1,9 @@
 use crate::{
     ActivityKey, CompressedEventLogXes, EventLogCsv,
-    ebi_objects::{event_log_python::EventLogPython, event_log_xes::EventLogXes},
+    ebi_objects::{
+        event_log_python::EventLogPython,
+        event_log_xes::{DEFAULT_PARAMETER_RESOURCE, DEFAULT_PARAMETER_TIMESTAMP, EventLogXes},
+    },
 };
 use ebi_arithmetic::anyhow::{Error, anyhow};
 use process_mining::core::event_data::case_centric::{
@@ -64,16 +67,29 @@ impl TryFrom<EventLogCsv> for EventLogXes {
             keys: vec![activity_attribute_string],
         };
 
-        Ok((result, classifier).into())
+        let resource = value
+            .attribute_key
+            .attribute_to_label(&value.resource_attribute)
+            .cloned()
+            .unwrap_or(DEFAULT_PARAMETER_RESOURCE.to_string());
+        let time = value
+            .attribute_key
+            .attribute_to_label(&value.time_attribute)
+            .cloned()
+            .unwrap_or(DEFAULT_PARAMETER_TIMESTAMP.to_string());
+
+        Ok((result, classifier, resource, time).into())
     }
 }
 
-impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogXes {
-    fn from(value: (process_mining::EventLog, EventLogClassifier)) -> Self {
+impl From<(process_mining::EventLog, EventLogClassifier, String, String)> for EventLogXes {
+    fn from(value: (process_mining::EventLog, EventLogClassifier, String, String)) -> Self {
         let mut result = Self {
             classifier: value.1,
             rust4pm_log: value.0,
             activity_key: ActivityKey::new(),
+            resource: value.2,
+            time: value.3,
         };
         result.create_activity_key();
         result

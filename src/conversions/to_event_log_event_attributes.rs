@@ -32,9 +32,11 @@ impl From<EventLogXes> for EventLogEventAttributes {
     }
 }
 
-impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogEventAttributes {
-    fn from(value: (process_mining::EventLog, EventLogClassifier)) -> Self {
-        let (rust4pm_log, classifier) = value;
+impl From<(process_mining::EventLog, EventLogClassifier, String, String)>
+    for EventLogEventAttributes
+{
+    fn from(value: (process_mining::EventLog, EventLogClassifier, String, String)) -> Self {
+        let (rust4pm_log, classifier, resource, time) = value;
         let mut activity_key = ActivityKey::new();
         let mut attribute_key = AttributeKey::new();
         let traces = rust4pm_log
@@ -71,15 +73,20 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogEventAttri
             })
             .collect();
 
-        let activity_attributes = attribute_key
+        let activity_attribute = attribute_key
             .label_to_attribute(classifier.keys.iter().next().unwrap_or(&String::new()))
             .unwrap_or(attribute_key.id_to_attribute(0));
+
+        let time_attribute = attribute_key.label_to_attribute(&time);
+        let resource_attribute = attribute_key.label_to_attribute(&resource);
 
         Self {
             traces,
             activity_key,
-            activity_attribute: activity_attributes,
+            activity_attribute,
             attribute_key,
+            time_attribute,
+            resource_attribute,
         }
     }
 }

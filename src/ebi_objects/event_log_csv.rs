@@ -37,6 +37,20 @@ pub const CSV_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter
     allowed_values: None,
     default_value: "1",
 };
+pub const CSV_IMPORTER_PARAMETER_RESOURCE: ImporterParameter = ImporterParameter::String {
+    name: "csv_resource",
+    short_name: "re",
+    explanation: "The name or number of the column that contains the resource.",
+    allowed_values: None,
+    default_value: "2",
+};
+pub const CSV_IMPORTER_PARAMETER_TIMESTAMP: ImporterParameter = ImporterParameter::String {
+    name: "csv_time",
+    short_name: "et",
+    explanation: "The name or number of the column that contains the timestamp.",
+    allowed_values: None,
+    default_value: "3",
+};
 pub const CSV_IMPORTER_PARAMETER_HAS_NO_HEADER: ImporterParameter = ImporterParameter::Flag {
     name: "csv_no_header",
     short_name: "nh",
@@ -67,6 +81,8 @@ pub struct EventLogCsv {
 
     pub(crate) separator: u8,
     pub(crate) quote_character: u8,
+    pub(crate) resource_attribute: Attribute,
+    pub(crate) time_attribute: Attribute,
 }
 
 impl EventLogCsv {
@@ -93,6 +109,8 @@ impl Importable for EventLogCsv {
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
         CSV_IMPORTER_PARAMETER_TRACE_ID,
         CSV_IMPORTER_PARAMETER_ACTIVITY,
+        CSV_IMPORTER_PARAMETER_RESOURCE,
+        CSV_IMPORTER_PARAMETER_TIMESTAMP,
         CSV_IMPORTER_PARAMETER_HAS_NO_HEADER,
         CSV_IMPORTER_PARAMETER_SEPARATOR,
         CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER,
