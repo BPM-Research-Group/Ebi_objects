@@ -311,7 +311,7 @@ impl<'a> From<&'a EventLogOcel> for ParallelTraceIteratorDataProducerOcel<'a> {
             log: value,
             objects: EventLogOcel::get_relevant_objects(
                 &value.rust4pm_log.objects,
-                &value.object_type,
+                &value.case_object_type,
             )
             .into_iter()
             .collect(),

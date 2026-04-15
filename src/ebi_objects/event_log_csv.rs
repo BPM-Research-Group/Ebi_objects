@@ -25,48 +25,48 @@ pub const DEFAULT_QUOTE_CHARACTER: &str = "\"";
 
 pub const CSV_IMPORTER_PARAMETER_TRACE_ID: ImporterParameter = ImporterParameter::String {
     name: "csv_trace_id",
-    short_name: "ti",
+    short_name: "cti",
     explanation: "The name or number of the column that contains the trace id.",
     allowed_values: None,
     default_value: "0",
 };
 pub const CSV_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
     name: "csv_activity",
-    short_name: "ec",
+    short_name: "cec",
     explanation: "The name or number of the column that contains the activity.",
     allowed_values: None,
     default_value: "1",
 };
 pub const CSV_IMPORTER_PARAMETER_RESOURCE: ImporterParameter = ImporterParameter::String {
     name: "csv_resource",
-    short_name: "re",
+    short_name: "cre",
     explanation: "The name or number of the column that contains the resource.",
     allowed_values: None,
     default_value: "2",
 };
 pub const CSV_IMPORTER_PARAMETER_TIMESTAMP: ImporterParameter = ImporterParameter::String {
     name: "csv_time",
-    short_name: "et",
+    short_name: "cet",
     explanation: "The name or number of the column that contains the timestamp.",
     allowed_values: None,
     default_value: "3",
 };
 pub const CSV_IMPORTER_PARAMETER_HAS_NO_HEADER: ImporterParameter = ImporterParameter::Flag {
     name: "csv_no_header",
-    short_name: "nh",
+    short_name: "cnh",
     explanation: "Without this flag set, the first line is read as the header. 
     With this flag set, the first line is read as an event. In the latter case, the columns are given numbers, starting from 0.",
 };
 pub const CSV_IMPORTER_PARAMETER_SEPARATOR: ImporterParameter = ImporterParameter::String {
     name: "csv_separator",
-    short_name: "sep",
+    short_name: "csep",
     explanation: "The character(s) that separate the columns.",
     allowed_values: None,
     default_value: DEFAULT_SEPARATOR,
 };
 pub const CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER: ImporterParameter = ImporterParameter::String {
     name: "csv_quote_character",
-    short_name: "qc",
+    short_name: "cqc",
     explanation: "The character(s) that begin and end a quote.",
     allowed_values: None,
     default_value: DEFAULT_QUOTE_CHARACTER,
@@ -81,8 +81,8 @@ pub struct EventLogCsv {
 
     pub(crate) separator: u8,
     pub(crate) quote_character: u8,
-    pub(crate) resource_attribute: Attribute,
-    pub(crate) time_attribute: Attribute,
+    pub(crate) resource_attribute: Option<Attribute>,
+    pub(crate) time_attribute: Option<Attribute>,
 }
 
 impl EventLogCsv {
@@ -94,6 +94,21 @@ impl EventLogCsv {
                 }
             })
         });
+    }
+
+    pub fn find_column(
+        attribute_key: &AttributeKey,
+        column_name_or_number: &str,
+    ) -> Option<Attribute> {
+        if let Some(attribute) = attribute_key.label_to_attribute(&column_name_or_number) {
+            Some(attribute)
+        } else if let Ok(attribute_id) = column_name_or_number.parse::<usize>()
+            && attribute_id < attribute_key.len()
+        {
+            Some(attribute_key.id_to_attribute(attribute_id))
+        } else {
+            None
+        }
     }
 }
 
@@ -142,6 +157,7 @@ impl Importable for EventLogCsv {
             if parameter_values
                 .get(&CSV_IMPORTER_PARAMETER_HAS_NO_HEADER)
                 .ok_or_else(|| anyhow!("parameter not found"))?
+                .0
                 .as_bool()?
             {
                 csv.has_headers(false);
@@ -155,6 +171,7 @@ impl Importable for EventLogCsv {
             let sep = parameter_values
                 .get(&CSV_IMPORTER_PARAMETER_SEPARATOR)
                 .ok_or_else(|| anyhow!("parameter not found"))?
+                .0
                 .as_string()?;
             if sep.as_bytes().len() != 1 {
                 return Err(anyhow!(
@@ -169,6 +186,7 @@ impl Importable for EventLogCsv {
             let quote = parameter_values
                 .get(&CSV_IMPORTER_PARAMETER_QUOTE_CHARACTER)
                 .ok_or_else(|| anyhow!("parameter not found"))?
+                .0
                 .as_string()?;
             if quote.as_bytes().len() != 1 {
                 return Err(anyhow!(
@@ -215,39 +233,65 @@ impl Importable for EventLogCsv {
         }
 
         //find the trace id column
-        let trace_id_attribute = {
-            let parameter = parameter_values
-                .get(&CSV_IMPORTER_PARAMETER_TRACE_ID)
-                .ok_or_else(|| anyhow!("parameter not found"))?
-                .as_string()?;
-            if let Some(attribute) = attribute_key.label_to_attribute(&parameter) {
-                attribute
-            } else if let Ok(attribute_id) = parameter.parse::<usize>() {
-                attribute_key.id_to_attribute(attribute_id)
-            } else {
-                return Err(anyhow!(
-                    "trace id attribute `{}` not found as a column",
-                    parameter
-                ));
-            }
-        };
+        let trace_id_parameter_value = &parameter_values
+            .get(&CSV_IMPORTER_PARAMETER_TRACE_ID)
+            .ok_or_else(|| anyhow!("parameter not found"))?
+            .0
+            .as_string()?;
+        let trace_id_attribute = Self::find_column(&attribute_key, trace_id_parameter_value)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Trace id attribute `{}` not found as a column.",
+                    trace_id_parameter_value
+                )
+            })?;
 
         //find the activity column
-        let activity_attribute = {
-            let parameter = parameter_values
-                .get(&CSV_IMPORTER_PARAMETER_ACTIVITY)
-                .ok_or_else(|| anyhow!("parameter not found"))?
-                .as_string()?;
-            if let Some(attribute) = attribute_key.label_to_attribute(&parameter) {
-                attribute
-            } else if let Ok(attribute_id) = parameter.parse::<usize>() {
-                attribute_key.id_to_attribute(attribute_id)
-            } else {
-                return Err(anyhow!(
-                    "activity attribute `{}` not found as a column",
-                    parameter
-                ));
-            }
+        let activity_parameter_value = parameter_values
+            .get(&CSV_IMPORTER_PARAMETER_ACTIVITY)
+            .ok_or_else(|| anyhow!("parameter not found"))?
+            .0
+            .as_string()?;
+        let activity_attribute = Self::find_column(&attribute_key, &activity_parameter_value)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Activity attribute `{}` not found as a column.",
+                    activity_parameter_value
+                )
+            })?;
+
+        //find the resource column
+        let (resource_parameter_value, resource_parameter_given) = parameter_values
+            .get(&CSV_IMPORTER_PARAMETER_RESOURCE)
+            .ok_or_else(|| anyhow!("parameter not found"))?;
+        let resource_attribute = if let Some(att) =
+            Self::find_column(&attribute_key, &resource_parameter_value.as_string()?)
+        {
+            Some(att)
+        } else if *resource_parameter_given {
+            return Err(anyhow!(
+                "Resource attribute `{}` not found as a column.",
+                resource_parameter_value.as_string()?
+            ));
+        } else {
+            None
+        };
+
+        //find the time column
+        let (time_parameter_value, time_parameter_given) = parameter_values
+            .get(&CSV_IMPORTER_PARAMETER_TIMESTAMP)
+            .ok_or_else(|| anyhow!("parameter not found"))?;
+        let time_attribute = if let Some(att) =
+            Self::find_column(&attribute_key, &time_parameter_value.as_string()?)
+        {
+            Some(att)
+        } else if *time_parameter_given {
+            return Err(anyhow!(
+                "Time attribute `{}` not found as a column.",
+                time_parameter_value.as_string()?
+            ));
+        } else {
+            None
         };
 
         //combine events into traces
@@ -271,6 +315,8 @@ impl Importable for EventLogCsv {
             traces,
             separator,
             quote_character,
+            resource_attribute,
+            time_attribute,
         };
 
         result.create_activity_key();
@@ -466,7 +512,10 @@ mod tests {
         let mut parameter_values = EventLogCsv::default_importer_parameter_values();
         parameter_values.insert(
             CSV_IMPORTER_PARAMETER_TRACE_ID,
-            ImporterParameterValue::String("alternative_case_id".to_string()),
+            (
+                ImporterParameterValue::String("alternative_case_id".to_string()),
+                false,
+            ),
         );
         let csv = EventLogCsv::import(
             &mut BufReader::new(File::open("testfiles/a-b_multiple_separators.csv").unwrap()),
@@ -478,7 +527,10 @@ mod tests {
         //parse again with a different separator (invalid)
         parameter_values.insert(
             CSV_IMPORTER_PARAMETER_SEPARATOR,
-            ImporterParameterValue::String("alternative_case_id".to_string()),
+            (
+                ImporterParameterValue::String("alternative_case_id".to_string()),
+                false,
+            ),
         );
         assert!(
             EventLogCsv::import(
@@ -491,11 +543,14 @@ mod tests {
         //parse again with a different separator
         parameter_values.insert(
             CSV_IMPORTER_PARAMETER_SEPARATOR,
-            ImporterParameterValue::String(";".to_string()),
+            (ImporterParameterValue::String(";".to_string()), false),
         );
         parameter_values.insert(
             CSV_IMPORTER_PARAMETER_TRACE_ID,
-            ImporterParameterValue::String("case_column".to_string()),
+            (
+                ImporterParameterValue::String("case_column".to_string()),
+                false,
+            ),
         );
         let csv = EventLogCsv::import(
             &mut BufReader::new(File::open("testfiles/a-b_multiple_separators.csv").unwrap()),

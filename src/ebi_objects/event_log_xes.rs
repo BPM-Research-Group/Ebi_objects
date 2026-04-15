@@ -26,32 +26,32 @@ use std::{
     io::{BufRead, Write},
 };
 
-pub const DEFAULT_PARAMETER_ACTIVITY: &str = "concept:name";
-pub const DEFAULT_PARAMETER_TIMESTAMP: &str = "time:timestamp";
-pub const DEFAULT_PARAMETER_RESOURCE: &str = "org:resource";
+pub const XES_DEFAULT_PARAMETER_ACTIVITY: &str = "concept:name";
+pub const XES_DEFAULT_PARAMETER_TIMESTAMP: &str = "time:timestamp";
+pub const XES_DEFAULT_PARAMETER_RESOURCE: &str = "org:resource";
 
 pub const XES_IMPORTER_PARAMETER_ACTIVITY: ImporterParameter = ImporterParameter::String {
     name: "xes_event_classifier",
-    short_name: "ec",
+    short_name: "xec",
     explanation: "The attribute that defines, for each event, what its activity is.",
     allowed_values: None,
-    default_value: DEFAULT_PARAMETER_ACTIVITY,
+    default_value: XES_DEFAULT_PARAMETER_ACTIVITY,
 };
 
 pub const XES_IMPORTER_PARAMETER_RESOURCE: ImporterParameter = ImporterParameter::String {
     name: "xes_resource",
-    short_name: "r",
+    short_name: "xr",
     explanation: "The attribute that defines, for each event, what its resource is.",
     allowed_values: None,
-    default_value: DEFAULT_PARAMETER_RESOURCE,
+    default_value: XES_DEFAULT_PARAMETER_RESOURCE,
 };
 
 pub const XES_IMPORTER_PARAMETER_TIME: ImporterParameter = ImporterParameter::String {
     name: "xes_time",
-    short_name: "t",
+    short_name: "xt",
     explanation: "The attribute that defines, for each event, what its timestamp is.",
     allowed_values: None,
-    default_value: DEFAULT_PARAMETER_TIMESTAMP,
+    default_value: XES_DEFAULT_PARAMETER_TIMESTAMP,
 };
 
 #[derive(ActivityKey, Clone)]
@@ -59,8 +59,8 @@ pub struct EventLogXes {
     pub(crate) classifier: EventLogClassifier,
     pub(crate) activity_key: ActivityKey,
     pub rust4pm_log: process_mining::EventLog,
-    pub time: String,
-    pub resource: String,
+    pub time_attribute: String,
+    pub resource_attribute: String,
 }
 
 impl EventLogXes {
@@ -185,17 +185,19 @@ For instance:
             .get(&XES_IMPORTER_PARAMETER_ACTIVITY)
             .ok_or_else(|| anyhow!("expected parameter not found"))?;
         let classifier = EventLogClassifier {
-            name: key.clone().as_string()?,
-            keys: vec![key.clone().as_string()?],
+            name: key.0.as_string()?.clone(),
+            keys: vec![key.0.as_string()?.clone()],
         };
 
         let resource = parameter_values
             .get(&XES_IMPORTER_PARAMETER_RESOURCE)
             .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .0
             .as_string()?;
         let time = parameter_values
             .get(&XES_IMPORTER_PARAMETER_TIME)
             .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .0
             .as_string()?;
 
         Ok((log, classifier, resource, time).into())

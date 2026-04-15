@@ -54,6 +54,8 @@ impl TryFrom<EventLog> for EventLogCsv {
             traces: data,
             separator: event_log_csv::DEFAULT_SEPARATOR.as_bytes()[0],
             quote_character: event_log_csv::DEFAULT_QUOTE_CHARACTER.as_bytes()[0],
+            resource_attribute: None,
+            time_attribute: None,
         })
     }
 }
@@ -83,6 +85,8 @@ impl TryFrom<EventLogXes> for EventLogCsv {
             activity_key,
             classifier,
             rust4pm_log,
+            resource_attribute,
+            time_attribute,
         } = value;
 
         //create the attribute key
@@ -118,6 +122,7 @@ impl TryFrom<EventLogXes> for EventLogCsv {
             traces.push((trace_id, events));
         }
 
+        //find the attributes that define the activity, resource and timestamp
         let activity_attribute = attribute_key
             .label_to_attribute(
                 classifier
@@ -127,6 +132,8 @@ impl TryFrom<EventLogXes> for EventLogCsv {
                     .ok_or_else(|| anyhow!("no event classifier attribute defined"))?,
             )
             .ok_or_else(|| anyhow!("could not find event attribute"))?;
+        let resource_attribute = attribute_key.label_to_attribute(&resource_attribute);
+        let time_attribute = attribute_key.label_to_attribute(&time_attribute);
 
         Ok(EventLogCsv {
             activity_attribute,
@@ -135,6 +142,8 @@ impl TryFrom<EventLogXes> for EventLogCsv {
             traces,
             separator: DEFAULT_SEPARATOR.as_bytes()[0],
             quote_character: DEFAULT_QUOTE_CHARACTER.as_bytes()[0],
+            resource_attribute,
+            time_attribute,
         })
     }
 }
@@ -148,7 +157,8 @@ impl TryFrom<EventLogEventAttributes> for EventLogCsv {
             attribute_key,
             activity_attribute,
             traces,
-            ..
+            resource_attribute,
+            time_attribute,
         } = value;
         //transform the traces
         let mut data = Vec::with_capacity(traces.len());
@@ -173,6 +183,8 @@ impl TryFrom<EventLogEventAttributes> for EventLogCsv {
             traces: data,
             separator: event_log_csv::DEFAULT_SEPARATOR.as_bytes()[0],
             quote_character: event_log_csv::DEFAULT_QUOTE_CHARACTER.as_bytes()[0],
+            resource_attribute,
+            time_attribute,
         })
     }
 }

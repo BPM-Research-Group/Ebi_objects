@@ -138,7 +138,7 @@ impl<'a> Iterator for TraceIteratorOcel<'a> {
 impl<'a> From<&'a EventLogOcel> for TraceIteratorOcel<'a> {
     fn from(value: &'a EventLogOcel) -> Self {
         let objects =
-            EventLogOcel::get_relevant_objects(&value.rust4pm_log.objects, &value.object_type)
+            EventLogOcel::get_relevant_objects(&value.rust4pm_log.objects, &value.case_object_type)
                 .into_iter()
                 .collect::<VecDeque<_>>();
         Self {

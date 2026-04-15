@@ -2,7 +2,9 @@ use crate::{
     ActivityKey, CompressedEventLogXes, EventLogCsv,
     ebi_objects::{
         event_log_python::EventLogPython,
-        event_log_xes::{DEFAULT_PARAMETER_RESOURCE, DEFAULT_PARAMETER_TIMESTAMP, EventLogXes},
+        event_log_xes::{
+            EventLogXes, XES_DEFAULT_PARAMETER_RESOURCE, XES_DEFAULT_PARAMETER_TIMESTAMP,
+        },
     },
 };
 use ebi_arithmetic::anyhow::{Error, anyhow};
@@ -67,16 +69,24 @@ impl TryFrom<EventLogCsv> for EventLogXes {
             keys: vec![activity_attribute_string],
         };
 
-        let resource = value
-            .attribute_key
-            .attribute_to_label(&value.resource_attribute)
-            .cloned()
-            .unwrap_or(DEFAULT_PARAMETER_RESOURCE.to_string());
-        let time = value
-            .attribute_key
-            .attribute_to_label(&value.time_attribute)
-            .cloned()
-            .unwrap_or(DEFAULT_PARAMETER_TIMESTAMP.to_string());
+        let resource = if let Some(att) = value.resource_attribute {
+            value
+                .attribute_key
+                .attribute_to_label(&att)
+                .cloned()
+                .unwrap_or(XES_DEFAULT_PARAMETER_RESOURCE.to_string())
+        } else {
+            XES_DEFAULT_PARAMETER_RESOURCE.to_string()
+        };
+        let time = if let Some(att) = value.time_attribute {
+            value
+                .attribute_key
+                .attribute_to_label(&att)
+                .cloned()
+                .unwrap_or(XES_DEFAULT_PARAMETER_TIMESTAMP.to_string())
+        } else {
+            XES_DEFAULT_PARAMETER_TIMESTAMP.to_string()
+        };
 
         Ok((result, classifier, resource, time).into())
     }
@@ -88,8 +98,8 @@ impl From<(process_mining::EventLog, EventLogClassifier, String, String)> for Ev
             classifier: value.1,
             rust4pm_log: value.0,
             activity_key: ActivityKey::new(),
-            resource: value.2,
-            time: value.3,
+            resource_attribute: value.2,
+            time_attribute: value.3,
         };
         result.create_activity_key();
         result

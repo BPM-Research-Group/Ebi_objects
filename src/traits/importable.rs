@@ -25,7 +25,7 @@ pub trait Importable {
     fn default_importer_parameter_values() -> ImporterParameterValues {
         let mut result = HashMap::new();
         for parameter in Self::IMPORTER_PARAMETERS {
-            result.insert(*parameter, parameter.default());
+            result.insert(*parameter, (parameter.default(), false));
         }
         result
     }
@@ -46,7 +46,7 @@ macro_rules! from_string {
 }
 pub(crate) use from_string;
 
-pub type ImporterParameterValues = HashMap<ImporterParameter, ImporterParameterValue>;
+pub type ImporterParameterValues = HashMap<ImporterParameter, (ImporterParameterValue, bool)>;
 
 /// Parameters that can be given to an importer.
 /// It is a design decision that every parameter must have a default,

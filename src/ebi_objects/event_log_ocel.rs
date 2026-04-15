@@ -17,7 +17,7 @@ use intmap::IntMap;
 use process_mining::{
     Importable as I, OCEL,
     core::{
-        event_data::object_centric::{OCELObject, ocel_xml::export_ocel_xml},
+        event_data::object_centric::{OCELObject, OCELType, ocel_xml::export_ocel_xml},
         process_models::ocpt::ObjectType,
     },
 };
@@ -27,32 +27,33 @@ use std::{
     io::BufRead,
 };
 
-pub const OCEL_DEFAULT_OBJECT_TYPE: &str = "0";
+pub const OCEL_DEFAULT_CASE_OBJECT_TYPE: &str = "0";
 pub const OCEL_DEFAULT_RESOURCE_OBJECT_TYPE: &str = "1";
+pub const OCEL_DEFAULT_TIMESTAMP_ATTRIBUTE: &str = "time";
 
-pub const OCEL_IMPORTER_PARAMETER_OBJECT_TYPE: ImporterParameter = ImporterParameter::String {
-    name: "ocel_object_type",
-    short_name: "ot",
+pub const OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE: ImporterParameter = ImporterParameter::String {
+    name: "ocel_case_object_type",
+    short_name: "ocot",
     explanation: "The object type that defines what a trace is. May be given as the name of the object type (which takes preference) or as the index of the object-type in the order of declaration.",
     allowed_values: None,
-    default_value: OCEL_DEFAULT_OBJECT_TYPE,
+    default_value: OCEL_DEFAULT_CASE_OBJECT_TYPE,
 };
 
 pub const OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE: ImporterParameter =
     ImporterParameter::String {
         name: "ocel_resource_object_type",
-        short_name: "ort",
+        short_name: "orot",
         explanation: "The object type that defines what a resource is. May be given as the name of the object type (which takes preference) or as the index of the object-type in the order of declaration.",
         allowed_values: None,
         default_value: OCEL_DEFAULT_RESOURCE_OBJECT_TYPE,
     };
 
-pub const OCEL_IMPORTER_PARAMETER_TIME: ImporterParameter = ImporterParameter::String {
-    name: "ocel_time",
-    short_name: "ot",
+pub const OCEL_IMPORTER_PARAMETER_TIME_ATTRIBUTE: ImporterParameter = ImporterParameter::String {
+    name: "ocel_time_attribute",
+    short_name: "ota",
     explanation: "The attribute that denotes the timestamp of an event.",
     allowed_values: None,
-    default_value: OCEL_DEFAULT_RESOURCE_OBJECT_TYPE,
+    default_value: OCEL_DEFAULT_TIMESTAMP_ATTRIBUTE,
 };
 
 /// An OCEL event log is a wrapper for a Rust4PM OCEL struct.
@@ -64,9 +65,9 @@ pub struct EventLogOcel {
     pub(crate) activity_key: ActivityKey,
     pub rust4pm_log: process_mining::OCEL,
     /// The object type that determines the traces, in case an event log is extracted.
-    pub object_type: ObjectType,
+    pub case_object_type: ObjectType,
     ///
-    pub(crate) resource_object_type: ObjectType,
+    pub(crate) resource_object_type: Option<ObjectType>,
     pub(crate) time_attribute: String,
 }
 
@@ -92,7 +93,7 @@ impl EventLogOcel {
 
     pub fn get_trace_lengths(&self) -> Vec<usize> {
         let mut object_id2length = HashMap::new();
-        let objects = Self::get_relevant_objects(&self.rust4pm_log.objects, &self.object_type);
+        let objects = Self::get_relevant_objects(&self.rust4pm_log.objects, &self.case_object_type);
         for event in &self.rust4pm_log.events {
             for relation in &event.relationships {
                 if objects.contains(&relation.object_id) {
@@ -105,13 +106,28 @@ impl EventLogOcel {
 
         object_id2length.into_values().collect()
     }
+
+    pub fn find_object_type<'a>(
+        object_types: &'a Vec<OCELType>,
+        name_or_number: &str,
+    ) -> Option<&'a ObjectType> {
+        if let Some(object_type) = object_types.iter().find(|t| t.name == name_or_number) {
+            Some(&object_type.name)
+        } else if let Ok(rank) = name_or_number.parse::<usize>()
+            && rank < object_types.len()
+        {
+            Some(&object_types[rank].name)
+        } else {
+            None
+        }
+    }
 }
 
 impl Importable for EventLogOcel {
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[
-        OCEL_IMPORTER_PARAMETER_OBJECT_TYPE,
+        OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE,
         OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE,
-        OCEL_IMPORTER_PARAMETER_TIME,
+        OCEL_IMPORTER_PARAMETER_TIME_ATTRIBUTE,
     ];
 
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An object-centric event log file follows the Ocel 2.0 format~\\cite{DBLP:journals/corr/abs-2403-01975}. 
@@ -136,45 +152,51 @@ For instance:
         let log = OCEL::import_from_reader_with_options(reader, "xml", ())
             .with_context(|| "cannot read Ocel XML log")?;
 
-        //create the object-type
-        let read_object_type = parameter_values
-            .get(&OCEL_IMPORTER_PARAMETER_OBJECT_TYPE)
+        //create the case object-type
+        let case_object_type_parameter_value = parameter_values
+            .get(&OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE)
             .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .0
             .as_string()?;
-
-        let object_type = if log.object_types.iter().any(|t| t.name == read_object_type) {
-            read_object_type
-        } else if let Ok(rank) = read_object_type.parse::<usize>()
-            && rank < log.object_types.len()
-        {
-            log.object_types[rank].name.clone()
-        } else {
-            return Err(anyhow!("object-type {} not found", read_object_type));
-        };
+        let case_object_type =
+            Self::find_object_type(&log.object_types, &case_object_type_parameter_value)
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Case object-type `{}` not found.",
+                        case_object_type_parameter_value
+                    )
+                })?.clone();
 
         //find resource object type
-        let read_resource_object_type = parameter_values
-            .get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE)
+        let (resource_object_type_parameter_value, resource_object_type_parameter_given) =
+            parameter_values
+                .get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE)
+                .ok_or_else(|| anyhow!("expected parameter not found"))?;
+        let resource_object_type = Self::find_object_type(
+            &log.object_types,
+            &resource_object_type_parameter_value.as_string()?,
+        ).cloned();
+        if *resource_object_type_parameter_given && resource_object_type.is_none() {
+            return Err(anyhow!(
+                "Resource object-type `{}` not found.",
+                resource_object_type_parameter_value.as_string()?
+            ));
+        }
+
+        //obtain timestamp attribute
+        let time_parameter_value = parameter_values
+            .get(&OCEL_IMPORTER_PARAMETER_TIME_ATTRIBUTE)
             .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .0
             .as_string()?;
 
-        let resource_object_type = if log
-            .object_types
-            .iter()
-            .any(|t| t.name == read_resource_object_type)
-        {
-            Some(read_object_type)
-        } else if let Ok(rank) = read_object_type.parse::<usize>()
-            && rank < log.object_types.len()
-        {
-            Some(log.object_types[rank].name.clone())
-        } else {
-            None
-        };
-
-        parameter_values.get(&OCEL_IMPORTER_PARAMETER_RESOURCE_OBJECT_TYPE);
-
-        Ok((log, object_type).into())
+        Ok((
+            log,
+            case_object_type,
+            resource_object_type,
+            time_parameter_value,
+        )
+            .into())
     }
 }
 from_string!(EventLogOcel);
@@ -261,7 +283,7 @@ impl TranslateActivityKey for EventLogOcel {
 impl StartEndActivities for EventLogOcel {
     fn start_activities(&self) -> IntMap<Activity, Fraction> {
         let relevant_objects =
-            Self::get_relevant_objects(&self.rust4pm_log.objects, &self.object_type);
+            Self::get_relevant_objects(&self.rust4pm_log.objects, &self.case_object_type);
         let mut started_traces = HashSet::new();
         let mut result = IntMap::new();
         for event in &self.rust4pm_log.events {
@@ -290,7 +312,7 @@ impl StartEndActivities for EventLogOcel {
 
     fn end_activities(&self) -> IntMap<Activity, Fraction> {
         let relevant_objects =
-            Self::get_relevant_objects(&self.rust4pm_log.objects, &self.object_type);
+            Self::get_relevant_objects(&self.rust4pm_log.objects, &self.case_object_type);
         let mut started_traces = HashSet::new();
         let mut result = IntMap::new();
         for event in self.rust4pm_log.events.iter().rev() {
@@ -322,7 +344,7 @@ impl NumberOfTraces for EventLogOcel {
     /// returns the number of traces in the log view
     fn number_of_traces(&self) -> usize {
         self.rust4pm_log.objects.iter().fold(0, |count, obj| {
-            if obj.object_type == self.object_type {
+            if obj.object_type == self.case_object_type {
                 count + 1
             } else {
                 count
@@ -359,7 +381,7 @@ impl TestActivityKey for EventLogOcel {
 mod tests {
     use crate::{
         EventLogOcel, Importable, NumberOfTraces,
-        ebi_objects::event_log_ocel::OCEL_IMPORTER_PARAMETER_OBJECT_TYPE,
+        ebi_objects::event_log_ocel::OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE,
         traits::importable::ImporterParameterValue,
     };
     use std::{
@@ -373,13 +395,13 @@ mod tests {
         let log = fin.parse::<EventLogOcel>().unwrap();
         assert_eq!(log.number_of_traces(), 1);
         assert_eq!(log.number_of_events(), 2);
-        assert_eq!(log.object_type, "Invoice");
+        assert_eq!(log.case_object_type, "Invoice");
 
         //parse again with a different trace id column
         let mut parameter_values = EventLogOcel::default_importer_parameter_values();
         parameter_values.insert(
-            OCEL_IMPORTER_PARAMETER_OBJECT_TYPE,
-            ImporterParameterValue::String("Payment".to_string()),
+            OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE,
+            (ImporterParameterValue::String("Payment".to_string()), false),
         );
         let log = EventLogOcel::import(
             &mut BufReader::new(File::open("testfiles/oc-log.ocel").unwrap()),
@@ -388,6 +410,6 @@ mod tests {
         .unwrap();
         assert_eq!(log.number_of_traces(), 1);
         assert_eq!(log.number_of_events(), 1);
-        assert_eq!(log.object_type, "Payment");
+        assert_eq!(log.case_object_type, "Payment");
     }
 }

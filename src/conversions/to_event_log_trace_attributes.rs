@@ -37,7 +37,8 @@ impl From<EventLogOcel> for EventLogTraceAttributes {
         let EventLogOcel {
             mut activity_key,
             rust4pm_log,
-            object_type,
+            case_object_type: object_type,
+            ..
         } = value;
         let OCEL {
             event_types: _,
