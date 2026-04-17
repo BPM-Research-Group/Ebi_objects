@@ -159,7 +159,7 @@ For instance:
         //create the case object-type
         let case_object_type_parameter_value = parameter_values
             .get(&OCEL_IMPORTER_PARAMETER_CASE_OBJECT_TYPE)
-            .ok_or_else(|| anyhow!("expected parameter not found"))?
+            .ok_or_else(|| anyhow!("expected parameter case object type not found"))?
             .0
             .as_string()?;
         let case_object_type =

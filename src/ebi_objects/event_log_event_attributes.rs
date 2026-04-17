@@ -60,24 +60,44 @@ impl EventLogEventAttributes {
         })
     }
 
-    /// Returns the time of the given event, if the event and the trace exist, it has a time-parseable attribute, and the attribute was declared correctly on import.
-    pub fn get_time(
-        &self,
-        trace_index: usize,
-        event_index: usize,
-    ) -> Option<&DateTime<FixedOffset>> {
-        let time_attribute = self.time_attribute?;
-        let attributes = &self.traces[trace_index].1[event_index];
-        let value = attributes.get(time_attribute)?;
-        value.try_as_date()
+    pub fn retain_traces_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&Vec<Activity>) -> bool,
+    {
+        //get our hands free to change the traces without cloning
+        let mut traces = vec![];
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        traces = traces
+            .into_iter()
+            .filter_map(|(mut trace, atts)| {
+                if f(&mut trace) {
+                    Some((trace, atts))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        //swap the the traces back
+        std::mem::swap(&mut self.traces, &mut traces);
     }
 
-    /// Returns the resource of the given event, if the event and the trace exist, it has a resource attribute, and the attribute was declared correctly on import.
-    pub fn get_resource(&self, trace_index: usize, event_index: usize) -> Option<&String> {
-        let resource_attribute = self.resource_attribute?;
-        let attributes = &self.traces[trace_index].1[event_index];
-        let value = attributes.get(resource_attribute)?;
-        value.try_as_string()
+    pub fn retain_traces_event_attributes_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&(Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>)) -> bool,
+    {
+        //get our hands free to change the traces without cloning
+        let mut traces = vec![];
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        traces = traces
+            .into_iter()
+            .filter_map(|mut trace| if f(&mut trace) { Some(trace) } else { None })
+            .collect();
+
+        //swap the the traces back
+        std::mem::swap(&mut self.traces, &mut traces);
     }
 }
 
@@ -319,6 +339,24 @@ impl EventAttributes for EventLogEventAttributes {
             .1
             .get(event_index)?
             .get_attribute_numeric(attribute)
+    }
+
+    fn get_event_time(
+        &self,
+        trace_index: usize,
+        event_index: usize,
+    ) -> Option<&DateTime<FixedOffset>> {
+        let time_attribute = self.time_attribute?;
+        let attributes = &self.traces.get(trace_index)?.1.get(event_index)?;
+        let value = attributes.get(time_attribute)?;
+        value.try_as_date()
+    }
+
+    fn get_event_resource(&self, trace_index: usize, event_index: usize) -> Option<&String> {
+        let resource_attribute = self.resource_attribute?;
+        let attributes = &self.traces.get(trace_index)?.1.get(event_index)?;
+        let value = attributes.get(resource_attribute)?;
+        value.try_as_string()
     }
 }
 

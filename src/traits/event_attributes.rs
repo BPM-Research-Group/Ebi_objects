@@ -23,4 +23,14 @@ pub trait EventAttributes {
         event_index: usize,
         attribute: Attribute,
     ) -> Option<Fraction>;
+
+    /// Returns the resource of the given event, if the event and the trace exist, it has a resource attribute, and the attribute was declared correctly on import.
+    fn get_event_resource(&self, trace_index: usize, event_index: usize) -> Option<&String>;
+
+    /// Returns the time of the given event, if the event and the trace exist, it has a time-parseable attribute, and the attribute was declared correctly on import.
+    fn get_event_time(
+        &self,
+        trace_index: usize,
+        event_index: usize,
+    ) -> Option<&DateTime<FixedOffset>>;
 }

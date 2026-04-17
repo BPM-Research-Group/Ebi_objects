@@ -4,6 +4,18 @@ use ebi_arithmetic::Fraction;
 use ebi_arithmetic::anyhow::{Result, anyhow};
 use serde_json::{Map, Value};
 
+pub fn read_field_bool(json: &Value, field: &str) -> Result<bool> {
+    match &json[field] {
+        Value::Null => Err(anyhow!("field not found")),
+        Value::Bool(b) => Ok(*b),
+        Value::Number(_) => Err(anyhow!("field is a number, where boolean expected")),
+        Value::String(_) => Err(anyhow!("field is a literal, where number expected")),
+        Value::Array(_) => Err(anyhow!("field is a list, where number expected")),
+        Value::Object(_) => Err(anyhow!("field is an object, where number expected")),
+    }
+}
+
+
 pub fn read_field_index(json: &Value, field: &str) -> Result<usize> {
     match &json[field] {
         Value::Null => return Err(anyhow!("field not found")),
