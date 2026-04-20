@@ -9,26 +9,32 @@ use chrono::{DateTime, FixedOffset};
 use ebi_activity_key::{Activity, ActivityKey, ActivityKeyTranslator, TranslateActivityKey};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::{HasActivityKey, TestActivityKey};
-use ebi_arithmetic::anyhow::{Error, Result};
+use ebi_arithmetic::{
+    Fraction,
+    anyhow::{Error, Result},
+};
 use ebi_derive::ActivityKey;
-use serde_json::{Number, Value};
+use serde_json::{Number, Value, json};
 use std::{
     fmt::{self, Display},
     io::BufRead,
 };
 
+pub const JSON_KEY_TRACE: &str = "trace";
 pub const JSON_KEY_EXECUTIONS: &str = "executions";
 pub const JSON_KEY_ACTIVITY: &str = "activity";
 pub const JSON_KEY_ALSO_IN_LOG: &str = "also_in_log";
-pub const JSON_KEY_ENABLED_TRANSITIONS: &str = "enabled_transitions";
+pub const JSON_KEY_FIRED_TRANSITION: &str = "fired_transition";
+pub const JSON_KEY_OTHER_ENABLED_TRANSITIONS: &str = "other_enabled_transitions";
 pub const JSON_KEY_TIME_OF_ENABLEMENT: &str = "time_of_enablement";
 pub const JSON_KEY_TIME_OF_EXECUTION: &str = "time_of_execution";
 pub const JSON_KEY_RESOURCE: &str = "resource";
+pub const JSON_KEY_RESOURCE_UTILISATION: &str = "resource_utilisation";
 
 #[derive(Clone, ActivityKey)]
 pub struct Executions {
     pub(crate) activity_key: ActivityKey,
-    pub(crate) resource_key: ActivityKey,
+    pub resource_key: ActivityKey,
     pub executions: Vec<Execution>,
 }
 
@@ -50,12 +56,16 @@ impl Importable for Executions {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An executions file is a JSON structure, of which the root is an object with one element called `executions`.
     This is a list of executions, where each execution contains:
     \\begin{itemize}
-        \\item An activity label (may be null), 
-        \\item a list of enabled transitions of which the first one actually fired, 
-        \\item a resource (may be null),
-        \\item a time of enablement (may be null), and 
-        \\item a time of execution (may be null).
+        \\item The trace.
+        \\item An activity label (may be null).
+        \\item Whether the transition was also in the log (true = synchronous move, false = model move or silent move).
+        \\item The index of the transition that fired.
+        \\item A list of other enabled transitions.
+        \\item The name of the resource that executed the transition (may be null).
+        \\item The time of enablement (may be null).
+        \\item The time of execution (may be null). In case of a model move, contains the time of the next synchronous or log move.
     \\end{itemize} 
+    The executions should be sorted in order of increasing execution time; the position of missing execution timestamps is arbitrary.
     
     For instance:
     \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/a-b.exs}";
@@ -85,6 +95,15 @@ impl Importable for Executions {
         let mut executions = Vec::with_capacity(json_executions.len());
 
         for (execution_i, json_execution) in json_executions.into_iter().enumerate() {
+            //trace
+            let trace =
+                json::read_field_index(json_execution, JSON_KEY_TRACE).with_context(|| {
+                    anyhow!(
+                        "Could not read what trace contained execution {}.",
+                        execution_i
+                    )
+                })?;
+
             //activity
             let activity = if let Some(activity) =
                 json::read_field_string_or_null(&json_execution, "activity").with_context(|| {
@@ -104,23 +123,37 @@ impl Importable for Executions {
                     )
                 })?;
 
+            //fired transition
+            let fired_transition =
+                json::read_field_index(json_execution, JSON_KEY_FIRED_TRANSITION).with_context(
+                    || {
+                        anyhow!(
+                            "Could not read what transition fired for execution {}.",
+                            execution_i
+                        )
+                    },
+                )?;
+
             //enabled transitions
-            let json_enabled = json::read_field_list(&json_execution, JSON_KEY_ENABLED_TRANSITIONS)
-                .with_context(|| {
-                    anyhow!(
-                        "Enabled transitions are missing for execution {}.",
-                        execution_i
-                    )
-                })?;
-            let mut enabled_transitions = Vec::with_capacity(json_enabled.len());
+            let json_enabled =
+                json::read_field_list(&json_execution, JSON_KEY_OTHER_ENABLED_TRANSITIONS)
+                    .with_context(|| {
+                        anyhow!(
+                            "Enabled transitions are missing for execution {}.",
+                            execution_i
+                        )
+                    })?;
+            let mut other_enabled_transitions = Vec::with_capacity(json_enabled.len());
             for (enabledd_i, json_enabledd) in json_enabled.into_iter().enumerate() {
-                enabled_transitions.push(json::read_index(&json_enabledd).with_context(|| {
-                    anyhow!(
-                        "Could not read enabled transition {} of execution {}.",
-                        enabledd_i,
-                        execution_i
-                    )
-                })?);
+                other_enabled_transitions.push(json::read_index(&json_enabledd).with_context(
+                    || {
+                        anyhow!(
+                            "Could not read enabled transition {} of execution {}.",
+                            enabledd_i,
+                            execution_i
+                        )
+                    },
+                )?);
             }
 
             //time of enablement
@@ -153,13 +186,22 @@ impl Importable for Executions {
                 None
             };
 
+            let resource_utilisation =
+                json::read_field_fraction_or_null(&json_execution, JSON_KEY_RESOURCE_UTILISATION)
+                    .with_context(|| {
+                        anyhow!("Could not read resource utilisation of execution {}.", execution_i)
+                    })?;
+
             executions.push(Execution {
+                trace,
                 activity,
                 also_in_log,
-                enabled_transitions,
+                fired_transition,
+                other_enabled_transitions,
                 time_of_enablement,
                 time_of_execution,
                 resource,
+                resource_utilisation,
             });
         }
 
@@ -207,18 +249,23 @@ impl Exportable for Executions {
 
 #[derive(Clone, Debug)]
 pub struct Execution {
+    pub trace: usize,
     pub activity: Option<Activity>,
     pub also_in_log: bool,
-    /// first enabled transition was actually fired
-    pub enabled_transitions: Vec<usize>,
+    pub fired_transition: usize,
+    pub other_enabled_transitions: Vec<usize>,
     pub time_of_enablement: Option<DateTime<FixedOffset>>,
     pub time_of_execution: Option<DateTime<FixedOffset>>,
     pub resource: Option<Activity>,
+    pub resource_utilisation: Option<Fraction>,
 }
 
 impl Execution {
     fn to_json(&self, activity_key: &ActivityKey, resource_key: &ActivityKey) -> Value {
         let mut json_execution = serde_json::Map::new();
+
+        //fired transition
+        json_execution.insert(JSON_KEY_TRACE.to_string(), json!(self.trace));
 
         //activity
         json_execution.insert(
@@ -236,11 +283,17 @@ impl Execution {
             Value::Bool(self.also_in_log),
         );
 
+        //fired transition
+        json_execution.insert(
+            JSON_KEY_FIRED_TRANSITION.to_string(),
+            json!(self.fired_transition),
+        );
+
         //enabled transitions
         json_execution.insert(
-            JSON_KEY_ENABLED_TRANSITIONS.to_string(),
+            JSON_KEY_OTHER_ENABLED_TRANSITIONS.to_string(),
             Value::Array(
-                self.enabled_transitions
+                self.other_enabled_transitions
                     .iter()
                     .map(|i| Value::Number(Number::from_u128(*i as u128).unwrap()))
                     .collect(),
@@ -272,6 +325,16 @@ impl Execution {
             JSON_KEY_RESOURCE.to_string(),
             if let Some(resource) = self.resource {
                 Value::String(resource_key.deprocess_activity(&resource).to_string())
+            } else {
+                Value::Null
+            },
+        );
+
+        //resource utilisation
+        json_execution.insert(
+            JSON_KEY_RESOURCE_UTILISATION.to_string(),
+            if let Some(resource_utilisation) = &self.resource_utilisation {
+                Value::String(format!("{}", resource_utilisation))
             } else {
                 Value::Null
             },
@@ -310,6 +373,6 @@ mod tests {
 
         println!("{}", exs);
 
-        assert_eq!(exs.to_string() + "\n", fin);
+        assert_eq!(exs.to_string(), fin);
     }
 }

@@ -76,6 +76,17 @@ pub fn read_field_string<'a>(json: &'a Value, field: &str) -> Result<String> {
     }
 }
 
+pub fn read_field_fraction_or_null(json: &Value, field: &str) -> Result<Option<Fraction>> {
+    match &json[field] {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where fraction expected")),
+        Value::Number(n) => return Ok(Some(n.to_string().parse::<Fraction>()?)),
+        Value::String(s) => return Ok(Some(s.parse::<Fraction>()?)),
+        Value::Array(_) => return Err(anyhow!("field is a list, where fraction expected")),
+        Value::Object(_) => return Err(anyhow!("field is an object, where fraction expected")),
+    }
+}
+
 pub fn read_field_string_or_null<'a>(json: &'a Value, field: &str) -> Result<Option<String>> {
     match &json[field] {
         Value::Null => return Ok(None),
