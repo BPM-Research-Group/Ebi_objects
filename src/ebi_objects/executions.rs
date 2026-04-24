@@ -21,11 +21,13 @@ use std::{
 };
 
 pub const JSON_KEY_TRACE: &str = "trace";
+pub const JSON_KEY_MOVE_INDEX: &str = "move_index";
 pub const JSON_KEY_EXECUTIONS: &str = "executions";
 pub const JSON_KEY_ACTIVITY: &str = "activity";
 pub const JSON_KEY_ALSO_IN_LOG: &str = "also_in_log";
 pub const JSON_KEY_FIRED_TRANSITION: &str = "fired_transition";
 pub const JSON_KEY_OTHER_ENABLED_TRANSITIONS: &str = "other_enabled_transitions";
+pub const JSON_KEY_MOVE_INDEX_OF_ENABLEMENT: &str = "move_index_of_enablement";
 pub const JSON_KEY_TIME_OF_ENABLEMENT: &str = "time_of_enablement";
 pub const JSON_KEY_TIME_OF_EXECUTION: &str = "time_of_execution";
 pub const JSON_KEY_RESOURCE: &str = "resource";
@@ -57,12 +59,13 @@ impl Importable for Executions {
     This is a list of executions, where each execution contains:
     \\begin{itemize}
         \\item The trace.
+        \\item The index of the move within the trace.
         \\item An activity label (may be null).
         \\item Whether the transition was also in the log (true = synchronous move, false = model move or silent move).
         \\item The index of the transition that fired.
         \\item A list of other enabled transitions.
-        \\item The name of the resource that executed the transition (may be null).
-        \\item The time of enablement (may be null).
+        \\item The name of the resource of the execution (may be null).
+        \\item The index of the move that enabled the execution (may be null).
         \\item The time of execution (may be null). In case of a model move, contains the time of the next synchronous or log move.
     \\end{itemize} 
     The executions should be sorted in order of increasing execution time; the position of missing execution timestamps is arbitrary.
@@ -100,6 +103,15 @@ impl Importable for Executions {
                 json::read_field_index(json_execution, JSON_KEY_TRACE).with_context(|| {
                     anyhow!(
                         "Could not read what trace contained execution {}.",
+                        execution_i
+                    )
+                })?;
+
+            //move index
+            let move_index = json::read_field_index(json_execution, JSON_KEY_MOVE_INDEX)
+                .with_context(|| {
+                    anyhow!(
+                        "Could not read the move index of execution {}.",
                         execution_i
                     )
                 })?;
@@ -156,15 +168,15 @@ impl Importable for Executions {
                 )?);
             }
 
-            //time of enablement
-            let time_of_enablement =
-                json::read_field_time_or_null(&json_execution, JSON_KEY_TIME_OF_ENABLEMENT)
+            //move index of enablement
+            let move_index_of_enablement =
+                json::read_field_index_or_null(json_execution, JSON_KEY_MOVE_INDEX_OF_ENABLEMENT)
                     .with_context(|| {
-                        anyhow!(
-                            "Could not read time of enablement of execution {}.",
-                            execution_i
-                        )
-                    })?;
+                    anyhow!(
+                        "Could not read the move index of enablement of execution {}.",
+                        execution_i
+                    )
+                })?;
 
             //time of execution
             let time_of_execution =
@@ -189,16 +201,20 @@ impl Importable for Executions {
             let resource_utilisation =
                 json::read_field_fraction_or_null(&json_execution, JSON_KEY_RESOURCE_UTILISATION)
                     .with_context(|| {
-                        anyhow!("Could not read resource utilisation of execution {}.", execution_i)
-                    })?;
+                    anyhow!(
+                        "Could not read resource utilisation of execution {}.",
+                        execution_i
+                    )
+                })?;
 
             executions.push(Execution {
                 trace,
+                move_index,
                 activity,
                 also_in_log,
                 fired_transition,
                 other_enabled_transitions,
-                time_of_enablement,
+                move_index_of_enablement,
                 time_of_execution,
                 resource,
                 resource_utilisation,
@@ -250,11 +266,12 @@ impl Exportable for Executions {
 #[derive(Clone, Debug)]
 pub struct Execution {
     pub trace: usize,
+    pub move_index: usize,
     pub activity: Option<Activity>,
     pub also_in_log: bool,
     pub fired_transition: usize,
     pub other_enabled_transitions: Vec<usize>,
-    pub time_of_enablement: Option<DateTime<FixedOffset>>,
+    pub move_index_of_enablement: Option<usize>,
     pub time_of_execution: Option<DateTime<FixedOffset>>,
     pub resource: Option<Activity>,
     pub resource_utilisation: Option<Fraction>,
@@ -264,8 +281,11 @@ impl Execution {
     fn to_json(&self, activity_key: &ActivityKey, resource_key: &ActivityKey) -> Value {
         let mut json_execution = serde_json::Map::new();
 
-        //fired transition
+        //trace
         json_execution.insert(JSON_KEY_TRACE.to_string(), json!(self.trace));
+
+        //move index
+        json_execution.insert(JSON_KEY_MOVE_INDEX.to_string(), json!(self.move_index));
 
         //activity
         json_execution.insert(
@@ -300,14 +320,10 @@ impl Execution {
             ),
         );
 
-        //time of enablement
+        //move index of enablement
         json_execution.insert(
-            JSON_KEY_TIME_OF_ENABLEMENT.to_string(),
-            if let Some(time) = self.time_of_enablement {
-                Value::String(time.to_string())
-            } else {
-                Value::Null
-            },
+            JSON_KEY_MOVE_INDEX_OF_ENABLEMENT.to_string(),
+            json!(self.move_index_of_enablement),
         );
 
         //time of execution

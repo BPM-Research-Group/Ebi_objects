@@ -15,7 +15,6 @@ pub fn read_field_bool(json: &Value, field: &str) -> Result<bool> {
     }
 }
 
-
 pub fn read_field_index(json: &Value, field: &str) -> Result<usize> {
     match &json[field] {
         Value::Null => return Err(anyhow!("field not found")),
@@ -26,7 +25,7 @@ pub fn read_field_index(json: &Value, field: &str) -> Result<usize> {
             }
             return Ok(usize::try_from(n.as_u64().unwrap())?);
         }
-        Value::String(_) => return Err(anyhow!("field is a literal, where number expected")),
+        Value::String(s) => return Ok(s.parse::<usize>()?),
         Value::Array(_) => return Err(anyhow!("field is a list, where number expected")),
         Value::Object(_) => return Err(anyhow!("field is an object, where number expected")),
     }
@@ -73,6 +72,22 @@ pub fn read_field_string<'a>(json: &'a Value, field: &str) -> Result<String> {
         Value::String(s) => return Ok(s.to_string()),
         Value::Array(_) => return Err(anyhow!("field is a list, where literal expected")),
         Value::Object(_) => return Err(anyhow!("field is an object, where literal expected")),
+    }
+}
+
+pub fn read_field_index_or_null(json: &Value, field: &str) -> Result<Option<usize>> {
+    match &json[field] {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where number expected")),
+        Value::Number(n) => {
+            if !n.is_u64() {
+                return Err(anyhow!("number is not an integer"));
+            }
+            return Ok(Some(usize::try_from(n.as_u64().unwrap())?));
+        }
+        Value::String(s) => return Ok(Some(s.parse::<usize>()?)),
+        Value::Array(_) => return Err(anyhow!("field is a list, where number expected")),
+        Value::Object(_) => return Err(anyhow!("field is an object, where number expected")),
     }
 }
 

@@ -1,19 +1,21 @@
 use crate::{
     Activity, ActivityKey, CompressedEventLog, CompressedEventLogXes, EventLogOcel,
-    EventLogTraceAttributes, EventLogXes,
+    EventLogTraceAttributes, EventLogXes, NumberOfTraces,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
         event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython,
         finite_stochastic_language::FiniteStochasticLanguage,
     },
 };
-use ebi_arithmetic::{Fraction, One};
+use ebi_arithmetic::{Fraction, f};
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<EventLog> for FiniteStochasticLanguage {
     fn from(value: EventLog) -> Self {
         log::info!("create stochastic language");
         let mut map = HashMap::new();
+
+        let trace_weight = f!((1, value.number_of_traces()));
 
         let EventLog {
             activity_key,
@@ -24,17 +26,17 @@ impl From<EventLog> for FiniteStochasticLanguage {
         for trace in traces {
             match map.entry(trace) {
                 Entry::Occupied(mut e) => {
-                    *e.get_mut() += Fraction::one();
+                    *e.get_mut() += &trace_weight;
                     ()
                 }
                 Entry::Vacant(e) => {
-                    e.insert(Fraction::one());
+                    e.insert(trace_weight.clone());
                     ()
                 }
             }
         }
 
-        (activity_key, map).into()
+        Self::new_raw(map, activity_key)
     }
 }
 
