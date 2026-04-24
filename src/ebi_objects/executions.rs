@@ -389,6 +389,6 @@ mod tests {
 
         println!("{}", exs);
 
-        assert_eq!(exs.to_string(), fin);
+        assert_eq!(exs.to_string() + "\n", fin);
     }
 }
