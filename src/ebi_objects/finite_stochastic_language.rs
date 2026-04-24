@@ -50,6 +50,13 @@ impl FiniteStochasticLanguage {
         }
     }
 
+    pub fn empty() -> Self {
+        Self {
+            activity_key: ActivityKey::new(),
+            traces: HashMap::new(),
+        }
+    }
+
     pub fn normalise_before(traces: &mut HashMap<Vec<String>, Fraction>) {
         if traces.len() != 0 {
             let sum = traces.values().fold(Fraction::zero(), |mut x, y| {

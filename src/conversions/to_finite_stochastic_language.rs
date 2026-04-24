@@ -15,6 +15,10 @@ impl From<EventLog> for FiniteStochasticLanguage {
         log::info!("create stochastic language");
         let mut map = HashMap::new();
 
+        if value.number_of_traces() == 0 {
+            return FiniteStochasticLanguage::empty();
+        }
+
         let trace_weight = f!((1, value.number_of_traces()));
 
         let EventLog {
