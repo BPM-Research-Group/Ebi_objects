@@ -136,6 +136,8 @@ impl Importable for EventLogOcel {
 
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "An object-centric event log file follows the Ocel 2.0 format~\\cite{DBLP:journals/corr/abs-2403-01975}. 
 Parsing is performed by the Rust4PM crate~\\cite{DBLP:conf/bpm/KustersA24}.
+Note that if a case-centric process is abstracted using a single object type, then events are assumed to be ordered. 
+That is, timestamps are not taken into account.
 For instance:
     \\lstinputlisting[language=xml, style=boxed]{../testfiles/oc-log.ocel}";
 

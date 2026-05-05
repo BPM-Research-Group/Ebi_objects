@@ -2,7 +2,12 @@ use crate::{
     Activity, ActivityKey, CompressedEventLogXes, EventLogTraceAttributes, EventLogXes,
     IntoTraceIterator,
     ebi_objects::{
-        compressed_event_log::CompressedEventLog, compressed_event_log_event_attributes::CompressedEventLogEventAttributes, compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes, event_log::EventLog, event_log_csv::EventLogCsv, event_log_event_attributes::EventLogEventAttributes, event_log_ocel::EventLogOcel, event_log_python::EventLogPython
+        compressed_event_log::CompressedEventLog,
+        compressed_event_log_event_attributes::CompressedEventLogEventAttributes,
+        compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
+        event_log::EventLog, event_log_csv::EventLogCsv,
+        event_log_event_attributes::EventLogEventAttributes, event_log_ocel::EventLogOcel,
+        event_log_python::EventLogPython,
     },
 };
 use process_mining::{OCEL, core::event_data::case_centric::EventLogClassifier};
@@ -28,7 +33,6 @@ impl From<CompressedEventLogEventAttributes> for EventLog {
         value.log.into()
     }
 }
-
 
 impl From<EventLogTraceAttributes> for EventLog {
     fn from(value: EventLogTraceAttributes) -> Self {
@@ -66,18 +70,17 @@ impl From<EventLogOcel> for EventLog {
             objects,
         } = rust4pm_log;
 
-        //gather list of objects
-        let objects = EventLogOcel::get_relevant_objects(&objects, &object_type);
+        //gather list of objects and create empty traces
+        let mut object_id2trace = EventLogOcel::get_relevant_objects(&objects, &object_type)
+            .into_iter()
+            .map(|object_id| (object_id, vec![]))
+            .collect::<HashMap<_, _>>();
 
         //gather traces
-        let mut object_id2trace = HashMap::new();
         for event in events {
             for relation in event.relationships {
-                if objects.contains(&relation.object_id) {
-                    object_id2trace
-                        .entry(relation.object_id)
-                        .or_insert_with(|| vec![])
-                        .push(activity_key.process_activity(&event.event_type));
+                if let Some(trace) = object_id2trace.get_mut(&relation.object_id) {
+                    trace.push(activity_key.process_activity(&event.event_type));
                 }
             }
         }

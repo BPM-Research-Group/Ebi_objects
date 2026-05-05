@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    AttributeKey, CompressedEventLogXes, EventLogCsv, EventLogOcel, EventLogPython, EventLogXes, ebi_objects::{
+    AttributeKey, CompressedEventLogXes, EventLogCsv, EventLogOcel, EventLogPython, EventLogXes,
+    ebi_objects::{
         compressed_event_log_event_attributes::CompressedEventLogEventAttributes,
         event_log_event_attributes::EventLogEventAttributes,
-    }
+    },
 };
 use ebi_activity_key::{Activity, ActivityKey};
 use intmap::IntMap;
@@ -141,16 +142,15 @@ impl From<EventLogOcel> for EventLogEventAttributes {
         }
 
         //gather list of objects that form the cases
-        let case_objects = objects
+        let relevant_objects = EventLogOcel::get_relevant_objects(&objects, &case_object_type);
+        let mut object_id2trace_activities = relevant_objects
             .iter()
-            .filter_map(|ob| {
-                if ob.object_type == case_object_type {
-                    Some(ob.id.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<HashSet<_>>();
+            .map(|object_id| (object_id.clone(), vec![]))
+            .collect::<HashMap<_, _>>();
+        let mut object_id2trace_attributes = relevant_objects
+            .into_iter()
+            .map(|object_id| (object_id, vec![]))
+            .collect::<HashMap<_, _>>();
 
         let resource_objects = objects
             .into_iter()
@@ -166,16 +166,13 @@ impl From<EventLogOcel> for EventLogEventAttributes {
             .collect::<HashSet<_>>();
 
         //gather traces and attributes
-        let mut object_id2trace_activities = HashMap::new();
-        let mut object_id2trace_attributes = HashMap::new();
         for event in events {
             for relation in &event.relationships {
-                if case_objects.contains(&relation.object_id) {
-                    //activity trace
-                    object_id2trace_activities
-                        .entry(relation.object_id.clone())
-                        .or_insert_with(|| vec![])
-                        .push(activity_key.process_activity(&event.event_type));
+                if let (Some(trace_activities), Some(trace_attributes)) = (
+                    object_id2trace_activities.get_mut(&relation.object_id),
+                    object_id2trace_attributes.get_mut(&relation.object_id),
+                ) {
+                    trace_activities.push(activity_key.process_activity(&event.event_type));
 
                     //attribute trace
                     let mut attributes = IntMap::new();
@@ -205,10 +202,7 @@ impl From<EventLogOcel> for EventLogEventAttributes {
                         }
                     }
 
-                    object_id2trace_attributes
-                        .entry(relation.object_id.clone())
-                        .or_insert_with(|| vec![])
-                        .push(attributes);
+                    trace_attributes.push(attributes);
                 }
             }
         }

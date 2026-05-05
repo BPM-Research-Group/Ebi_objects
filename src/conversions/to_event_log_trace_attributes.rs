@@ -11,7 +11,7 @@ use process_mining::{
     OCEL,
     core::event_data::case_centric::{AttributeValue, EventLogClassifier},
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 impl From<CompressedEventLogTraceAttributes> for EventLogTraceAttributes {
     fn from(value: CompressedEventLogTraceAttributes) -> Self {
@@ -65,27 +65,17 @@ impl From<EventLogOcel> for EventLogTraceAttributes {
         }
         let attribute_object_id = "object-id";
 
-        //gather list of objects
-        let objects = objects
+        //gather list of objects and create empty traces
+        let mut object_id2trace = EventLogOcel::get_relevant_objects(&objects, &object_type)
             .into_iter()
-            .filter_map(|ob| {
-                if ob.object_type == object_type {
-                    Some(ob.id)
-                } else {
-                    None
-                }
-            })
-            .collect::<HashSet<_>>();
+            .map(|object_id| (object_id, vec![]))
+            .collect::<HashMap<_, _>>();
 
         //gather traces
-        let mut object_id2trace = HashMap::new();
         for event in events {
             for relation in event.relationships {
-                if objects.contains(&relation.object_id) {
-                    object_id2trace
-                        .entry(relation.object_id)
-                        .or_insert_with(|| vec![])
-                        .push(activity_key.process_activity(&event.event_type));
+                if let Some(trace) = object_id2trace.get_mut(&relation.object_id) {
+                    trace.push(activity_key.process_activity(&event.event_type));
                 }
             }
         }
