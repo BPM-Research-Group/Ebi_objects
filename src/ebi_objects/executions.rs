@@ -9,7 +9,7 @@ use chrono::{DateTime, FixedOffset};
 use ebi_activity_key::{Activity, ActivityKey, ActivityKeyTranslator, TranslateActivityKey};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::{HasActivityKey, TestActivityKey};
-use ebi_arithmetic::{
+use ebi_bpmn::ebi_arithmetic::{
     Fraction,
     anyhow::{Error, Result},
 };

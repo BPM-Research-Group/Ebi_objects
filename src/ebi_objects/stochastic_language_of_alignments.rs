@@ -7,8 +7,8 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
-use ebi_arithmetic::{Fraction, One, Signed};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
+use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed};
 use ebi_derive::ActivityKey;
 use std::fmt::Display;
 

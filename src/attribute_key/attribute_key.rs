@@ -1,5 +1,5 @@
 use crate::{Attribute, DataType, Infoable};
-use ebi_arithmetic::anyhow::Result;
+use ebi_bpmn::ebi_arithmetic::anyhow::Result;
 use process_mining::core::event_data::{
     case_centric::AttributeValue, object_centric::OCELAttributeValue,
 };

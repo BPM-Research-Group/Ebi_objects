@@ -1,4 +1,4 @@
-use ebi_arithmetic::anyhow::{Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use std::{
     cmp::Ordering,
     fmt::{Debug, Display, Formatter},

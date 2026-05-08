@@ -7,7 +7,7 @@ use crate::{
         },
     },
 };
-use ebi_arithmetic::anyhow::{Error, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Error, anyhow};
 use process_mining::core::event_data::case_centric::{
     Attribute, AttributeValue, Event, EventLogClassifier, Trace,
 };

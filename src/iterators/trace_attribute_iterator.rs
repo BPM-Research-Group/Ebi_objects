@@ -1,7 +1,6 @@
-use chrono::{DateTime, FixedOffset};
-use ebi_arithmetic::Fraction;
-
 use crate::{Attribute, EventLogTraceAttributes, NumberOfTraces, TraceAttributes};
+use chrono::{DateTime, FixedOffset};
+use ebi_bpmn::ebi_arithmetic::Fraction;
 
 pub struct CategoricalTraceAttributeIterator<'a> {
     log: &'a EventLogTraceAttributes,

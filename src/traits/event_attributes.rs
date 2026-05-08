@@ -1,6 +1,6 @@
 use crate::Attribute;
 use chrono::{DateTime, FixedOffset};
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 
 pub trait EventAttributes {
     fn get_event_attribute_categorical(

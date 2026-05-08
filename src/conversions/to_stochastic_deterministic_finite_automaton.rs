@@ -9,7 +9,7 @@ use crate::{
     },
     traits::trace_iterators::{IntoRefTraceIterator, IntoTraceIterator},
 };
-use ebi_arithmetic::{Fraction, One, Signed, Zero};
+use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed, Zero};
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
@@ -218,7 +218,7 @@ from_via_log!(CompressedEventLogTraceAttributes);
 
 #[cfg(test)]
 mod tests {
-    use ebi_arithmetic::{Fraction, Zero, f0};
+    use ebi_bpmn::ebi_arithmetic::{Fraction, Zero, f0};
 
     use crate::{
         DirectlyFollowsGraph, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,

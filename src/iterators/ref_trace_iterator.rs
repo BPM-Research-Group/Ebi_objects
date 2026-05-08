@@ -1,5 +1,5 @@
 use crate::{Activity, Attribute};
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
 use std::collections::HashMap;

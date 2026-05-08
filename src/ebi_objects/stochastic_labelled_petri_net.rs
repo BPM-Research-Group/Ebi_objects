@@ -12,8 +12,8 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::Fraction;
-use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{fmt, io::BufRead};

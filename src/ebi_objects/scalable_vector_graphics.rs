@@ -1,7 +1,7 @@
 use crate::{EbiObject, Exportable, Graphable, Infoable};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use layout::{backends::svg::SVGWriter, topo::layout::VisualGraph};
 use std::fmt::Display;
 

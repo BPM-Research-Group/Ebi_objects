@@ -5,7 +5,7 @@ use crate::{
         stochastic_process_tree::StochasticProcessTree,
     },
 };
-use ebi_arithmetic::{
+use ebi_bpmn::ebi_arithmetic::{
     Fraction,
     anyhow::{Error, anyhow},
 };

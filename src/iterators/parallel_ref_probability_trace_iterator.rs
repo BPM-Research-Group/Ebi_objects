@@ -1,4 +1,4 @@
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,
     plumbing::{Producer, bridge},

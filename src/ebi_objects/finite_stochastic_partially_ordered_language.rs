@@ -12,7 +12,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{
     Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey, TranslateActivityKey,
 };
-use ebi_arithmetic::{Fraction, One, Signed, Zero};
+use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::{core::base::Orientation, topo::layout::VisualGraph};
 use std::{fmt::Display, io::BufRead};

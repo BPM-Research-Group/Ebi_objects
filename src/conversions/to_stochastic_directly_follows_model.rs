@@ -1,5 +1,3 @@
-use ebi_arithmetic::{Fraction, Signed, Zero, f};
-
 use crate::{
     HasActivityKey,
     ebi_objects::{
@@ -7,6 +5,7 @@ use crate::{
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
     },
 };
+use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero, f};
 
 impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
     fn from(value: DirectlyFollowsGraph) -> Self {

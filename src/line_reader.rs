@@ -1,6 +1,6 @@
 use ebi_activity_key::{Activity, ActivityKey};
-use ebi_arithmetic::Fraction;
-use ebi_arithmetic::anyhow::{Context, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Result, anyhow};
 use std::fmt;
 use std::io::BufRead;
 
@@ -236,6 +236,8 @@ impl<'a> LineReader<'a> {
 
 #[cfg(test)]
 mod tests {
+    use ebi_bpmn::ebi_arithmetic::is_exact_globally;
+
     use crate::{Exportable, FiniteStochasticLanguage, FiniteStochasticPartiallyOrderedLanguage};
     use std::fs;
 
@@ -259,16 +261,20 @@ mod tests {
 
     #[test]
     fn activity_read_write_psolang() {
-        let fin = fs::read_to_string("testfiles/model.sbpmn.spolang").unwrap();
-        let mut slang = fin
-            .parse::<FiniteStochasticPartiallyOrderedLanguage>()
-            .unwrap();
+        if is_exact_globally() {
+            let fin = fs::read_to_string("testfiles/model.sbpmn.spolang").unwrap();
+            let mut slang = fin
+                .parse::<FiniteStochasticPartiallyOrderedLanguage>()
+                .unwrap();
 
-        let act = slang.activity_key.process_activity("Check easy claim\n(5 min)");
-        assert!(slang.activity_key.get_id_from_activity(act) < 3);
+            let act = slang
+                .activity_key
+                .process_activity("Check easy claim\n(5 min)");
+            assert!(slang.activity_key.get_id_from_activity(act) < 3);
 
-        let mut fout: Vec<u8> = vec![];
-        slang.export(&mut fout).unwrap();
-        assert_eq!(String::from_utf8_lossy(&fout), fin);
+            let mut fout: Vec<u8> = vec![];
+            slang.export(&mut fout).unwrap();
+            assert_eq!(String::from_utf8_lossy(&fout), fin);
+        }
     }
 }

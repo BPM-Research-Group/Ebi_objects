@@ -6,9 +6,9 @@ use crate::{
     },
 };
 use ebi_activity_key::HasActivityKey;
-use ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_bpmn::{
     BusinessProcessModelAndNotation,
+    ebi_arithmetic::anyhow::{Result, anyhow},
     element::BPMNElement,
     elements::{
         manual_task::BPMNManualTask, receive_task::BPMNReceiveTask, task::BPMNTask,
@@ -87,7 +87,9 @@ impl Exportable for BusinessProcessModelAndNotation {
 
             EbiObject::EventLog(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogCsv(_) => Err(anyhow!("Cannot export event log as BPMN.")),
-            EbiObject::EventLogEventAttributes(_) => Err(anyhow!("Cannot export event log as BPMN.")),
+            EbiObject::EventLogEventAttributes(_) => {
+                Err(anyhow!("Cannot export event log as BPMN."))
+            }
             EbiObject::EventLogOcel(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogPython(_) => Err(anyhow!("Cannot export event log as BPMN.")),
             EbiObject::EventLogTraceAttributes(_) => {

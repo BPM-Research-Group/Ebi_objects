@@ -18,8 +18,8 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
-use ebi_arithmetic::{Fraction, One, Signed, Zero};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
 use std::{
@@ -423,7 +423,7 @@ mod tests {
         ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
         traits::number_of_traces::NumberOfTraces,
     };
-    use ebi_arithmetic::{Fraction, Zero};
+    use ebi_bpmn::ebi_arithmetic::{Fraction, Zero};
     use std::fs;
 
     #[test]

@@ -8,7 +8,7 @@ use crate::ebi_objects::{
     stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     stochastic_process_tree::StochasticProcessTree,
 };
-use ebi_arithmetic::anyhow::{Error, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Error, anyhow};
 use process_mining::{
     PetriNet,
     core::process_models::petri_net::{self, ArcType},

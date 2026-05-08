@@ -25,7 +25,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{
     Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey, TranslateActivityKey,
 };
-use ebi_arithmetic::{Fraction, One};
+use ebi_bpmn::ebi_arithmetic::{Fraction, One};
 use ebi_derive::{ActivityKey, AttributeKey};
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
@@ -333,7 +333,7 @@ impl EventAttributes for EventLogEventAttributes {
         trace_index: usize,
         event_index: usize,
         attribute: Attribute,
-    ) -> Option<ebi_arithmetic::Fraction> {
+    ) -> Option<ebi_bpmn::ebi_arithmetic::Fraction> {
         self.traces
             .get(trace_index)?
             .1

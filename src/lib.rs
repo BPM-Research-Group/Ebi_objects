@@ -156,7 +156,7 @@ pub use ebi_objects::stochastic_nondeterministic_finite_automaton::StochasticNon
 pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 
 pub use ebi_activity_key;
-pub use ebi_arithmetic;
+pub use ebi_bpmn::ebi_arithmetic;
 pub use ebi_arithmetic::anyhow;
 pub use ebi_arithmetic::malachite;
 pub use ebi_arithmetic::rand;

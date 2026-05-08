@@ -1,6 +1,6 @@
 use crate::constants::ebi_object::EbiObject;
-use ebi_arithmetic::anyhow::{Result, anyhow};
-use ebi_arithmetic::{ConstFraction, Fraction};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::{ConstFraction, Fraction};
 use std::{collections::HashMap, fmt::Debug, hash::Hash, io::BufRead};
 use strum_macros::Display;
 

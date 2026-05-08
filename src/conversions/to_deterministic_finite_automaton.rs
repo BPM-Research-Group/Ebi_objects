@@ -19,7 +19,7 @@ use crate::{
     },
 };
 use ebi_activity_key::HasActivityKey;
-use ebi_arithmetic::ebi_number::{Signed, Zero};
+use ebi_bpmn::ebi_arithmetic::ebi_number::{Signed, Zero};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 impl From<FiniteLanguage> for DeterministicFiniteAutomaton {

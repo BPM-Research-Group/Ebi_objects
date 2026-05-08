@@ -7,7 +7,7 @@ use crate::{
         finite_stochastic_language::FiniteStochasticLanguage,
     },
 };
-use ebi_arithmetic::{Fraction, f};
+use ebi_bpmn::ebi_arithmetic::{Fraction, f};
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<EventLog> for FiniteStochasticLanguage {

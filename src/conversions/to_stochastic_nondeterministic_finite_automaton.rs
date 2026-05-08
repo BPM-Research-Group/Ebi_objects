@@ -9,7 +9,7 @@ use crate::{
         get_total_weight_of_enabled_transitions, get_transition_activity, get_transition_weight,
     },
 };
-use ebi_arithmetic::{Fraction, Signed, Zero};
+use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 use std::collections::{HashMap, VecDeque, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
@@ -341,7 +341,7 @@ mod tests {
         StochasticDirectlyFollowsModel, StochasticNondeterministicFiniteAutomaton,
         StochasticProcessTree,
     };
-    use ebi_arithmetic::{Fraction, One, Zero, f0, f1};
+    use ebi_bpmn::ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
 
     #[test]

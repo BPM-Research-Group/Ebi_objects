@@ -7,7 +7,7 @@ use crate::{
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::process_tree::{Node, Operator},
 };
-use ebi_arithmetic::anyhow::{Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
     BPMNCreator, BusinessProcessModelAndNotation, Container, EndEventType, GatewayType,
     GlobalIndex, StartEventType,

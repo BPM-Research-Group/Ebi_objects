@@ -5,7 +5,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use std::fmt::Display;
 use svg2pdf::{ConversionOptions, PageOptions};
 

@@ -2,7 +2,7 @@ use crate::{
     Activity, Attribute, EventLogXes, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
     ebi_objects::{event_log_csv::EventLogCsv, event_log_ocel::EventLogOcel},
 };
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use intmap::IntMap;
 use rayon::iter::{
     IndexedParallelIterator, ParallelIterator,

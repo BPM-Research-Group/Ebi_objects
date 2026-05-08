@@ -1,6 +1,6 @@
 use ebi_activity_key::ActivityKey;
-use ebi_arithmetic::anyhow::Result;
-use ebi_arithmetic::{
+use ebi_bpmn::ebi_arithmetic::anyhow::Result;
+use ebi_bpmn::ebi_arithmetic::{
     Fraction, MaybeExact,
     malachite::{base::num::logic::traits::SignificantBits, rational::Rational},
 };

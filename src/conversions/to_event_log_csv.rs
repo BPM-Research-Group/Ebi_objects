@@ -7,7 +7,7 @@ use crate::{
         event_log_event_attributes::EventLogEventAttributes,
     },
 };
-use ebi_arithmetic::anyhow::{Error, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Error, anyhow};
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::{AttributeValue, XESEditableAttribute};
 

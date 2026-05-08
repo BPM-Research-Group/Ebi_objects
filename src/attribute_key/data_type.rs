@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset};
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use process_mining::core::event_data::case_centric::AttributeValue;
 use std::fmt::{self, Display};
 

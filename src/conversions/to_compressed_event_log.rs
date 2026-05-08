@@ -7,7 +7,7 @@ use crate::{
         event_log_event_attributes::EventLogEventAttributes,
     },
 };
-use ebi_arithmetic::anyhow::Error;
+use ebi_bpmn::ebi_arithmetic::anyhow::Error;
 
 macro_rules! via {
     ($t:ident) => {

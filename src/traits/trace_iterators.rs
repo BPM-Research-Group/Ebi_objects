@@ -7,7 +7,7 @@ use crate::{
         trace_iterator::TraceIterator,
     },
 };
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
 use std::collections::HashMap;

@@ -4,7 +4,7 @@ use crate::{
 };
 use chrono::{DateTime, FixedOffset};
 use ebi_activity_key::Activity;
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use pastey::paste;
 
 macro_rules! iterator {

@@ -4,7 +4,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_arithmetic::anyhow::{Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use resvg::usvg::{self};
 use std::fmt::Display;
 

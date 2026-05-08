@@ -7,7 +7,7 @@ use crate::{
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
     },
 };
-use ebi_arithmetic::Signed;
+use ebi_bpmn::ebi_arithmetic::Signed;
 
 impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet {
     fn from(value: StochasticDeterministicFiniteAutomaton) -> Self {

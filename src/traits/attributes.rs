@@ -1,9 +1,8 @@
+use crate::Attribute;
 use chrono::{DateTime, FixedOffset};
-use ebi_arithmetic::Fraction;
+use ebi_bpmn::ebi_arithmetic::Fraction;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
-
-use crate::Attribute;
 
 pub trait Attributes {
     fn get_attribute_categorical(&self, attribute: Attribute) -> Option<String>;
