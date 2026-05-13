@@ -434,7 +434,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     for child_id in self.tree.get_children(node_id) {
                         writeln!(
                             f,
-                            "<parentsNode sourceId=\"{}\", targetId=\"{}\"/>",
+                            "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",
                             node_id, child_id
                         )?;
                     }
@@ -443,7 +443,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     writeln!(f, "<automaticTask id=\"{}redo\" name=\"tau\"/>", node_id)?;
                     writeln!(
                         f,
-                        "<parentsNode sourceId=\"{}\", targetId=\"{}redo\"/>",
+                        "<parentsNode sourceId=\"{}\" targetId=\"{}redo\"/>",
                         node_id, node_id
                     )?;
 
@@ -451,7 +451,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     writeln!(f, "<automaticTask id=\"{}exit\" name=\"tau\"/>", node_id)?;
                     writeln!(
                         f,
-                        "<parentsNode sourceId=\"{}\", targetId=\"{}exit\"/>",
+                        "<parentsNode sourceId=\"{}\" targetId=\"{}exit\"/>",
                         node_id, node_id
                     )?
                 }
@@ -467,7 +467,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     for child_id in self.tree.get_children(node_id) {
                         writeln!(
                             f,
-                            "<parentsNode sourceId=\"{}\", targetId=\"{}\"/>",
+                            "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",
                             node_id, child_id
                         )?;
                     }
@@ -476,7 +476,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     writeln!(f, "<automaticTask id=\"{}exit\" name=\"tau\"/>", node_id)?;
                     writeln!(
                         f,
-                        "<parentsNode sourceId=\"{}\", targetId=\"{}exit\"/>",
+                        "<parentsNode sourceId=\"{}\" targetId=\"{}exit\"/>",
                         node_id, node_id
                     )?
                 }
@@ -501,13 +501,13 @@ impl Exportable for ProcessTreeMarkupLanguage {
                             //body gets attached to the loop node
                             writeln!(
                                 f,
-                                "<parentsNode sourceId=\"{}\", targetId=\"{}\"/>",
+                                "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",
                                 node_id, child_id
                             )?;
                         } else {
                             writeln!(
                                 f,
-                                "<parentsNode sourceId=\"{}\", targetId=\"{}redo\"/>",
+                                "<parentsNode sourceId=\"{}\" targetId=\"{}redo\"/>",
                                 node_id, child_id
                             )?;
                         }
@@ -517,7 +517,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     writeln!(f, "<automaticTask id=\"{}exit\" name=\"tau\"/>", node_id)?;
                     writeln!(
                         f,
-                        "<parentsNode sourceId=\"{}\", targetId=\"{}exit\"/>",
+                        "<parentsNode sourceId=\"{}\" targetId=\"{}exit\"/>",
                         node_id, node_id
                     )?
                 }
@@ -529,7 +529,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     for child_id in self.tree.get_children(node_id) {
                         writeln!(
                             f,
-                            "<parentsNode sourceId=\"{}\", targetId=\"{}\"/>",
+                            "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",
                             node_id, child_id
                         )?;
                     }
@@ -640,5 +640,22 @@ impl Display for PTMLTag {
 impl TestActivityKey for ProcessTreeMarkupLanguage {
     fn test_activity_key(&self) {
         self.tree.test_activity_key();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Exportable, ProcessTreeMarkupLanguage};
+    use std::fs;
+
+    #[test]
+    fn in_out() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.ptml").unwrap();
+        let tree = fin.parse::<ProcessTreeMarkupLanguage>().unwrap();
+
+        let mut f: Vec<u8> = vec![];
+        tree.export(&mut f).unwrap();
+        let fin2 = String::from_utf8(f).unwrap();
+        let _tree2 = fin2.parse::<ProcessTreeMarkupLanguage>().unwrap();
     }
 }
