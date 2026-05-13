@@ -1,0 +1,30 @@
+stochastic process tree
+sequence
+# number of children
+4
+	activity p
+	# weight node 1
+	1
+	loop
+	# number of children
+	2
+		sequence
+		# number of children
+		2	
+			activity a
+			# weight node 5
+			1
+			activity c
+			# weight node 6
+			1
+		activity b
+		# weight node 4
+		1
+	activity q
+	# weight node 2
+	1
+	activity r
+	# weight node 3
+	1
+# termination weight
+1

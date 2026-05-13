@@ -351,6 +351,7 @@ dependencies = [
 [[package]]
 name = "ebi_arithmetic"
 version = "0.3.11"
+source = "git+https://github.com/BPM-Research-Group/Ebi_arithmetic.git#e97fe7f0f503168f36feef5b41c8d94b1443bd46"
 dependencies = [
  "anyhow",
  "fnv",
@@ -366,6 +367,7 @@ dependencies = [
 [[package]]
 name = "ebi_bpmn"
 version = "0.0.46"
+source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#961328bc2af05b94dbdb9f81631c3a059a1ec9bb"
 dependencies = [
  "anyhow",
  "bitvec",
