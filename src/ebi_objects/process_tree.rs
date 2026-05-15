@@ -594,7 +594,7 @@ pub enum Node {
     Tau,
     Activity(Activity),
     ///type, number of children
-    Operator(Operator, usize), 
+    Operator(Operator, usize),
 }
 
 impl Node {
@@ -905,6 +905,7 @@ macro_rules! tree_semantics {
             state: &mut TreeMarking,
             node: usize,
         ) {
+            // println!("\t\twithdraw enablement next sequential nodes node {node}");
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
                     Node::Tau => unreachable!(),
@@ -952,6 +953,8 @@ macro_rules! tree_semantics {
         }
 
         fn close_node(tree: &$t, state: &mut TreeMarking, node: usize) {
+            // println!("\tclose node {node}");
+
             //close this node and all of its children
             for grandchild in node..tree.traverse(node) {
                 state[grandchild] = NodeState::Closed;
@@ -1028,15 +1031,33 @@ macro_rules! tree_semantics {
         /// Starts executing a node.
         /// Recurses upwards to adjust enablement.
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
+            // println!("\tstart node {node}, child {:?}", child);
             match tree.tree[node] {
                 Node::Tau
                 | Node::Activity(_)
                 | Node::Operator(Operator::Concurrent, _)
-                | Node::Operator(Operator::Or, _)
-                | Node::Operator(Operator::Sequence, _) => {
+                | Node::Operator(Operator::Or, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
 
+                        //recurse to parent
+                        if let Some((parent, _)) = tree.get_parent(node) {
+                            start_node(tree, state, parent, Some(node));
+                        }
+                    }
+                }
+                Node::Operator(Operator::Sequence, _) => {
+                    //for a sequence parent, we withdraw the enablement of the previous child
+                    if let Some(child) = child
+                        && let Some(child_rank) = tree.get_child_rank_with(node, child)
+                        && child_rank > 0
+                    {
+                        let previous_child = tree.get_child(node, child_rank - 1);
+                        withdraw_enablement(tree, state, previous_child);
+                    }
+
+                    if state[node] != NodeState::Started {
+                        state[node] = NodeState::Started;
                         //recurse to parent
                         if let Some((parent, _)) = tree.get_parent(node) {
                             start_node(tree, state, parent, Some(node));
@@ -1163,7 +1184,7 @@ macro_rules! tree_semantics {
                 start_node(tree, state, *node, None);
                 close_node(tree, state, *node);
             }
-            // log::debug!("state after execution {}", state);
+            // println!("state after executing transition {transition}: {}", state);
             Ok(())
         }
     };

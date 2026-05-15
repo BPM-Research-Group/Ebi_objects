@@ -457,7 +457,7 @@ mod tests {
         HasActivityKey, StochasticProcessTree,
         ebi_objects::stochastic_process_tree::{
             can_execute, can_terminate, execute_transition, get_enabled_transitions,
-            get_initial_state, get_total_weight_of_enabled_transitions, get_transition_activity,
+            get_initial_state, get_total_weight_of_enabled_transitions, get_transition_activity, is_final_state,
         },
     };
     use ebi_bpmn::ebi_arithmetic::Fraction;
@@ -1059,5 +1059,48 @@ mod tests {
         assert_execute_expect!(tree, state, tc, [td, te, tfin]);
 
         assert_terminate!(tree, state, tfin);
+    }
+
+    #[test]
+    fn loop_termination() {
+        let fin = fs::read_to_string("testfiles/loop_issue.sptree").unwrap();
+        let tree = fin.parse::<StochasticProcessTree>().unwrap();
+
+        // let wrong_trace = vec![p, a, c, b, a, c, q, b, a, c, q, b, a, c, r];
+        // let partial_trace = vec![p, a, c, b, a, c, q];
+
+        let mut state = get_initial_state(&tree).unwrap();
+        
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![0]);
+        assert!(execute_transition(&tree, &mut state, 0).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![1]);
+        assert!(execute_transition(&tree, &mut state, 1).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![2]);
+        assert!(execute_transition(&tree, &mut state, 2).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![3, 4]);
+        assert!(execute_transition(&tree, &mut state, 3).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![1]);
+        assert!(execute_transition(&tree, &mut state, 1).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![2]);
+        assert!(execute_transition(&tree, &mut state, 2).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![3, 4]);
+        assert!(execute_transition(&tree, &mut state, 4).is_ok());
+
+        //after q/4, only r/5 should be enabled
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![5]);
+        assert!(execute_transition(&tree, &mut state, 5).is_ok());
+
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![6]);
+        assert!(execute_transition(&tree, &mut state, 6).is_ok());
+
+        assert!(is_final_state(&tree, &state));
+        
     }
 }
