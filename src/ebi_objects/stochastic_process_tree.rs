@@ -849,7 +849,7 @@ mod tests {
     }
 
     macro_rules! assert_execute_expect {
-        ($tree:ident, $state:ident, $t:ident, $e:expr) => {
+        ($tree:ident, $state:ident, $t:expr, $e:expr) => {
             println!("execute {} {}", ::std::stringify!($t), $t);
             assert!(can_execute(&$tree, &$state, $tree.transition2node[$t]));
             execute_transition(&$tree, &mut $state, $t).unwrap();
@@ -859,7 +859,7 @@ mod tests {
     }
 
     macro_rules! assert_terminate {
-        ($tree:ident, $state:ident, $tfin:ident) => {
+        ($tree:ident, $state:ident, $tfin:expr) => {
             println!("terminate {}", $tfin);
             assert!(can_terminate(&$tree, &$state, $tree.root()));
             execute_transition(&$tree, &mut $state, $tfin).unwrap();
@@ -1102,5 +1102,27 @@ mod tests {
 
         assert!(is_final_state(&tree, &state));
         
+    }
+
+     #[test]
+    fn loop_multiple_redos() {
+        let fin = fs::read_to_string("testfiles/loop(a,b,c).sptree").unwrap();
+        let tree = fin.parse::<StochasticProcessTree>().unwrap();
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [0]);
+
+        assert_execute_expect!(tree, state, 0, [1, 2, 3]);
+
+        assert_execute_expect!(tree, state, 1, [0]);
+
+        assert_execute_expect!(tree, state, 0, [1, 2, 3]);
+
+        assert_execute_expect!(tree, state, 2, [0]);
+
+        assert_execute_expect!(tree, state, 0, [1, 2, 3]);
+
+        assert_terminate!(tree, state, 3);
     }
 }

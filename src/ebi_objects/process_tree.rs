@@ -1031,7 +1031,7 @@ macro_rules! tree_semantics {
         /// Starts executing a node.
         /// Recurses upwards to adjust enablement.
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
-            // println!("\tstart node {node}, child {:?}", child);
+            println!("\tstart node {node}, child {:?}", child);
             match tree.tree[node] {
                 Node::Tau
                 | Node::Activity(_)
@@ -1099,7 +1099,13 @@ macro_rules! tree_semantics {
                         {
                             //we are in a redo child: withdraw the next sequential node, which cannot fire now
                             withdraw_enablement_next_sequential_nodes(tree, state, node);
-                            withdraw_enablement(tree, state, tree.get_child(node, 0));
+                            //also withdraw enablement of all other children
+                            for child_rank in 0..number_of_children {
+                                let sibling = tree.get_child(node, child_rank);
+                                if sibling != child {
+                                    withdraw_enablement(tree, state, sibling);
+                                }
+                            }
                         } else {
                             //we are in a body child; withdraw the enablement of the redo children
                             for child_rank in 1..number_of_children {
