@@ -1031,7 +1031,7 @@ macro_rules! tree_semantics {
         /// Starts executing a node.
         /// Recurses upwards to adjust enablement.
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
-            println!("\tstart node {node}, child {:?}", child);
+            // println!("\tstart node {node}, child {:?}", child);
             match tree.tree[node] {
                 Node::Tau
                 | Node::Activity(_)
