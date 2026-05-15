@@ -180,3 +180,14 @@ pub fn read_fraction(json: &Value) -> Result<Fraction> {
         Value::Object(_) => return Err(anyhow!("field is an object, where fraction expected")),
     }
 }
+
+pub fn read_fraction_or_null(json: &Value) -> Result<Option<Fraction>> {
+    match &json {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where fraction expected")),
+        Value::Number(n) => return Ok(Some(n.to_string().parse::<Fraction>()?)),
+        Value::String(s) => return Ok(Some(s.parse::<Fraction>()?)),
+        Value::Array(_) => return Err(anyhow!("field is a list, where fraction expected")),
+        Value::Object(_) => return Err(anyhow!("field is an object, where fraction expected")),
+    }
+}

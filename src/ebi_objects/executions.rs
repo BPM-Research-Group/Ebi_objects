@@ -31,7 +31,10 @@ pub const JSON_KEY_MOVE_INDEX_OF_ENABLEMENT: &str = "move_index_of_enablement";
 pub const JSON_KEY_TIME_OF_ENABLEMENT: &str = "time_of_enablement";
 pub const JSON_KEY_TIME_OF_EXECUTION: &str = "time_of_execution";
 pub const JSON_KEY_RESOURCE: &str = "resource";
-pub const JSON_KEY_RESOURCE_UTILISATION: &str = "resource_utilisation";
+pub const JSON_KEY_RESOURCE_UTILISATION_FIRED_TRANSITION: &str =
+    "resource_utilisation_fired_transition";
+pub const JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS: &str =
+    "other_enabled_transitions_resource_utilisation";
 
 #[derive(Clone, ActivityKey)]
 pub struct Executions {
@@ -67,6 +70,8 @@ impl Importable for Executions {
         \\item The name of the resource of the execution (may be null).
         \\item The index of the move that enabled the execution (may be null).
         \\item The time of execution (may be null). In case of a model move, contains the time of the next synchronous or log move.
+        \\item The resource utilisation of the transition that fired.
+        \\item A list of the resource utilisation for each other enabled transition.
     \\end{itemize} 
     The executions should be sorted in order of increasing execution time; the position of missing execution timestamps is arbitrary.
     
@@ -198,14 +203,38 @@ impl Importable for Executions {
                 None
             };
 
-            let resource_utilisation =
-                json::read_field_fraction_or_null(&json_execution, JSON_KEY_RESOURCE_UTILISATION)
+            let resource_utilisation_fired_transition = json::read_field_fraction_or_null(
+                &json_execution,
+                JSON_KEY_RESOURCE_UTILISATION_FIRED_TRANSITION,
+            )
+            .with_context(|| {
+                anyhow!(
+                    "Could not read resource utilisation of fired execution {}.",
+                    execution_i
+                )
+            })?;
+
+            //utilisation of enabled transitions
+            let json_utilisation_enabled =
+                json::read_field_list(&json_execution, JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS)
                     .with_context(|| {
-                    anyhow!(
-                        "Could not read resource utilisation of execution {}.",
-                        execution_i
-                    )
-                })?;
+                        anyhow!(
+                            "Resource utilisation of enabled transitions are missing for execution {}.",
+                            execution_i
+                        )
+                    })?;
+            let mut resource_utilisation_other_enabled_transitions = Vec::with_capacity(json_utilisation_enabled.len());
+            for (enabledd_i, json_enabledd) in json_utilisation_enabled.into_iter().enumerate() {
+                resource_utilisation_other_enabled_transitions.push(json::read_fraction_or_null(&json_enabledd).with_context(
+                    || {
+                        anyhow!(
+                            "Could not read utilisation of enabled transition {} of execution {}.",
+                            enabledd_i,
+                            execution_i
+                        )
+                    },
+                )?);
+            }
 
             executions.push(Execution {
                 trace,
@@ -217,7 +246,8 @@ impl Importable for Executions {
                 move_index_of_enablement,
                 time_of_execution,
                 resource,
-                resource_utilisation,
+                resource_utilisation_fired_transition,
+                resource_utilisation_other_enabled_transitions
             });
         }
 
@@ -274,7 +304,8 @@ pub struct Execution {
     pub move_index_of_enablement: Option<usize>,
     pub time_of_execution: Option<DateTime<FixedOffset>>,
     pub resource: Option<Activity>,
-    pub resource_utilisation: Option<Fraction>,
+    pub resource_utilisation_fired_transition: Option<Fraction>,
+    pub resource_utilisation_other_enabled_transitions: Vec<Option<Fraction>>,
 }
 
 impl Execution {
@@ -348,12 +379,29 @@ impl Execution {
 
         //resource utilisation
         json_execution.insert(
-            JSON_KEY_RESOURCE_UTILISATION.to_string(),
-            if let Some(resource_utilisation) = &self.resource_utilisation {
+            JSON_KEY_RESOURCE_UTILISATION_FIRED_TRANSITION.to_string(),
+            if let Some(resource_utilisation) = &self.resource_utilisation_fired_transition {
                 Value::String(format!("{}", resource_utilisation))
             } else {
                 Value::Null
             },
+        );
+
+        //resource utilisation of other enabled transitions
+        json_execution.insert(
+            JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS.to_string(),
+            Value::Array(
+                self.resource_utilisation_other_enabled_transitions
+                    .iter()
+                    .map(|i| {
+                        if let Some(resource_utilisation) = i {
+                            Value::String(format!("{}", resource_utilisation))
+                        } else {
+                            Value::Null
+                        }
+                    })
+                    .collect(),
+            ),
         );
 
         Value::Object(json_execution)
