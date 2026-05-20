@@ -25,7 +25,7 @@ use std::{
 
 pub const HEADER: &str = "finite language";
 
-#[derive(ActivityKey, Clone)]
+#[derive(ActivityKey, Clone, Debug)]
 pub struct FiniteLanguage {
     pub activity_key: ActivityKey,
     pub traces: HashSet<Vec<Activity>, FnvBuildHasher>,
