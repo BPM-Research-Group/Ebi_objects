@@ -32,6 +32,20 @@ pub struct FiniteLanguage {
 }
 
 impl FiniteLanguage {
+    pub fn new() -> Self {
+        Self {
+            activity_key: ActivityKey::new(),
+            traces: Self::new_hashmap(),
+        }
+    }
+
+    pub fn new_with_activity_key(activity_key: ActivityKey) -> Self {
+        Self {
+            activity_key,
+            traces: Self::new_hashmap(),
+        }
+    }
+
     pub fn new_hashmap() -> HashSet<Vec<Activity>, FnvBuildHasher> {
         HashSet::<_, FnvBuildHasher>::default()
     }
