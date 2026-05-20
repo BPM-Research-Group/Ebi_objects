@@ -32,6 +32,22 @@ pub struct ProcessTree {
 }
 
 impl ProcessTree {
+    pub fn new() -> ProcessTree {
+        Self {
+            activity_key: ActivityKey::new(),
+            tree: vec![],
+            transition2node: vec![],
+        }
+    }
+
+    pub fn new_with_activity_key(activity_key: ActivityKey) -> ProcessTree {
+        Self {
+            activity_key,
+            tree: vec![],
+            transition2node: vec![],
+        }
+    }
+
     pub fn number_of_leaves(&self) -> usize {
         self.tree.iter().filter(|node| node.is_leaf()).count()
     }
