@@ -285,19 +285,39 @@ impl IntoRefTraceIterator for EventLogEventAttributes {
 }
 
 impl IntoEventAttributeIterator for EventLogEventAttributes {
-    fn iter_categorical_and_events(
+    fn iter_categorical_attribute_and_events(
         &self,
         attribute: Attribute,
     ) -> CategoricalEventAttributeIterator<'_> {
         (self, attribute).into()
     }
 
-    fn iter_numeric_and_events(&self, attribute: Attribute) -> NumericEventAttributeIterator<'_> {
+    fn iter_numeric_attribute_and_events(
+        &self,
+        attribute: Attribute,
+    ) -> NumericEventAttributeIterator<'_> {
         (self, attribute).into()
     }
 
-    fn iter_time_and_events(&self, attribute: Attribute) -> TimeEventAttributeIterator<'_> {
+    fn iter_time_attribute_and_events(
+        &self,
+        attribute: Attribute,
+    ) -> TimeEventAttributeIterator<'_> {
         (self, attribute).into()
+    }
+
+    fn iter_time_and_events(&self) -> Option<TimeEventAttributeIterator<'_>> {
+        Some(TimeEventAttributeIterator::from((
+            self,
+            self.time_attribute?,
+        )))
+    }
+
+    fn iter_time_and_resources(&self) -> Option<CategoricalEventAttributeIterator<'_>> {
+        Some(CategoricalEventAttributeIterator::from((
+            self,
+            self.resource_attribute?,
+        )))
     }
 }
 
