@@ -452,7 +452,7 @@ impl TestActivityKey for StochasticProcessTree {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{
         HasActivityKey, StochasticProcessTree,
         ebi_objects::stochastic_process_tree::{
