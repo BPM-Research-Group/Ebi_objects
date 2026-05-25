@@ -2,6 +2,7 @@ use crate::{
     EbiObject, EventLogXes, Exportable, HasActivityKey, Importable, TranslateActivityKey,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
+use anyhow::anyhow;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result};
@@ -42,7 +43,7 @@ impl Exportable for CompressedEventLogXes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
             EbiObject::EventLogXes(log) => Self::export(&Self { log }, f),
-            _ => unreachable!(),
+            _ => Err(anyhow!("Cannot export as compressed event log.")),
         }
     }
 

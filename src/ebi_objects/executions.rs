@@ -284,7 +284,7 @@ impl Exportable for Executions {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::Executions(exe) => exe.export(f),
-            _ => unreachable!(),
+            _ => Err(anyhow!("Cannot export as executions.")),
         }
     }
 
