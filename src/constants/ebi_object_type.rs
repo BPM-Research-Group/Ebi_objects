@@ -1,37 +1,63 @@
-use std::fmt::Display;
+use strum_macros::{Display, EnumIter, EnumString};
 
-use strum_macros::EnumIter;
-
-#[derive(PartialEq, Clone, EnumIter, Hash, Default, Debug)]
+#[derive(PartialEq, Clone, EnumIter, Hash, Default, Debug, Display, EnumString)]
 pub enum EbiObjectType {
     #[default]
+    #[strum(serialize = "business process model and notation")]
     BusinessProcessModelAndNotation,
+    #[strum(serialize = "stochastic business process model and notation")]
     StochasticBusinessProcessModelAndNotation,
+    #[strum(serialize = "language of alignments")]
     LanguageOfAlignments,
+    #[strum(serialize = "stochastic language of alignments")]
     StochasticLanguageOfAlignments,
+    #[strum(serialize = "stochastic deterministic finite automaton")]
     StochasticDeterministicFiniteAutomaton,
+    #[strum(serialize = "stochastic non-deterministic finite automaton")]
     StochasticNondeterministicFiniteAutomaton,
+    #[strum(serialize = "deterministic finite automaton")]
     DeterministicFiniteAutomaton,
+    #[strum(serialize = "directly follows model")]
     DirectlyFollowsModel,
+    #[strum(serialize = "stochastic directly follows model")]
     StochasticDirectlyFollowsModel,
+    #[strum(serialize = "event log")]
     EventLog,
+    #[strum(serialize = "event log with event attributes")]
     EventLogEventAttributes,
+    #[strum(serialize = "CSV event log")]
     EventLogCsv,
+    #[strum(serialize = "OCEL event log")]
     EventLogOcel,
+    #[strum(serialize = "Python event log")]
     EventLogPython,
+    #[strum(serialize = "event log with trace attributes")]
     EventLogTraceAttributes,
+    #[strum(serialize = "XES event log")]
     EventLogXes,
+    #[strum(serialize = "finite language")]
     FiniteLanguage,
+    #[strum(serialize = "finite stochastic language")]
     FiniteStochasticLanguage,
+    #[strum(serialize = "finite stochastic partially ordered language")]
     FiniteStochasticPartiallyOrderedLanguage,
+    #[strum(serialize = "labelled Petri net")]
     LabelledPetriNet,
+    #[strum(serialize = "stochastic labelled Petri net")]
     StochasticLabelledPetriNet,
+    #[strum(serialize = "process tree")]
     ProcessTree,
+    #[strum(serialize = "stochastic process tree")]
     StochasticProcessTree,
+    #[strum(serialize = "executions")]
     Executions,
+    #[strum(serialize = "directly follows graph")]
     DirectlyFollowsGraph,
+    #[strum(serialize = "scalable vector graphics")]
     ScalableVectorGraphics,
+    #[strum(serialize = "portable network graphics")]
     PortableNetworkGraphics,
+    #[strum(serialize = "portable document format")]
     PortableDocumentFormat,
 }
 
@@ -85,51 +111,5 @@ impl PartialOrd for EbiObjectType {
         self.to_string()
             .to_lowercase()
             .partial_cmp(&other.to_string().to_lowercase())
-    }
-}
-
-impl Display for EbiObjectType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                EbiObjectType::BusinessProcessModelAndNotation =>
-                    "business process model and notation",
-                EbiObjectType::StochasticBusinessProcessModelAndNotation =>
-                    "stochastic business process model and notation",
-                EbiObjectType::LabelledPetriNet => "labelled Petri net",
-                EbiObjectType::StochasticLabelledPetriNet => "stochastic labelled Petri net",
-                EbiObjectType::StochasticDeterministicFiniteAutomaton =>
-                    "stochastic deterministic finite automaton",
-                EbiObjectType::StochasticNondeterministicFiniteAutomaton =>
-                    "stochastic non-deterministic finite automaton",
-                EbiObjectType::EventLog => "event log",
-                EbiObjectType::EventLogCsv => "CSV event log",
-                EbiObjectType::EventLogEventAttributes => "event log with event attributes",
-                EbiObjectType::EventLogOcel => "OCEL event log",
-                EbiObjectType::EventLogPython => "Python event log",
-                EbiObjectType::EventLogTraceAttributes => "event log with trace attributes",
-                EbiObjectType::EventLogXes => "XES event log",
-                EbiObjectType::FiniteLanguage => "finite language",
-                EbiObjectType::FiniteStochasticLanguage => "finite stochastic language",
-                EbiObjectType::FiniteStochasticPartiallyOrderedLanguage =>
-                    "finite stochastic partially ordered language",
-                EbiObjectType::DirectlyFollowsModel => "directly follows model",
-                EbiObjectType::StochasticDirectlyFollowsModel =>
-                    "stochastic directly follows model",
-                EbiObjectType::LanguageOfAlignments => "alignments",
-                EbiObjectType::StochasticLanguageOfAlignments =>
-                    "stochastic language of alignments",
-                EbiObjectType::DeterministicFiniteAutomaton => "deterministic finite automaton",
-                EbiObjectType::ProcessTree => "process tree",
-                EbiObjectType::StochasticProcessTree => "stochastic process tree",
-                EbiObjectType::Executions => "executions",
-                EbiObjectType::DirectlyFollowsGraph => "directly follows graph",
-                EbiObjectType::ScalableVectorGraphics => "scalable vector graphics",
-                EbiObjectType::PortableDocumentFormat => "portable document format",
-                EbiObjectType::PortableNetworkGraphics => "portable network graphics",
-            }
-        )
     }
 }
