@@ -105,7 +105,7 @@ impl From<(process_mining::EventLog, EventLogClassifier, String, String)>
 
 impl From<EventLogOcel> for EventLogEventAttributes {
     fn from(value: EventLogOcel) -> Self {
-        log::info!("Convert OCEL event log into event log.");
+        log::info!("Convert OCEL event log into event log with event attributes.");
         let EventLogOcel {
             mut activity_key,
             rust4pm_log,
@@ -147,7 +147,7 @@ impl From<EventLogOcel> for EventLogEventAttributes {
             .iter()
             .map(|object_id| (object_id.clone(), vec![]))
             .collect::<HashMap<_, _>>();
-        let mut object_id2trace_attributes = relevant_objects
+        let mut object_id2event_attributes = relevant_objects
             .into_iter()
             .map(|object_id| (object_id, vec![]))
             .collect::<HashMap<_, _>>();
@@ -168,14 +168,15 @@ impl From<EventLogOcel> for EventLogEventAttributes {
         //gather traces and attributes
         for event in events {
             for relation in &event.relationships {
-                if let (Some(trace_activities), Some(trace_attributes)) = (
+                if let (Some(trace_activities), Some(event_attributes)) = (
                     object_id2trace_activities.get_mut(&relation.object_id),
-                    object_id2trace_attributes.get_mut(&relation.object_id),
+                    object_id2event_attributes.get_mut(&relation.object_id),
                 ) {
                     trace_activities.push(activity_key.process_activity(&event.event_type));
 
-                    //attribute trace
                     let mut attributes = IntMap::new();
+
+                    //explicit attributes
                     for rust4pm_attribute in &event.attributes {
                         let attribute_value = AttributeKey::ocel_attribute_value2attribute_value(
                             rust4pm_attribute.value.clone(),
@@ -202,7 +203,15 @@ impl From<EventLogOcel> for EventLogEventAttributes {
                         }
                     }
 
-                    trace_attributes.push(attributes);
+                    //time
+                    {
+                        let time_value = AttributeValue::Date(event.time);
+                        let time_attributee =
+                            attribute_key.process_attribute_value(&time_attribute, &time_value);
+                        attributes.insert(time_attributee, time_value);
+                    }
+
+                    event_attributes.push(attributes);
                 }
             }
         }
@@ -216,7 +225,7 @@ impl From<EventLogOcel> for EventLogEventAttributes {
             }
         }
         for (object_id, trace) in object_id2trace_activities {
-            let attributes = object_id2trace_attributes.get(&object_id).unwrap();
+            let attributes = object_id2event_attributes.get(&object_id).unwrap();
             traces.push((trace, attributes.clone()));
         }
 
@@ -292,5 +301,21 @@ impl From<EventLogCsv> for EventLogEventAttributes {
             time_attribute,
             traces,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use crate::{EventLogOcel, ebi_objects::event_log_event_attributes::EventLogEventAttributes};
+
+    #[test]
+    fn ocel_time() {
+        let fin = fs::read_to_string("testfiles/oc-log.ocel").unwrap();
+        let ocel = fin.parse::<EventLogOcel>().unwrap();
+        let log = EventLogEventAttributes::from(ocel);
+
+        assert!(log.time_attribute.is_some());
     }
 }
