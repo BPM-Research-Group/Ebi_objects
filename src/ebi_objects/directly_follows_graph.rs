@@ -142,6 +142,14 @@ impl DirectlyFollowsGraph {
         self.empty_traces_weight.is_positive()
     }
 
+    pub fn get_sources(&self) -> impl Iterator<Item = Activity> {
+        self.sources.iter().map(|node| self.node_2_activity[node.0])
+    }
+
+    pub fn get_targets(&self) -> impl Iterator<Item = Activity> {
+        self.targets.iter().map(|node| self.node_2_activity[node.0])
+    }
+
     fn add_or_get_node(&mut self, activity: Activity) -> Node {
         let new_node = Node(self.activity_2_node.len(), ());
         match self.activity_2_node.entry(activity) {
