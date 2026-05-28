@@ -49,7 +49,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn number_of_states(&self) -> usize {
-        self.activity_key.get_number_of_activities() + 2
+        self.activity_key.next_index + 2
     }
 
     pub fn edge_weight(&self, source: Activity, target: Activity) -> Option<&Fraction> {
