@@ -193,7 +193,7 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub(crate) fn binary_search(&self, source: Node, target: Node) -> (bool, usize) {
+    pub fn binary_search(&self, source: Node, target: Node) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }
