@@ -5,40 +5,41 @@ use crate::{
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
     },
 };
-use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero, f};
+use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 
 impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
     fn from(value: DirectlyFollowsGraph) -> Self {
         log::info!("Convert directly follows graph into stochastic directly follows model");
 
+        let mut new_node_2_activity = vec![
+            value.activity_key.get_activities()[0].clone();
+            value.activity_key.get_number_of_activities()
+        ];
+        let mut start_node_weights = vec![Fraction::zero(); new_node_2_activity.len()];
+        let mut end_node_weights = vec![Fraction::zero(); new_node_2_activity.len()];
+
+        for activity in value.activity_key.get_activities() {
+            let node = value.activity_key.get_id_from_activity(activity);
+
+            new_node_2_activity[node] = activity.clone();
+            start_node_weights[node] = value.start_activity_weight(*activity);
+            end_node_weights[node] = value.end_activity_weight(*activity);
+        }
+
         let DirectlyFollowsGraph {
             activity_key,
             empty_traces_weight,
+            node_2_activity,
             sources,
             targets,
             weights,
-            start_activities,
-            end_activities,
+            ..
         } = value;
-
-        let zero = f!(0);
-        let mut node_2_activity =
-            vec![activity_key.get_activities()[0].clone(); activity_key.get_number_of_activities()];
-        let mut start_node_weights = vec![Fraction::zero(); node_2_activity.len()];
-        let mut end_node_weights = vec![Fraction::zero(); node_2_activity.len()];
-
-        for activity in activity_key.get_activities() {
-            let node = activity_key.get_id_from_activity(activity);
-
-            node_2_activity[node] = activity.clone();
-            start_node_weights[node] = start_activities.get(activity).unwrap_or(&zero).clone();
-            end_node_weights[node] = end_activities.get(activity).unwrap_or(&zero).clone();
-        }
 
         let mut result = Self {
             activity_key: activity_key,
-            node_2_activity: node_2_activity,
-            empty_traces_weight: empty_traces_weight.into(),
+            node_2_activity: new_node_2_activity,
+            empty_traces_weight,
             sources: vec![],
             targets: vec![],
             weights: vec![],
@@ -52,9 +53,13 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
             .zip(targets.into_iter().zip(weights.into_iter()))
         {
             if weight.is_positive() {
-                let source_index = result.activity_key().get_id_from_activity(source);
-                let target_index = result.activity_key().get_id_from_activity(target);
-                result.add_edge(source_index, target_index, weight.into())
+                let source_index = result
+                    .activity_key()
+                    .get_id_from_activity(node_2_activity[source.0]);
+                let target_index = result
+                    .activity_key()
+                    .get_id_from_activity(node_2_activity[target.0]);
+                result.add_edge(source_index, target_index, weight)
             }
         }
 

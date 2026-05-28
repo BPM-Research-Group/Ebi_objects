@@ -3,7 +3,7 @@ use crate::{
     EventLogTraceAttributes, EventLogXes, HasActivityKey, NumberOfTraces,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, event_log_python::EventLogPython,
+        directly_follows_graph::Node, event_log::EventLog, event_log_python::EventLogPython,
         finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },
@@ -74,11 +74,12 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
                 .map(|(_, f)| f)
                 .sum::<Fraction>();
             sum_of_start_activities += &value.empty_traces_weight;
-            for (activity, weight) in &value.start_activities {
+            for (node, weight) in &value.start_activities {
+                let activity = value.node_2_activity[node.0];
                 result
                     .add_transition(
                         initial_state,
-                        *activity,
+                        activity,
                         activity.id + 1,
                         weight / &sum_of_start_activities,
                     )
@@ -91,43 +92,43 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
         //edges
         {
             for activity in value.activity_key().get_activities() {
-                //gather the outgoing sum
-                let mut sum = Fraction::zero();
-                {
-                    let (_, mut i) =
-                        value.binary_search(*activity, value.activity_key().get_activity_by_id(0));
-                    while i < value.sources.len() && &value.sources[i] == activity {
+                if let Some(node) = value.activity_2_node.get(*activity) {
+                    //gather the outgoing sum
+                    let mut sum = Fraction::zero();
+                    {
+                        let (_, mut i) = value.binary_search(*node, Node::zero());
+                        while i < value.sources.len() && &value.sources[i] == node {
+                            if value.weights[i].is_positive() {
+                                sum += &value.weights[i];
+                            }
+                            i += 1;
+                        }
+
+                        if let Some(w) = value.end_activities.get(*node)
+                            && w.is_positive()
+                        {
+                            sum += w;
+                        }
+                    }
+
+                    // add the edges
+                    let (_, mut i) = value.binary_search(*node, Node::zero());
+                    while i < value.sources.len() && &value.sources[i] == node {
                         if value.weights[i].is_positive() {
-                            sum += &value.weights[i];
+                            result
+                                .add_transition(
+                                    activity.id + 1,
+                                    value.node_2_activity[value.targets[i].0],
+                                    value.node_2_activity[value.targets[i].0].id + 1,
+                                    &value.weights[i] / &sum,
+                                )
+                                .unwrap(); //by construction, remaining outgoing probability cannot become negative
                         }
                         i += 1;
                     }
 
-                    if let Some(w) = value.end_activities.get(activity)
-                        && w.is_positive()
-                    {
-                        sum += w;
-                    }
+                    // termination is implied
                 }
-
-                // add the edges
-                let (_, mut i) =
-                    value.binary_search(*activity, value.activity_key().get_activity_by_id(0));
-                while i < value.sources.len() && &value.sources[i] == activity {
-                    if value.weights[i].is_positive() {
-                        result
-                            .add_transition(
-                                activity.id + 1,
-                                value.targets[i],
-                                value.targets[i].id + 1,
-                                &value.weights[i] / &sum,
-                            )
-                            .unwrap(); //by construction, remaining outgoing probability cannot become negative
-                    }
-                    i += 1;
-                }
-
-                // termination is implied
             }
         }
 
@@ -243,8 +244,8 @@ mod tests {
 
         let a = dfg.activity_key_mut().process_activity("a");
         let b = dfg.activity_key_mut().process_activity("b");
-        assert_eq!(dfg.start_activities[&a], Fraction::from((2, 5)));
-        assert_eq!(dfg.start_activities[&b], Fraction::from((3, 5)));
+        assert_eq!(dfg.start_activity_weight(a), Fraction::from((2, 5)));
+        assert_eq!(dfg.start_activity_weight(b), Fraction::from((3, 5)));
 
         let snfa: StochasticDeterministicFiniteAutomaton = dfg.into();
         assert_eq!(snfa.number_of_states(), 3);

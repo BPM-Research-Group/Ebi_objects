@@ -1,4 +1,3 @@
-use ebi_bpmn::ebi_arithmetic::ebi_number::Signed;
 use crate::{
     HasActivityKey,
     ebi_objects::{
@@ -6,22 +5,14 @@ use crate::{
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
     },
 };
+use ebi_bpmn::ebi_arithmetic::ebi_number::Signed;
 
 impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
     fn from(value: DirectlyFollowsGraph) -> Self {
         log::info!("Convert directly follows graph into directly follows model");
 
-        let DirectlyFollowsGraph {
-            activity_key,
-            empty_traces_weight,
-            sources,
-            targets,
-            weights,
-            start_activities,
-            end_activities,
-        } = value;
-
-        let node_2_activity = activity_key
+        let node_2_activity = value
+            .activity_key
             .get_activities()
             .iter()
             .cloned()
@@ -29,18 +20,29 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
             .collect::<Vec<_>>();
 
         let mut start_nodes = vec![false; node_2_activity.len()];
-        start_activities.into_iter().for_each(|(activity, weight)| {
+        value.start_activities.iter().for_each(|(node, weight)| {
+            let activity = value.node_2_activity[node.0];
             if weight.is_positive() {
-                start_nodes[activity_key.get_id_from_activity(activity)] = true;
+                start_nodes[value.activity_key.get_id_from_activity(activity)] = true;
             }
         });
 
         let mut end_nodes = vec![false; node_2_activity.len()];
-        end_activities.into_iter().for_each(|(activity, weight)| {
+        value.end_activities.iter().for_each(|(node, weight)| {
+            let activity = value.node_2_activity[node.0];
             if weight.is_positive() {
-                end_nodes[activity_key.get_id_from_activity(activity)] = true;
+                end_nodes[value.activity_key.get_id_from_activity(activity)] = true;
             }
         });
+
+        let DirectlyFollowsGraph {
+            activity_key,
+            empty_traces_weight,
+            sources,
+            targets,
+            weights,
+            ..
+        } = value;
 
         let mut result = Self {
             activity_key: activity_key,
@@ -54,6 +56,8 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
 
         //edges
         for (source, (target, weight)) in sources.iter().zip(targets.iter().zip(weights.iter())) {
+            let source = value.node_2_activity[source.0];
+            let target = value.node_2_activity[target.0];
             if weight.is_positive() {
                 let source_index = result.activity_key().get_id_from_activity(source);
                 let target_index = result.activity_key().get_id_from_activity(target);

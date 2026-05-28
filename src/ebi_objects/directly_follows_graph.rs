@@ -16,23 +16,26 @@ use ebi_bpmn::ebi_arithmetic::{
     anyhow::{Context, Error, Result, anyhow},
 };
 use ebi_derive::ActivityKey;
+use intmap::{Entry, IntKey, IntMap};
 use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 use std::{
     cmp::Ordering,
-    collections::{HashMap, hash_map::Entry},
+    collections::{HashMap, hash_map},
     fmt::Display,
 };
 
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
     pub activity_key: ActivityKey,
+    pub node_2_activity: Vec<Activity>, //invariant: each activity appears only once
+    pub(crate) activity_2_node: IntMap<Activity, Node>, //invariant: each activity appears only once
     pub empty_traces_weight: Fraction,
-    pub sources: Vec<Activity>, //edge -> source of edge
-    pub targets: Vec<Activity>, //edge -> target of edge
-    pub weights: Vec<Fraction>, //edge -> how often observed
-    pub start_activities: HashMap<Activity, Fraction>, //activity -> how often observed
-    pub end_activities: HashMap<Activity, Fraction>, //activity -> how often observed
+    pub(crate) sources: Vec<Node>,                       //edge -> source of edge
+    pub(crate) targets: Vec<Node>,                       //edge -> target of edge
+    pub weights: Vec<Fraction>,                   //edge -> how often observed
+    pub(crate) start_activities: IntMap<Node, Fraction>, //node -> how often observed
+    pub(crate) end_activities: IntMap<Node, Fraction>,   //node -> how often observed
 }
 
 impl DirectlyFollowsGraph {
@@ -40,60 +43,115 @@ impl DirectlyFollowsGraph {
         Self {
             empty_traces_weight: Fraction::zero(),
             activity_key: activity_key,
+            node_2_activity: vec![],
+            activity_2_node: IntMap::new(),
             sources: vec![],
             targets: vec![],
             weights: vec![],
-            start_activities: HashMap::new(),
-            end_activities: HashMap::new(),
+            start_activities: IntMap::new(),
+            end_activities: IntMap::new(),
         }
     }
 
     pub fn number_of_states(&self) -> usize {
-        self.activity_key.next_index + 2
+        self.node_2_activity.len() + 2
     }
 
     pub fn edge_weight(&self, source: Activity, target: Activity) -> Option<&Fraction> {
-        let (found, from) = self.binary_search(source, target);
-        if found {
-            Some(&self.weights[from])
+        if let (Some(source), Some(target)) = (
+            self.activity_2_node.get(source),
+            self.activity_2_node.get(target),
+        ) {
+            let (found, from) = self.binary_search(*source, *target);
+            if found {
+                Some(&self.weights[from])
+            } else {
+                None
+            }
         } else {
             None
         }
     }
 
-    pub fn is_start_node(&self, node: Activity) -> bool {
-        match self.start_activities.get(&node) {
-            Some(w) => w.is_positive(),
-            None => false,
+    pub fn start_activity_weight(&self, activity: Activity) -> Fraction {
+        if let Some(node) = self.activity_2_node.get(activity) {
+            self.start_activities
+                .get(*node)
+                .cloned()
+                .unwrap_or_else(|| Fraction::zero())
+        } else {
+            Fraction::zero()
         }
     }
 
-    pub fn is_end_node(&self, node: Activity) -> bool {
-        match self.end_activities.get(&node) {
-            Some(w) => w.is_positive(),
-            None => false,
+    pub fn end_activity_weight(&self, activity: Activity) -> Fraction {
+        if let Some(node) = self.activity_2_node.get(activity) {
+            self.start_activities
+                .get(*node)
+                .cloned()
+                .unwrap_or_else(|| Fraction::zero())
+        } else {
+            Fraction::zero()
+        }
+    }
+
+    pub fn is_start_node(&self, activity: Activity) -> bool {
+        if let Some(node) = self.activity_2_node.get(activity) {
+            match self.start_activities.get(*node) {
+                Some(w) => w.is_positive(),
+                None => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn is_end_node(&self, activity: Activity) -> bool {
+        if let Some(node) = self.activity_2_node.get(activity) {
+            match self.end_activities.get(*node) {
+                Some(w) => w.is_positive(),
+                None => false,
+            }
+        } else {
+            false
         }
     }
 
     pub fn activity_cardinality(&self, activity: Activity) -> Fraction {
-        let mut result = match self.end_activities.get(&activity) {
-            Some(a) => a.clone(),
-            None => Fraction::zero(),
-        };
+        if let Some(node) = self.activity_2_node.get(activity) {
+            let mut result = match self.end_activities.get(*node) {
+                Some(a) => a.clone(),
+                None => Fraction::zero(),
+            };
 
-        let (_, mut i) = self.binary_search(activity, self.activity_key.get_activity_by_id(0));
-        while i < self.sources.len() && self.sources[i] == activity {
-            if self.weights[i].is_positive() {
-                result += &self.weights[i];
+            let (_, mut i) = self.binary_search(*node, Node::zero());
+            while i < self.sources.len() && &self.sources[i] == node {
+                if self.weights[i].is_positive() {
+                    result += &self.weights[i];
+                }
+                i += 1;
             }
-            i += 1;
-        }
 
-        result
+            result
+        } else {
+            Fraction::zero()
+        }
     }
 
     pub fn has_empty_traces(&self) -> bool {
         self.empty_traces_weight.is_positive()
+    }
+
+    fn add_or_get_node(&mut self, activity: Activity) -> Node {
+        let new_node = Node(self.activity_2_node.len(), ());
+        match self.activity_2_node.entry(activity) {
+            intmap::Entry::Occupied(occupied_entry) => *occupied_entry.get(),
+            intmap::Entry::Vacant(vacant_entry) => {
+                self.node_2_activity.push(activity);
+                vacant_entry.insert(new_node);
+                new_node
+            }
+        }
     }
 
     pub fn add_empty_trace(&mut self, weight: &Fraction) {
@@ -101,7 +159,8 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn add_start_activity(&mut self, activity: Activity, weight: &Fraction) {
-        match self.start_activities.entry(activity) {
+        let node = self.add_or_get_node(activity);
+        match self.start_activities.entry(node) {
             Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += weight,
             Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(weight.clone());
@@ -110,7 +169,8 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn add_end_activity(&mut self, activity: Activity, weight: &Fraction) {
-        match self.end_activities.entry(activity) {
+        let node = self.add_or_get_node(activity);
+        match self.end_activities.entry(node) {
             Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += weight,
             Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(weight.clone());
@@ -119,6 +179,8 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn add_edge(&mut self, source: Activity, target: Activity, weight: &Fraction) {
+        let source = self.add_or_get_node(source);
+        let target = self.add_or_get_node(target);
         let (found, from) = self.binary_search(source, target);
         if found {
             //edge already present
@@ -131,7 +193,7 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn binary_search(&self, source: Activity, target: Activity) -> (bool, usize) {
+    pub(crate) fn binary_search(&self, source: Node, target: Node) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }
@@ -158,12 +220,7 @@ impl DirectlyFollowsGraph {
         (false, left)
     }
 
-    fn compare(
-        source1: Activity,
-        activity1: Activity,
-        source2: Activity,
-        activity2: Activity,
-    ) -> Ordering {
+    fn compare(source1: Node, activity1: Node, source2: Node, activity2: Node) -> Ordering {
         if source1 < source2 {
             return Ordering::Greater;
         } else if source1 > source2 {
@@ -258,7 +315,7 @@ impl Importable for DirectlyFollowsGraph {
 
             //keep track of how many executions are left for source
             match frequencies_out.entry(source) {
-                Entry::Occupied(mut occupied_entry) => {
+                hash_map::Entry::Occupied(mut occupied_entry) => {
                     let pre_weight = occupied_entry.get();
                     if pre_weight < &weight {
                         return Err(anyhow!(
@@ -270,7 +327,7 @@ impl Importable for DirectlyFollowsGraph {
                         *occupied_entry.get_mut() -= &weight
                     }
                 }
-                Entry::Vacant(_) => {
+                hash_map::Entry::Vacant(_) => {
                     //activity not declared
                     return Err(anyhow!(
                         "non-declared activity {} used as source of edge {}",
@@ -282,7 +339,7 @@ impl Importable for DirectlyFollowsGraph {
 
             //keep track of how many executions are left for source
             match frequencies_in.entry(target) {
-                Entry::Occupied(mut occupied_entry) => {
+                hash_map::Entry::Occupied(mut occupied_entry) => {
                     let pre_weight = occupied_entry.get();
                     if pre_weight < &weight {
                         return Err(anyhow!(
@@ -294,7 +351,7 @@ impl Importable for DirectlyFollowsGraph {
                         *occupied_entry.get_mut() -= &weight
                     }
                 }
-                Entry::Vacant(_) => {
+                hash_map::Entry::Vacant(_) => {
                     //activity not declared
                     return Err(anyhow!(
                         "non-declared activity {} used as target of edge {}",
@@ -314,13 +371,13 @@ impl Importable for DirectlyFollowsGraph {
                 let activity = result.activity_key.process_activity(act);
 
                 match frequencies_in.entry(activity) {
-                    Entry::Occupied(occupied_entry) => {
+                    hash_map::Entry::Occupied(occupied_entry) => {
                         let weight = occupied_entry.remove();
                         if weight.is_positive() {
                             result.add_start_activity(activity, &weight);
                         }
                     }
-                    Entry::Vacant(_) => {
+                    hash_map::Entry::Vacant(_) => {
                         //activity not declared
                         return Err(anyhow!(format!(
                             "non-declared activity {} used as start activity",
@@ -342,13 +399,13 @@ impl Importable for DirectlyFollowsGraph {
                 let activity = result.activity_key.process_activity(act);
 
                 match frequencies_out.entry(activity) {
-                    Entry::Occupied(occupied_entry) => {
+                    hash_map::Entry::Occupied(occupied_entry) => {
                         let weight = occupied_entry.remove();
                         if weight.is_positive() {
                             result.add_end_activity(activity, &weight);
                         }
                     }
-                    Entry::Vacant(_) => {
+                    hash_map::Entry::Vacant(_) => {
                         //activity not declared
                         return Err(anyhow!(format!(
                             "non-declared activity {} used as end activity",
@@ -383,41 +440,17 @@ impl TranslateActivityKey for DirectlyFollowsGraph {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
-        //extract all edges
-        let mut old_sources = vec![];
-        let mut old_targets = vec![];
-        let mut old_weights = vec![];
-        std::mem::swap(&mut self.sources, &mut old_sources);
-        std::mem::swap(&mut self.targets, &mut old_targets);
-        std::mem::swap(&mut self.weights, &mut old_weights);
+        let mut new_node_2_activity = Vec::with_capacity(self.node_2_activity.len());
+        let mut new_activity_2_node = IntMap::with_capacity(self.node_2_activity.len());
 
-        //re-add all edges
-        for (source, (target, weight)) in old_sources
-            .into_iter()
-            .zip(old_targets.into_iter().zip(old_weights.into_iter()))
-        {
-            let source = translator.translate_activity(&source);
-            let target = translator.translate_activity(&target);
-            let (_, from) = self.binary_search(source, target);
-            self.sources.insert(from, source);
-            self.targets.insert(from, target);
-            self.weights.insert(from, weight);
+        for (old_activity, node) in &self.activity_2_node {
+            let new_activity = translator.translate_activity(&old_activity);
+            new_node_2_activity.push(new_activity);
+            new_activity_2_node.insert(new_activity, *node);
         }
 
-        //extract all start activities
-        let mut old_start = HashMap::new();
-        let mut old_end = HashMap::new();
-        std::mem::swap(&mut self.start_activities, &mut old_start);
-        std::mem::swap(&mut self.end_activities, &mut old_end);
-
-        self.start_activities = old_start
-            .into_iter()
-            .map(|(a, w)| (translator.translate_activity(&a), w))
-            .collect();
-        self.end_activities = old_end
-            .into_iter()
-            .map(|(a, w)| (translator.translate_activity(&a), w))
-            .collect();
+        std::mem::swap(&mut self.node_2_activity, &mut new_node_2_activity);
+        std::mem::swap(&mut self.activity_2_node, &mut new_activity_2_node);
 
         self.activity_key = to_activity_key.clone();
     }
@@ -475,7 +508,9 @@ impl Display for DirectlyFollowsGraph {
                 .filter_map(|(a, w)| {
                     if w.is_positive() {
                         Some(Value::String(
-                            self.activity_key.get_activity_label(a).to_string(),
+                            self.activity_key
+                                .get_activity_label(&self.node_2_activity[a.0])
+                                .to_string(),
                         ))
                     } else {
                         None
@@ -489,7 +524,9 @@ impl Display for DirectlyFollowsGraph {
                 .filter_map(|(a, w)| {
                     if w.is_positive() {
                         Some(Value::String(
-                            self.activity_key.get_activity_label(a).to_string(),
+                            self.activity_key
+                                .get_activity_label(&self.node_2_activity[a.0])
+                                .to_string(),
                         ))
                     } else {
                         None
@@ -504,8 +541,16 @@ impl Display for DirectlyFollowsGraph {
                 .map(|(source, (target, weight))| {
                     Value::Array(vec![
                         Value::Array(vec![
-                            Value::String(self.activity_key.get_activity_label(source).to_string()),
-                            Value::String(self.activity_key.get_activity_label(target).to_string()),
+                            Value::String(
+                                self.activity_key
+                                    .get_activity_label(&self.node_2_activity[source.0])
+                                    .to_string(),
+                            ),
+                            Value::String(
+                                self.activity_key
+                                    .get_activity_label(&self.node_2_activity[target.0])
+                                    .to_string(),
+                            ),
                         ]),
                         Value::String(weight.to_string()),
                     ])
@@ -563,7 +608,9 @@ impl Graphable for DirectlyFollowsGraph {
                 graphable::create_edge(
                     &mut graph,
                     &source,
-                    &nodes[self.activity_key.get_id_from_activity(activity)],
+                    &nodes[self
+                        .activity_key
+                        .get_id_from_activity(&self.node_2_activity[activity.0])],
                     &format!("{}", weight),
                 );
             }
@@ -574,7 +621,9 @@ impl Graphable for DirectlyFollowsGraph {
             if weight.is_positive() {
                 graphable::create_edge(
                     &mut graph,
-                    &nodes[self.activity_key.get_id_from_activity(activity)],
+                    &nodes[self
+                        .activity_key
+                        .get_id_from_activity(&self.node_2_activity[activity.0])],
                     &sink,
                     &format!("{}", weight),
                 );
@@ -589,8 +638,12 @@ impl Graphable for DirectlyFollowsGraph {
         {
             graphable::create_edge(
                 &mut graph,
-                &nodes[self.activity_key.get_id_from_activity(source)],
-                &nodes[self.activity_key.get_id_from_activity(target)],
+                &nodes[self
+                    .activity_key
+                    .get_id_from_activity(&self.node_2_activity[source.0])],
+                &nodes[self
+                    .activity_key
+                    .get_id_from_activity(&self.node_2_activity[target.0])],
                 &format!("{}", weight),
             );
         }
@@ -602,17 +655,27 @@ impl Graphable for DirectlyFollowsGraph {
 #[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for DirectlyFollowsGraph {
     fn test_activity_key(&self) {
-        self.sources
+        self.node_2_activity
             .iter()
             .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
-        self.targets
-            .iter()
-            .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
-        self.start_activities
-            .iter()
-            .for_each(|(activity, _)| self.activity_key().assert_activity_is_of_key(activity));
-        self.end_activities
-            .iter()
-            .for_each(|(activity, _)| self.activity_key().assert_activity_is_of_key(activity));
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub(crate) struct Node(pub(crate) usize, ());
+
+impl Node {
+    pub(crate) fn zero() -> Self {
+        Node(0, ())
+    }
+}
+
+impl IntKey for Node {
+    type Int = usize;
+
+    const PRIME: Self::Int = (u32::MAX - 4) as usize;
+
+    fn into_int(self) -> Self::Int {
+        self.0
     }
 }
