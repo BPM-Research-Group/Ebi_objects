@@ -665,8 +665,12 @@ impl TestActivityKey for DirectlyFollowsGraph {
 pub struct Node(pub usize, ());
 
 impl Node {
-    pub(crate) fn zero() -> Self {
+    pub fn zero() -> Self {
         Node(0, ())
+    }
+
+    pub fn of(id: usize) -> Self {
+        Node(id, ())
     }
 }
 
