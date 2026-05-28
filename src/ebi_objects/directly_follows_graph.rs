@@ -662,7 +662,7 @@ impl TestActivityKey for DirectlyFollowsGraph {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-pub struct Node(pub(crate) usize, ());
+pub struct Node(pub usize, ());
 
 impl Node {
     pub(crate) fn zero() -> Self {
