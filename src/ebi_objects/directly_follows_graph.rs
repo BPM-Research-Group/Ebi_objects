@@ -29,13 +29,13 @@ use std::{
 pub struct DirectlyFollowsGraph {
     pub activity_key: ActivityKey,
     pub node_2_activity: Vec<Activity>, //invariant: each activity appears only once
-    pub(crate) activity_2_node: IntMap<Activity, Node>, //invariant: each activity appears only once
+    pub activity_2_node: IntMap<Activity, Node>, //invariant: each activity appears only once
     pub empty_traces_weight: Fraction,
-    pub(crate) sources: Vec<Node>,                       //edge -> source of edge
-    pub(crate) targets: Vec<Node>,                       //edge -> target of edge
+    pub sources: Vec<Node>,                       //edge -> source of edge
+    pub targets: Vec<Node>,                       //edge -> target of edge
     pub weights: Vec<Fraction>,                   //edge -> how often observed
-    pub(crate) start_activities: IntMap<Node, Fraction>, //node -> how often observed
-    pub(crate) end_activities: IntMap<Node, Fraction>,   //node -> how often observed
+    pub start_activities: IntMap<Node, Fraction>, //node -> how often observed
+    pub end_activities: IntMap<Node, Fraction>,   //node -> how often observed
 }
 
 impl DirectlyFollowsGraph {
@@ -662,7 +662,7 @@ impl TestActivityKey for DirectlyFollowsGraph {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-pub(crate) struct Node(pub(crate) usize, ());
+pub struct Node(pub(crate) usize, ());
 
 impl Node {
     pub(crate) fn zero() -> Self {
