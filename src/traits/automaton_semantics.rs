@@ -18,6 +18,8 @@ pub trait AutomatonSemantics {
 
     fn states(&self) -> impl Iterator<Item = AutomatonState>;
 
+    fn is_state_final(&self, state: AutomatonState) -> bool;
+
     fn transitions(&self) -> impl Iterator<Item = TransitionIndex>;
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex>;
@@ -55,6 +57,10 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
 
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
         (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 > self.state_2_activity.len()
     }
 
     fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
