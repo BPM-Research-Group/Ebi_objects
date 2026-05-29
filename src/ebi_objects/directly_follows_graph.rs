@@ -23,6 +23,7 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, hash_map},
     fmt::Display,
+    hash::Hash,
     ops::{Index, IndexMut},
 };
 
@@ -689,6 +690,18 @@ impl AutomatonState {
 
     pub fn of(id: usize) -> Self {
         AutomatonState(id)
+    }
+}
+
+impl Display for AutomatonState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Hash for AutomatonState {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
