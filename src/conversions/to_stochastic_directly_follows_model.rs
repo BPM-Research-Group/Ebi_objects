@@ -29,7 +29,7 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
         let DirectlyFollowsGraph {
             activity_key,
             empty_traces_weight,
-            node_2_activity,
+            state_2_activity,
             sources,
             targets,
             weights,
@@ -55,10 +55,10 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
             if weight.is_positive() {
                 let source_index = result
                     .activity_key()
-                    .get_id_from_activity(node_2_activity[source.0]);
+                    .get_id_from_activity(state_2_activity[source.0]);
                 let target_index = result
                     .activity_key()
-                    .get_id_from_activity(node_2_activity[target.0]);
+                    .get_id_from_activity(state_2_activity[target.0]);
                 result.add_edge(source_index, target_index, weight)
             }
         }

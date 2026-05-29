@@ -32,11 +32,11 @@ pub struct DirectlyFollowsGraph {
     pub state_2_activity: Vec<Activity>, //invariant: each activity appears only once
     pub activity_2_state: IntMap<Activity, AutomatonState>, //invariant: each activity appears only once
     pub empty_traces_weight: Fraction,
-    pub sources: Vec<AutomatonState>,                       //edge -> source of edge
-    pub targets: Vec<AutomatonState>,                       //edge -> target of edge
-    pub weights: Vec<Fraction>,                   //edge -> how often observed
+    pub sources: Vec<AutomatonState>, //edge -> source of edge
+    pub targets: Vec<AutomatonState>, //edge -> target of edge
+    pub weights: Vec<Fraction>,       //edge -> how often observed
     pub start_activities: IntMap<AutomatonState, Fraction>, //node -> how often observed
-    pub end_activities: IntMap<AutomatonState, Fraction>,   //node -> how often observed
+    pub end_activities: IntMap<AutomatonState, Fraction>, //node -> how often observed
 }
 
 impl DirectlyFollowsGraph {
@@ -144,11 +144,15 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn get_sources(&self) -> impl Iterator<Item = Activity> {
-        self.sources.iter().map(|node| self.state_2_activity[node.0])
+        self.sources
+            .iter()
+            .map(|state| self.state_2_activity[state])
     }
 
     pub fn get_targets(&self) -> impl Iterator<Item = Activity> {
-        self.targets.iter().map(|node| self.state_2_activity[node.0])
+        self.targets
+            .iter()
+            .map(|state| self.state_2_activity[state])
     }
 
     fn add_or_get_node(&mut self, activity: Activity) -> AutomatonState {
@@ -229,7 +233,12 @@ impl DirectlyFollowsGraph {
         (false, left)
     }
 
-    fn compare(source1: AutomatonState, activity1: AutomatonState, source2: AutomatonState, activity2: AutomatonState) -> Ordering {
+    fn compare(
+        source1: AutomatonState,
+        activity1: AutomatonState,
+        source2: AutomatonState,
+        activity2: AutomatonState,
+    ) -> Ordering {
         if source1 < source2 {
             return Ordering::Greater;
         } else if source1 > source2 {
@@ -701,8 +710,22 @@ impl<T> Index<AutomatonState> for Vec<T> {
     }
 }
 
+impl<T> Index<&AutomatonState> for Vec<T> {
+    type Output = T;
+
+    fn index(&self, index: &AutomatonState) -> &Self::Output {
+        &self[index.0]
+    }
+}
+
 impl<T> IndexMut<AutomatonState> for Vec<T> {
     fn index_mut(&mut self, index: AutomatonState) -> &mut T {
+        &mut self[index.0]
+    }
+}
+
+impl<T> IndexMut<&AutomatonState> for Vec<T> {
+    fn index_mut(&mut self, index: &AutomatonState) -> &mut T {
         &mut self[index.0]
     }
 }

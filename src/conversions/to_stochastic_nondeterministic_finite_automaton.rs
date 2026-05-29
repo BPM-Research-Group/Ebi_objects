@@ -5,7 +5,7 @@ use crate::{
     NumberOfTraces, StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::{
-        directly_follows_graph::Node,
+        directly_follows_graph::AutomatonState,
         stochastic_process_tree::{
             execute_transition, get_enabled_transitions, get_initial_state,
             get_total_weight_of_enabled_transitions, get_transition_activity,
@@ -125,7 +125,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                 .sum::<Fraction>();
             sum_of_start_activities += &value.empty_traces_weight;
             for (node, weight) in &value.start_activities {
-                let activity = value.node_2_activity[node.0];
+                let activity = value.state_2_activity[node.0];
                 result
                     .add_transition(
                         initial_state,
@@ -142,11 +142,11 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
         //edges
         {
             for activity in value.activity_key().get_activities() {
-                if let Some(node) = value.activity_2_node.get(*activity) {
+                if let Some(node) = value.activity_2_state.get(*activity) {
                     //gather the outgoing sum
                     let mut sum = Fraction::zero();
                     {
-                        let (_, mut i) = value.binary_search(*node, Node::zero());
+                        let (_, mut i) = value.binary_search(*node, AutomatonState::zero());
                         while i < value.sources.len() && &value.sources[i] == node {
                             if value.weights[i].is_positive() {
                                 sum += &value.weights[i];
@@ -162,14 +162,14 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                     }
 
                     // add the edges
-                    let (_, mut i) = value.binary_search(*node, Node::zero());
+                    let (_, mut i) = value.binary_search(*node, AutomatonState::zero());
                     while i < value.sources.len() && &value.sources[i] == node {
                         if value.weights[i].is_positive() {
                             result
                                 .add_transition(
                                     activity.id + 1,
-                                    Some(value.node_2_activity[value.targets[i].0]),
-                                    value.node_2_activity[value.targets[i].0].id + 1,
+                                    Some(value.state_2_activity[value.targets[i].0]),
+                                    value.state_2_activity[value.targets[i].0].id + 1,
                                     &value.weights[i] / &sum,
                                 )
                                 .unwrap(); //by construction, remaining outgoing probability cannot become negative
