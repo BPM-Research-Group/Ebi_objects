@@ -29,14 +29,14 @@ use std::{
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
     pub activity_key: ActivityKey,
-    pub node_2_activity: Vec<Activity>, //invariant: each activity appears only once
-    pub activity_2_node: IntMap<Activity, Node>, //invariant: each activity appears only once
+    pub state_2_activity: Vec<Activity>, //invariant: each activity appears only once
+    pub activity_2_state: IntMap<Activity, AutomatonState>, //invariant: each activity appears only once
     pub empty_traces_weight: Fraction,
-    pub sources: Vec<Node>,                       //edge -> source of edge
-    pub targets: Vec<Node>,                       //edge -> target of edge
+    pub sources: Vec<AutomatonState>,                       //edge -> source of edge
+    pub targets: Vec<AutomatonState>,                       //edge -> target of edge
     pub weights: Vec<Fraction>,                   //edge -> how often observed
-    pub start_activities: IntMap<Node, Fraction>, //node -> how often observed
-    pub end_activities: IntMap<Node, Fraction>,   //node -> how often observed
+    pub start_activities: IntMap<AutomatonState, Fraction>, //node -> how often observed
+    pub end_activities: IntMap<AutomatonState, Fraction>,   //node -> how often observed
 }
 
 impl DirectlyFollowsGraph {
@@ -44,8 +44,8 @@ impl DirectlyFollowsGraph {
         Self {
             empty_traces_weight: Fraction::zero(),
             activity_key: activity_key,
-            node_2_activity: vec![],
-            activity_2_node: IntMap::new(),
+            state_2_activity: vec![],
+            activity_2_state: IntMap::new(),
             sources: vec![],
             targets: vec![],
             weights: vec![],
@@ -55,13 +55,13 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn number_of_states(&self) -> usize {
-        self.node_2_activity.len() + 2
+        self.state_2_activity.len() + 2
     }
 
     pub fn edge_weight(&self, source: Activity, target: Activity) -> Option<&Fraction> {
         if let (Some(source), Some(target)) = (
-            self.activity_2_node.get(source),
-            self.activity_2_node.get(target),
+            self.activity_2_state.get(source),
+            self.activity_2_state.get(target),
         ) {
             let (found, from) = self.binary_search(*source, *target);
             if found {
@@ -75,7 +75,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn start_activity_weight(&self, activity: Activity) -> Fraction {
-        if let Some(node) = self.activity_2_node.get(activity) {
+        if let Some(node) = self.activity_2_state.get(activity) {
             self.start_activities
                 .get(*node)
                 .cloned()
@@ -86,7 +86,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn end_activity_weight(&self, activity: Activity) -> Fraction {
-        if let Some(node) = self.activity_2_node.get(activity) {
+        if let Some(node) = self.activity_2_state.get(activity) {
             self.start_activities
                 .get(*node)
                 .cloned()
@@ -97,7 +97,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn is_start_node(&self, activity: Activity) -> bool {
-        if let Some(node) = self.activity_2_node.get(activity) {
+        if let Some(node) = self.activity_2_state.get(activity) {
             match self.start_activities.get(*node) {
                 Some(w) => w.is_positive(),
                 None => false,
@@ -108,7 +108,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn is_end_node(&self, activity: Activity) -> bool {
-        if let Some(node) = self.activity_2_node.get(activity) {
+        if let Some(node) = self.activity_2_state.get(activity) {
             match self.end_activities.get(*node) {
                 Some(w) => w.is_positive(),
                 None => false,
@@ -119,13 +119,13 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn activity_cardinality(&self, activity: Activity) -> Fraction {
-        if let Some(node) = self.activity_2_node.get(activity) {
+        if let Some(node) = self.activity_2_state.get(activity) {
             let mut result = match self.end_activities.get(*node) {
                 Some(a) => a.clone(),
                 None => Fraction::zero(),
             };
 
-            let (_, mut i) = self.binary_search(*node, Node::zero());
+            let (_, mut i) = self.binary_search(*node, AutomatonState::zero());
             while i < self.sources.len() && &self.sources[i] == node {
                 if self.weights[i].is_positive() {
                     result += &self.weights[i];
@@ -144,19 +144,19 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn get_sources(&self) -> impl Iterator<Item = Activity> {
-        self.sources.iter().map(|node| self.node_2_activity[node.0])
+        self.sources.iter().map(|node| self.state_2_activity[node.0])
     }
 
     pub fn get_targets(&self) -> impl Iterator<Item = Activity> {
-        self.targets.iter().map(|node| self.node_2_activity[node.0])
+        self.targets.iter().map(|node| self.state_2_activity[node.0])
     }
 
-    fn add_or_get_node(&mut self, activity: Activity) -> Node {
-        let new_node = Node::of(self.activity_2_node.len());
-        match self.activity_2_node.entry(activity) {
+    fn add_or_get_node(&mut self, activity: Activity) -> AutomatonState {
+        let new_node = AutomatonState::of(self.activity_2_state.len());
+        match self.activity_2_state.entry(activity) {
             intmap::Entry::Occupied(occupied_entry) => *occupied_entry.get(),
             intmap::Entry::Vacant(vacant_entry) => {
-                self.node_2_activity.push(activity);
+                self.state_2_activity.push(activity);
                 vacant_entry.insert(new_node);
                 new_node
             }
@@ -202,7 +202,7 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn binary_search(&self, source: Node, target: Node) -> (bool, usize) {
+    pub fn binary_search(&self, source: AutomatonState, target: AutomatonState) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }
@@ -229,7 +229,7 @@ impl DirectlyFollowsGraph {
         (false, left)
     }
 
-    fn compare(source1: Node, activity1: Node, source2: Node, activity2: Node) -> Ordering {
+    fn compare(source1: AutomatonState, activity1: AutomatonState, source2: AutomatonState, activity2: AutomatonState) -> Ordering {
         if source1 < source2 {
             return Ordering::Greater;
         } else if source1 > source2 {
@@ -449,17 +449,17 @@ impl TranslateActivityKey for DirectlyFollowsGraph {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
-        let mut new_node_2_activity = Vec::with_capacity(self.node_2_activity.len());
-        let mut new_activity_2_node = IntMap::with_capacity(self.node_2_activity.len());
+        let mut new_node_2_activity = Vec::with_capacity(self.state_2_activity.len());
+        let mut new_activity_2_node = IntMap::with_capacity(self.state_2_activity.len());
 
-        for (old_activity, node) in &self.activity_2_node {
+        for (old_activity, node) in &self.activity_2_state {
             let new_activity = translator.translate_activity(&old_activity);
             new_node_2_activity.push(new_activity);
             new_activity_2_node.insert(new_activity, *node);
         }
 
-        std::mem::swap(&mut self.node_2_activity, &mut new_node_2_activity);
-        std::mem::swap(&mut self.activity_2_node, &mut new_activity_2_node);
+        std::mem::swap(&mut self.state_2_activity, &mut new_node_2_activity);
+        std::mem::swap(&mut self.activity_2_state, &mut new_activity_2_node);
 
         self.activity_key = to_activity_key.clone();
     }
@@ -518,7 +518,7 @@ impl Display for DirectlyFollowsGraph {
                     if w.is_positive() {
                         Some(Value::String(
                             self.activity_key
-                                .get_activity_label(&self.node_2_activity[a.0])
+                                .get_activity_label(&self.state_2_activity[a.0])
                                 .to_string(),
                         ))
                     } else {
@@ -534,7 +534,7 @@ impl Display for DirectlyFollowsGraph {
                     if w.is_positive() {
                         Some(Value::String(
                             self.activity_key
-                                .get_activity_label(&self.node_2_activity[a.0])
+                                .get_activity_label(&self.state_2_activity[a.0])
                                 .to_string(),
                         ))
                     } else {
@@ -552,12 +552,12 @@ impl Display for DirectlyFollowsGraph {
                         Value::Array(vec![
                             Value::String(
                                 self.activity_key
-                                    .get_activity_label(&self.node_2_activity[source.0])
+                                    .get_activity_label(&self.state_2_activity[source.0])
                                     .to_string(),
                             ),
                             Value::String(
                                 self.activity_key
-                                    .get_activity_label(&self.node_2_activity[target.0])
+                                    .get_activity_label(&self.state_2_activity[target.0])
                                     .to_string(),
                             ),
                         ]),
@@ -619,7 +619,7 @@ impl Graphable for DirectlyFollowsGraph {
                     &source,
                     &nodes[self
                         .activity_key
-                        .get_id_from_activity(&self.node_2_activity[activity.0])],
+                        .get_id_from_activity(&self.state_2_activity[activity.0])],
                     &format!("{}", weight),
                 );
             }
@@ -632,7 +632,7 @@ impl Graphable for DirectlyFollowsGraph {
                     &mut graph,
                     &nodes[self
                         .activity_key
-                        .get_id_from_activity(&self.node_2_activity[activity.0])],
+                        .get_id_from_activity(&self.state_2_activity[activity.0])],
                     &sink,
                     &format!("{}", weight),
                 );
@@ -649,10 +649,10 @@ impl Graphable for DirectlyFollowsGraph {
                 &mut graph,
                 &nodes[self
                     .activity_key
-                    .get_id_from_activity(&self.node_2_activity[source.0])],
+                    .get_id_from_activity(&self.state_2_activity[source.0])],
                 &nodes[self
                     .activity_key
-                    .get_id_from_activity(&self.node_2_activity[target.0])],
+                    .get_id_from_activity(&self.state_2_activity[target.0])],
                 &format!("{}", weight),
             );
         }
@@ -664,26 +664,26 @@ impl Graphable for DirectlyFollowsGraph {
 #[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for DirectlyFollowsGraph {
     fn test_activity_key(&self) {
-        self.node_2_activity
+        self.state_2_activity
             .iter()
             .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
-pub struct Node(pub usize);
+pub struct AutomatonState(pub usize);
 
-impl Node {
+impl AutomatonState {
     pub fn zero() -> Self {
-        Node(0)
+        AutomatonState(0)
     }
 
     pub fn of(id: usize) -> Self {
-        Node(id)
+        AutomatonState(id)
     }
 }
 
-impl IntKey for Node {
+impl IntKey for AutomatonState {
     type Int = usize;
 
     const PRIME: Self::Int = (u32::MAX - 4) as usize;
@@ -693,16 +693,16 @@ impl IntKey for Node {
     }
 }
 
-impl<T> Index<Node> for Vec<T> {
+impl<T> Index<AutomatonState> for Vec<T> {
     type Output = T;
 
-    fn index(&self, index: Node) -> &Self::Output {
+    fn index(&self, index: AutomatonState) -> &Self::Output {
         &self[index.0]
     }
 }
 
-impl<T> IndexMut<Node> for Vec<T> {
-    fn index_mut(&mut self, index: Node) -> &mut T {
+impl<T> IndexMut<AutomatonState> for Vec<T> {
+    fn index_mut(&mut self, index: AutomatonState) -> &mut T {
         &mut self[index.0]
     }
 }
