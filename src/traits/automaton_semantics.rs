@@ -1,13 +1,17 @@
 use ebi_activity_key::Activity;
 use ebi_bpmn::ebi_arithmetic::Signed;
 use intmap::IntKey;
+use resvg::usvg::AlignmentBaseline::Auto;
 use std::{
     fmt::Display,
     hash::Hash,
     ops::{Index, IndexMut},
 };
 
-use crate::{DirectlyFollowsGraph, ebi_objects::labelled_petri_net::TransitionIndex};
+use crate::{
+    DeterministicFiniteAutomaton, DirectlyFollowsGraph,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+};
 
 pub trait AutomatonSemantics {
     fn initial_state(&self) -> Option<AutomatonState>;
@@ -145,6 +149,70 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
     }
 }
 
+/**
+ * states.len() = final state
+ * sources.len() = silent transition to final state
+ */
+impl AutomatonSemantics for DeterministicFiniteAutomaton {
+    fn initial_state(&self) -> Option<AutomatonState> {
+        self.initial_state
+    }
+
+    fn number_of_states(&self) -> usize {
+        self.final_states.len() + 1
+    }
+
+    fn number_of_transitions(&self) -> usize {
+        self.sources.len() + 1
+    }
+
+    fn states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 > self.final_states.len()
+    }
+
+    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
+        0..(self.sources.len() + 1)
+    }
+
+    fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
+        let mut result = vec![];
+
+        //check the DFA for enabled transitions
+        let (_, mut i) = self.binary_search(state, 0);
+        while i < self.sources.len() && self.sources[i] == state {
+            result.push(i);
+            i += 1;
+        }
+
+        //if the DFA can terminate, then add a termination silent transition
+        if state.0 < self.final_states.len() && self.final_states[state.0] {
+            result.push(self.sources.len())
+        }
+
+        return result;
+    }
+
+    fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
+        if transition == self.sources.len() {
+            return Some(AutomatonState::of(self.final_states.len()));
+        }
+
+        Some(self.targets[transition])
+    }
+
+    fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity> {
+        if transition == self.sources.len() {
+            None
+        } else {
+            Some(self.activities[transition])
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
 pub struct AutomatonState(pub usize);
 
@@ -155,6 +223,10 @@ impl AutomatonState {
 
     pub fn of(id: usize) -> Self {
         AutomatonState(id)
+    }
+
+    pub fn of_option(id: Option<usize>) -> Option<Self> {
+        Some(AutomatonState::of(id?))
     }
 }
 

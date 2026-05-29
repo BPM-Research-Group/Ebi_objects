@@ -1,6 +1,6 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, dfg_format_comparison,
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonState, EbiObject, Exportable, Graphable,
+    HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -26,12 +26,12 @@ pub struct StochasticNondeterministicFiniteAutomaton {
     pub activity_key: ActivityKey,
 
     /// If the initial state is None, then the language is empty
-    pub initial_state: Option<usize>,
+    pub initial_state: Option<AutomatonState>,
 
-    pub sources: Vec<usize>,               //transition -> source of arc
-    pub targets: Vec<usize>,               //transition -> target of arc
+    pub sources: Vec<AutomatonState>, //transition -> source of arc
+    pub targets: Vec<AutomatonState>, //transition -> target of arc
     pub activities: Vec<Option<Activity>>, //transition -> activity of arc
-    pub probabilities: Vec<Fraction>,      //transition -> probability of arc
+    pub probabilities: Vec<Fraction>, //transition -> probability of arc
     pub terminating_probabilities: Vec<Fraction>, //state -> termination probability
 }
 
@@ -40,21 +40,13 @@ impl StochasticNondeterministicFiniteAutomaton {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            initial_state: Some(0),
+            initial_state: Some(AutomatonState::zero()),
             sources: vec![],
             targets: vec![],
             activities: vec![],
             probabilities: vec![],
             terminating_probabilities: vec![Fraction::one()],
         }
-    }
-
-    pub fn get_sources(&self) -> &Vec<usize> {
-        &self.sources
-    }
-
-    pub fn get_targets(&self) -> &Vec<usize> {
-        &self.targets
     }
 
     pub fn get_activities(&self) -> &Vec<Option<Activity>> {
@@ -65,7 +57,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         &self.probabilities
     }
 
-    pub fn set_initial_state(&mut self, state: Option<usize>) {
+    pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
         if let Some(state) = state {
             self.ensure_states(state);
         }
@@ -84,8 +76,8 @@ impl StochasticNondeterministicFiniteAutomaton {
     }
 
     /// Ensures that a state with index `new_max_state` exists
-    fn ensure_states(&mut self, new_max_state: usize) {
-        while self.number_of_states() <= new_max_state {
+    fn ensure_states(&mut self, new_max_state: AutomatonState) {
+        while self.terminating_probabilities.len() <= new_max_state.0 {
             self.add_state();
         }
     }
@@ -93,12 +85,13 @@ impl StochasticNondeterministicFiniteAutomaton {
     /// Add a transition. Will reduce the termination probability of the source state accordingly.
     pub fn add_transition(
         &mut self,
-        source: usize,
+        source: AutomatonState,
         activity: Option<Activity>,
-        target: usize,
+        target: AutomatonState,
         probability: Fraction,
     ) -> Result<()> {
-        self.ensure_states(max(source, target));
+        self.ensure_states(source);
+        self.ensure_states(target);
 
         self.terminating_probabilities[source] -= &probability;
 
@@ -135,14 +128,17 @@ impl StochasticNondeterministicFiniteAutomaton {
      */
     pub fn take_or_add_transition(
         &mut self,
-        source_state: usize,
+        source_state: AutomatonState,
         activity: Option<Activity>,
         probability: Fraction,
-    ) -> usize {
+    ) -> AutomatonState {
         self.terminating_probabilities[source_state] -= &probability;
 
-        let (found, mut transition) =
-            self.binary_search(source_state, self.label_to_id(activity), 0);
+        let (found, mut transition) = self.binary_search(
+            source_state,
+            self.label_to_id(activity),
+            AutomatonState::zero(),
+        );
         if found
             || (transition < self.sources.len()
                 && self.sources[transition] == source_state
@@ -156,7 +152,7 @@ impl StochasticNondeterministicFiniteAutomaton {
             let (_, transition2) = self.binary_search(
                 source_state,
                 self.label_to_id(activity),
-                self.number_of_states(),
+                AutomatonState::of(self.terminating_probabilities.len()),
             );
 
             //our edge could be anywhere between transition1 (inclusive) and transition2 (inclusive)
@@ -180,7 +176,7 @@ impl StochasticNondeterministicFiniteAutomaton {
     /**
      * Scales the outgoing probabilities of the state.
      */
-    pub fn scale_outgoing_probabilities(&mut self, state2scale: HashMap<usize, Fraction>) {
+    pub fn scale_outgoing_probabilities(&mut self, state2scale: HashMap<AutomatonState, Fraction>) {
         let mut new_terminating_probabilities =
             vec![Fraction::one(); self.terminating_probabilities.len()];
         for (state, _, _, outgoing_probability) in &mut self.into_iter() {
@@ -192,33 +188,24 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.terminating_probabilities = new_terminating_probabilities;
     }
 
-    /// Returns the number of states.
-    pub fn number_of_states(&self) -> usize {
-        self.terminating_probabilities.len()
-    }
-
-    pub fn get_initial_state(&self) -> Option<usize> {
-        self.initial_state
-    }
-
     pub fn get_termination_probability(&self, state: usize) -> &Fraction {
         &self.terminating_probabilities[state]
     }
 
     //Adds a state with 1 terminating probability.
-    pub fn add_state(&mut self) -> usize {
+    pub fn add_state(&mut self) -> AutomatonState {
         let state = self.terminating_probabilities.len();
         self.terminating_probabilities.push(Fraction::one());
-        return state;
+        return AutomatonState::of(state);
     }
 
     fn compare(
-        source1: usize,
+        source1: AutomatonState,
         activity1: usize,
-        target1: usize,
-        source2: usize,
+        target1: AutomatonState,
+        source2: AutomatonState,
         activity2: usize,
-        target2: usize,
+        target2: AutomatonState,
     ) -> Ordering {
         if source1 < source2 {
             return Ordering::Greater;
@@ -245,7 +232,12 @@ impl StochasticNondeterministicFiniteAutomaton {
         }
     }
 
-    pub fn binary_search(&self, source: usize, activity: usize, target: usize) -> (bool, usize) {
+    pub fn binary_search(
+        &self,
+        source: AutomatonState,
+        activity: usize,
+        target: AutomatonState,
+    ) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }
@@ -282,11 +274,11 @@ impl StochasticNondeterministicFiniteAutomaton {
     pub fn check_consistency(&self) -> Result<()> {
         let zero = Fraction::zero();
         //verify that sum of outgoing edges for each state is one
-        if self.number_of_states() > 0 {
+        if self.terminating_probabilities.len() > 0 {
             let mut state = 0; //next state to check
             let mut transition = 0; //next transition to check
             let mut sum = self.terminating_probabilities[0].clone(); //sum probability of the next state
-            while state < self.number_of_states() {
+            while state < self.terminating_probabilities.len() {
                 if transition == self.number_of_transitions() {
                     //there are no more transitions, so move to the next state
                     if (sum > Fraction::one() || sum < Fraction::one()) && !sum.is_one() {
@@ -302,7 +294,7 @@ impl StochasticNondeterministicFiniteAutomaton {
                         .get(state)
                         .unwrap_or(&zero)
                         .clone();
-                } else if state == self.sources[transition] {
+                } else if state == self.sources[transition].0 {
                     //the next transition is of the same state; add its probability
                     sum += &self.probabilities[transition];
                     transition += 1;
@@ -331,15 +323,15 @@ impl StochasticNondeterministicFiniteAutomaton {
     /// That is, (source, target, label, probaiblity)
     pub fn outgoing_edges(
         &'_ self,
-        source: usize,
+        source: AutomatonState,
     ) -> StochasticNondeterministicFiniteAutomatonIterator<'_> {
-        let (_, start) = self.binary_search(source, 0, 0);
-        let (_, end) = self.binary_search(source, usize::MAX, usize::MAX);
+        let (_, start) = self.binary_search(source, 0, AutomatonState::zero());
+        let (_, end) = self.binary_search(source, usize::MAX, AutomatonState::of(usize::MAX));
         StochasticNondeterministicFiniteAutomatonIterator {
-            it_sources: self.get_sources()[start..end].iter(),
-            it_targets: self.get_targets()[start..end].iter(),
-            it_activities: self.get_activities()[start..end].iter(),
-            it_probabilities: self.get_probabilities()[start..end].iter(),
+            it_sources: self.sources[start..end].iter(),
+            it_targets: self.targets[start..end].iter(),
+            it_activities: self.activities[start..end].iter(),
+            it_probabilities: self.probabilities[start..end].iter(),
         }
     }
 }
@@ -349,10 +341,10 @@ impl TranslateActivityKey for StochasticNondeterministicFiniteAutomaton {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
         //as the order of activities may have changed, we need to rebuild the transitions
-        let mut sources = Vec::with_capacity(self.number_of_transitions());
-        let mut targets = Vec::with_capacity(self.number_of_transitions());
-        let mut probabilities = Vec::with_capacity(self.number_of_transitions());
-        let mut activities = Vec::with_capacity(self.number_of_transitions());
+        let mut sources = Vec::with_capacity(self.sources.len());
+        let mut targets = Vec::with_capacity(self.sources.len());
+        let mut probabilities = Vec::with_capacity(self.sources.len());
+        let mut activities = Vec::with_capacity(self.sources.len());
 
         std::mem::swap(&mut self.sources, &mut sources);
         std::mem::swap(&mut self.targets, &mut targets);
@@ -393,7 +385,11 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
         } else {
             writeln!(f, "#initial state\nnone")?;
         }
-        writeln!(f, "# number of states\n{}", self.number_of_states())?;
+        writeln!(
+            f,
+            "# number of states\n{}",
+            self.terminating_probabilities.len()
+        )?;
         writeln!(
             f,
             "# number of transitions\n{}",
@@ -478,11 +474,11 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
         result.initial_state = if &initial_state.trim_start().to_lowercase()[..] == "none" {
             None
         } else {
-            Some(
+            Some(AutomatonState::of(
                 initial_state
                     .parse::<usize>()
                     .with_context(|| "failed to read initial state")?,
-            )
+            ))
         };
 
         //read the number of states
@@ -648,14 +644,19 @@ impl<'a> IntoIterator for &'a StochasticNondeterministicFiniteAutomaton {
 }
 
 pub struct StochasticNondeterministicFiniteAutomatonIterator<'a> {
-    it_sources: std::slice::Iter<'a, usize>,
-    it_targets: std::slice::Iter<'a, usize>,
+    it_sources: std::slice::Iter<'a, AutomatonState>,
+    it_targets: std::slice::Iter<'a, AutomatonState>,
     it_activities: std::slice::Iter<'a, Option<Activity>>,
     it_probabilities: std::slice::Iter<'a, Fraction>,
 }
 
 impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonIterator<'a> {
-    type Item = (&'a usize, &'a usize, &'a Option<Activity>, &'a Fraction);
+    type Item = (
+        &'a AutomatonState,
+        &'a AutomatonState,
+        &'a Option<Activity>,
+        &'a Fraction,
+    );
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(source) = self.it_sources.next() {
@@ -675,7 +676,12 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonIterator<'a> {
 }
 
 impl<'a> IntoIterator for &'a mut StochasticNondeterministicFiniteAutomaton {
-    type Item = (&'a usize, &'a usize, &'a Option<Activity>, &'a mut Fraction);
+    type Item = (
+        &'a AutomatonState,
+        &'a AutomatonState,
+        &'a Option<Activity>,
+        &'a mut Fraction,
+    );
 
     type IntoIter = StochasticNondeterministicFiniteAutomatonMutIterator<'a>;
 
@@ -690,14 +696,19 @@ impl<'a> IntoIterator for &'a mut StochasticNondeterministicFiniteAutomaton {
 }
 
 pub struct StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
-    it_sources: std::slice::Iter<'a, usize>,
-    it_targets: std::slice::Iter<'a, usize>,
+    it_sources: std::slice::Iter<'a, AutomatonState>,
+    it_targets: std::slice::Iter<'a, AutomatonState>,
     it_activities: std::slice::Iter<'a, Option<Activity>>,
     it_probabilities: std::slice::IterMut<'a, Fraction>,
 }
 
 impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
-    type Item = (&'a usize, &'a usize, &'a Option<Activity>, &'a mut Fraction);
+    type Item = (
+        &'a AutomatonState,
+        &'a AutomatonState,
+        &'a Option<Activity>,
+        &'a mut Fraction,
+    );
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(source) = self.it_sources.next() {

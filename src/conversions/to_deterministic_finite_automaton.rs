@@ -1,5 +1,5 @@
 use crate::{
-    ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogXes,
+    ActivityKey, ActivityKeyTranslator, AutomatonState, CompressedEventLog, CompressedEventLogXes,
     DirectlyFollowsGraph, DirectlyFollowsModel, EventLogCsv, EventLogOcel, EventLogTraceAttributes,
     EventLogXes, NumberOfTraces, ProcessTree, ProcessTreeMarkupLanguage,
     StochasticDirectlyFollowsModel, StochasticNondeterministicFiniteAutomaton,
@@ -98,6 +98,8 @@ impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
             .iter()
             .map(|target| node_2_activity[*target])
             .collect();
+        let sources = sources.into_iter().map(|x| AutomatonState::of(x)).collect();
+        let targets = targets.into_iter().map(|x| AutomatonState::of(x)).collect();
 
         //prepare final states: initial state is final if empty traces are present
         let mut final_states = end_nodes;
@@ -106,7 +108,7 @@ impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
         //construct result
         let mut result = Self {
             activity_key: value.activity_key,
-            initial_state: Some(number_of_nodes),
+            initial_state: Some(AutomatonState::of(number_of_nodes)),
             sources,
             targets,
             activities,
@@ -114,10 +116,14 @@ impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
         };
 
         //add the start activities
-        for start_node in 0..number_of_nodes {
-            if start_nodes[start_node] {
+        for start_state in 0..start_nodes.len() {
+            if start_nodes[start_state] {
                 result
-                    .add_transition(number_of_nodes, node_2_activity[start_node], start_node)
+                    .add_transition(
+                        AutomatonState::of(number_of_nodes),
+                        node_2_activity[start_state],
+                        AutomatonState::of(start_state),
+                    )
                     .unwrap(); //by construction, determinism is guaranteed
             }
         }

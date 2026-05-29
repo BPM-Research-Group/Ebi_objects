@@ -1,6 +1,6 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonState, EbiObject, Exportable, Graphable,
+    HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
     traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -21,10 +21,10 @@ use std::{
 #[derive(Debug, ActivityKey, Clone)]
 pub struct DeterministicFiniteAutomaton {
     pub activity_key: ActivityKey,
-    pub initial_state: Option<usize>,
-    pub sources: Vec<usize>,       //transition -> source of arc
-    pub targets: Vec<usize>,       //transition -> target of arc
-    pub activities: Vec<Activity>, //transition -> activity of arc (every transition is labelled)
+    pub initial_state: Option<AutomatonState>,
+    pub sources: Vec<AutomatonState>, //transition -> source of arc
+    pub targets: Vec<AutomatonState>, //transition -> target of arc
+    pub activities: Vec<Activity>,    //transition -> activity of arc (every transition is labelled)
     pub final_states: Vec<bool>,
 }
 
@@ -35,7 +35,7 @@ impl DeterministicFiniteAutomaton {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            initial_state: Some(0),
+            initial_state: Some(AutomatonState::zero()),
             sources: vec![],
             targets: vec![],
             activities: vec![],
@@ -43,11 +43,11 @@ impl DeterministicFiniteAutomaton {
         }
     }
 
-    pub fn get_sources(&self) -> &Vec<usize> {
+    pub fn get_sources(&self) -> &Vec<AutomatonState> {
         &self.sources
     }
 
-    pub fn get_targets(&self) -> &Vec<usize> {
+    pub fn get_targets(&self) -> &Vec<AutomatonState> {
         &self.targets
     }
 
@@ -55,7 +55,7 @@ impl DeterministicFiniteAutomaton {
         &self.activities
     }
 
-    pub fn set_initial_state(&mut self, state: Option<usize>) {
+    pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
         if let Some(state) = state {
             self.ensure_states(state);
         }
@@ -63,19 +63,20 @@ impl DeterministicFiniteAutomaton {
     }
 
     /// Ensures that a state with index `new_max_state` exists
-    fn ensure_states(&mut self, new_max_state: usize) {
-        while self.number_of_states() <= new_max_state {
+    fn ensure_states(&mut self, new_max_state: AutomatonState) {
+        while self.final_states.len() <= new_max_state.0 {
             self.add_state();
         }
     }
 
     pub fn add_transition(
         &mut self,
-        source: usize,
+        source: AutomatonState,
         activity: Activity,
-        target: usize,
+        target: AutomatonState,
     ) -> Result<()> {
-        self.ensure_states(max(source, target));
+        self.ensure_states(source);
+        self.ensure_states(target);
 
         let (found, from) =
             self.binary_search(source, self.activity_key.get_id_from_activity(activity));
@@ -96,7 +97,11 @@ impl DeterministicFiniteAutomaton {
     /**
      * Adds the probability to the transition. Returns the target state, which may be new.
      */
-    pub fn take_or_add_transition(&mut self, source_state: usize, activity: Activity) -> usize {
+    pub fn take_or_add_transition(
+        &mut self,
+        source_state: AutomatonState,
+        activity: Activity,
+    ) -> AutomatonState {
         let (found, transition) = self.binary_search(
             source_state,
             self.activity_key.get_id_from_activity(activity),
@@ -112,32 +117,22 @@ impl DeterministicFiniteAutomaton {
         }
     }
 
-    pub fn can_terminate_in_state(&self, state: usize) -> bool {
-        self.final_states[state]
-    }
-
-    /**
-     * Returns whether a transition is not permanently disabled.
-     */
-    pub fn can_execute_transition(&self, _transition: usize) -> bool {
-        true
-    }
-
-    pub fn set_final_state(&mut self, state: usize, is_final: bool) {
+    pub fn set_final_state(&mut self, state: AutomatonState, is_final: bool) {
         self.final_states[state] = is_final
     }
 
-    pub fn add_state(&mut self) -> usize {
+    pub fn add_state(&mut self) -> AutomatonState {
         let state = self.final_states.len();
         self.final_states.push(false);
-        state
+        AutomatonState::of(state)
     }
 
-    pub fn number_of_states(&self) -> usize {
-        self.final_states.len()
-    }
-
-    fn compare(source1: usize, activity1: usize, source2: usize, activity2: Activity) -> Ordering {
+    fn compare(
+        source1: AutomatonState,
+        activity1: usize,
+        source2: AutomatonState,
+        activity2: Activity,
+    ) -> Ordering {
         if source1 < source2 {
             return Ordering::Greater;
         } else if source1 > source2 {
@@ -151,7 +146,7 @@ impl DeterministicFiniteAutomaton {
         }
     }
 
-    pub fn binary_search(&self, source: usize, activity: usize) -> (bool, usize) {
+    pub fn binary_search(&self, source: AutomatonState, activity: usize) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }
@@ -228,15 +223,20 @@ impl Importable for DeterministicFiniteAutomaton {
 
         let mut result = DeterministicFiniteAutomaton::new();
 
-        result.set_initial_state(json::read_field_index(&json, "initialState").ok());
+        result.set_initial_state(AutomatonState::of_option(
+            json::read_field_index(&json, "initialState").ok(),
+        ));
 
         //read transitions
         let jtrans = json::read_field_list(&json, "transitions")
             .context("failed to read list of transitions")?;
         for jtransition in jtrans {
-            let from =
-                json::read_field_index(jtransition, "from").context("could not read from")?;
-            let to = json::read_field_index(jtransition, "to").context("could not read to")?;
+            let from = AutomatonState::of(
+                json::read_field_index(jtransition, "from").context("could not read from")?,
+            );
+            let to = AutomatonState::of(
+                json::read_field_index(jtransition, "to").context("could not read to")?,
+            );
             let label =
                 json::read_field_string(jtransition, "label").context("could not read label")?;
             let activity = result.activity_key.process_activity(label.as_str());
@@ -251,7 +251,9 @@ impl Importable for DeterministicFiniteAutomaton {
         let jfinal_states = json::read_field_list(&json, "finalStates")
             .with_context(|| "failed to read list of final states")?;
         for jfinal_state in jfinal_states {
-            let state = json::read_index(jfinal_state).context("could not read final state")?;
+            let state = AutomatonState::of(
+                json::read_index(jfinal_state).context("could not read final state")?,
+            );
 
             result.ensure_states(state);
 
@@ -294,7 +296,7 @@ impl Exportable for DeterministicFiniteAutomaton {
 
 impl Infoable for DeterministicFiniteAutomaton {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of states\t{}", self.number_of_states())?;
+        writeln!(f, "Number of states\t{}", self.final_states.len())?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
         writeln!(
             f,
@@ -351,8 +353,8 @@ impl Graphable for DeterministicFiniteAutomaton {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         let mut places = vec![];
-        for state in 0..self.number_of_states() {
-            if self.can_terminate_in_state(state) {
+        for state in 0..self.final_states.len() {
+            if self.final_states[state] {
                 places.push(graphable::create_transition(
                     &mut graph,
                     &state.to_string(),

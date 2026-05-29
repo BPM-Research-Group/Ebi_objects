@@ -1,10 +1,8 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
-    traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonState, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json, traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    },
+    }
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
@@ -23,9 +21,9 @@ use std::{
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticDeterministicFiniteAutomaton {
     pub activity_key: ActivityKey,
-    pub initial_state: Option<usize>,
-    pub sources: Vec<usize>,          //transition -> source of arc
-    pub targets: Vec<usize>,          //transition -> target of arc
+    pub initial_state: Option<AutomatonState>,
+    pub sources: Vec<AutomatonState>,          //transition -> source of arc
+    pub targets: Vec<AutomatonState>,          //transition -> target of arc
     pub activities: Vec<Activity>,    //transition -> activity of arc (every transition is labelled)
     pub probabilities: Vec<Fraction>, //transition -> probability of arc
     pub terminating_probabilities: Vec<Fraction>, //state -> termination probability
@@ -45,14 +43,6 @@ impl StochasticDeterministicFiniteAutomaton {
             probabilities: vec![],
             terminating_probabilities: vec![Fraction::one()],
         }
-    }
-
-    pub fn get_sources(&self) -> &Vec<usize> {
-        &self.sources
-    }
-
-    pub fn get_targets(&self) -> &Vec<usize> {
-        &self.targets
     }
 
     pub fn get_activities(&self) -> &Vec<Activity> {

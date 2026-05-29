@@ -164,7 +164,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                         if value.weights[i].is_positive() {
                             result
                                 .add_transition(
-                                    activity.id + 1,
+                                    AutomatonState::of(activity.id + 1),
                                     Some(value.state_2_activity[value.targets[i].0]),
                                     value.state_2_activity[value.targets[i].0].id + 1,
                                     &value.weights[i] / &sum,
@@ -194,7 +194,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAu
             return result;
         }
 
-        let initial_state = 0;
+        let initial_state = AutomatonState::zero();
         result.initial_state = Some(initial_state);
 
         //add states
