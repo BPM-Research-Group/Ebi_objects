@@ -1,9 +1,9 @@
 use crate::{
-    CompressedEventLog, CompressedEventLogXes, DirectlyFollowsGraph, EventLogCsv, EventLogOcel,
-    EventLogTraceAttributes, EventLogXes, HasActivityKey, NumberOfTraces,
+    AutomatonState, CompressedEventLog, CompressedEventLogXes, DirectlyFollowsGraph, EventLogCsv,
+    EventLogOcel, EventLogTraceAttributes, EventLogXes, HasActivityKey, NumberOfTraces,
     ebi_objects::{
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        directly_follows_graph::AutomatonState, event_log::EventLog, event_log_python::EventLogPython,
+        event_log::EventLog, event_log_python::EventLogPython,
         finite_stochastic_language::FiniteStochasticLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
     },

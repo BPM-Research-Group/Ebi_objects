@@ -1,16 +1,13 @@
 use crate::{
-    ActivityKey, ActivityKeyTranslator, CompressedEventLog, CompressedEventLogTraceAttributes,
-    CompressedEventLogXes, DirectlyFollowsGraph, EventLog, EventLogCsv, EventLogOcel,
-    EventLogPython, EventLogTraceAttributes, EventLogXes, FiniteStochasticLanguage, HasActivityKey,
-    NumberOfTraces, StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
+    ActivityKey, ActivityKeyTranslator, AutomatonState, CompressedEventLog,
+    CompressedEventLogTraceAttributes, CompressedEventLogXes, DirectlyFollowsGraph, EventLog,
+    EventLogCsv, EventLogOcel, EventLogPython, EventLogTraceAttributes, EventLogXes,
+    FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
+    StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
-    ebi_objects::{
-        directly_follows_graph::AutomatonState,
-        stochastic_process_tree::{
-            execute_transition, get_enabled_transitions, get_initial_state,
-            get_total_weight_of_enabled_transitions, get_transition_activity,
-            get_transition_weight,
-        },
+    ebi_objects::stochastic_process_tree::{
+        execute_transition, get_enabled_transitions, get_initial_state,
+        get_total_weight_of_enabled_transitions, get_transition_activity, get_transition_weight,
     },
 };
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};

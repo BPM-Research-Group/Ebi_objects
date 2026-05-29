@@ -1,6 +1,6 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Graphable, HasActivityKey, Infoable,
-    TranslateActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonState, Graphable, HasActivityKey,
+    Infoable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     dfg_format_comparison, json,
     traits::{
@@ -16,15 +16,13 @@ use ebi_bpmn::ebi_arithmetic::{
     anyhow::{Context, Error, Result, anyhow},
 };
 use ebi_derive::ActivityKey;
-use intmap::{Entry, IntKey, IntMap};
+use intmap::{Entry, IntMap};
 use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 use std::{
     cmp::Ordering,
     collections::{HashMap, hash_map},
     fmt::Display,
-    hash::Hash,
-    ops::{Index, IndexMut},
 };
 
 #[derive(ActivityKey, Clone, Debug)]
@@ -53,14 +51,6 @@ impl DirectlyFollowsGraph {
             start_activities: IntMap::new(),
             end_activities: IntMap::new(),
         }
-    }
-
-    pub fn number_of_states(&self) -> usize {
-        self.state_2_activity.len() + 2
-    }
-
-    pub fn get_states(&self) -> impl Iterator<Item = AutomatonState> {
-        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
     }
 
     pub fn edge_weight(&self, source: AutomatonState, target: AutomatonState) -> Option<&Fraction> {
@@ -674,68 +664,5 @@ impl TestActivityKey for DirectlyFollowsGraph {
         self.state_2_activity
             .iter()
             .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
-pub struct AutomatonState(pub usize);
-
-impl AutomatonState {
-    pub fn zero() -> Self {
-        AutomatonState(0)
-    }
-
-    pub fn of(id: usize) -> Self {
-        AutomatonState(id)
-    }
-}
-
-impl Display for AutomatonState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Hash for AutomatonState {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
-
-impl IntKey for AutomatonState {
-    type Int = usize;
-
-    const PRIME: Self::Int = (u32::MAX - 4) as usize;
-
-    fn into_int(self) -> Self::Int {
-        self.0
-    }
-}
-
-impl<T> Index<AutomatonState> for Vec<T> {
-    type Output = T;
-
-    fn index(&self, index: AutomatonState) -> &Self::Output {
-        &self[index.0]
-    }
-}
-
-impl<T> Index<&AutomatonState> for Vec<T> {
-    type Output = T;
-
-    fn index(&self, index: &AutomatonState) -> &Self::Output {
-        &self[index.0]
-    }
-}
-
-impl<T> IndexMut<AutomatonState> for Vec<T> {
-    fn index_mut(&mut self, index: AutomatonState) -> &mut T {
-        &mut self[index.0]
-    }
-}
-
-impl<T> IndexMut<&AutomatonState> for Vec<T> {
-    fn index_mut(&mut self, index: &AutomatonState) -> &mut T {
-        &mut self[index.0]
     }
 }

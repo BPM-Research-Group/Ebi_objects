@@ -86,6 +86,7 @@ pub mod iterators {
 }
 pub mod traits {
     pub mod attributes;
+    pub mod automaton_semantics;
     pub mod event_attribute_iterators;
     pub mod event_attributes;
     pub mod exportable;
@@ -108,6 +109,7 @@ pub use crate::attribute_key::attribute_key::AttributeKey;
 pub use crate::attribute_key::data_type::DataType;
 pub use crate::constants::ebi_object::EbiObject;
 pub use crate::constants::ebi_object_type::EbiObjectType;
+pub use crate::traits::automaton_semantics::*;
 pub use crate::traits::exportable::Exportable;
 pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
@@ -156,9 +158,9 @@ pub use ebi_objects::stochastic_nondeterministic_finite_automaton::StochasticNon
 pub use ebi_objects::stochastic_process_tree::StochasticProcessTree;
 
 pub use ebi_activity_key;
-pub use ebi_bpmn::ebi_arithmetic;
 pub use ebi_arithmetic::anyhow;
 pub use ebi_arithmetic::malachite;
 pub use ebi_arithmetic::rand;
 pub use ebi_bpmn;
+pub use ebi_bpmn::ebi_arithmetic;
 pub use ebi_derive;
