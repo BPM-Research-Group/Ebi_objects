@@ -465,10 +465,11 @@ impl TranslateActivityKey for DirectlyFollowsGraph {
         let mut new_node_2_activity = Vec::with_capacity(self.state_2_activity.len());
         let mut new_activity_2_node = IntMap::with_capacity(self.state_2_activity.len());
 
-        for (old_activity, node) in &self.activity_2_state {
+        for old_activity in self.state_2_activity.iter() {
             let new_activity = translator.translate_activity(&old_activity);
+            let new_state = AutomatonState::of(new_node_2_activity.len());
             new_node_2_activity.push(new_activity);
-            new_activity_2_node.insert(new_activity, *node);
+            new_activity_2_node.insert(new_activity, new_state);
         }
 
         std::mem::swap(&mut self.state_2_activity, &mut new_node_2_activity);

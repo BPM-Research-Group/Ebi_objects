@@ -125,9 +125,9 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                 let activity = value.state_2_activity[node.0];
                 result
                     .add_transition(
-                        initial_state,
+                        AutomatonState::of(initial_state),
                         Some(activity),
-                        activity.id + 1,
+                        AutomatonState::of(activity.id + 1),
                         weight / &sum_of_start_activities,
                     )
                     .unwrap(); //by construction, outgoing probability cannot become lower than 0
@@ -166,7 +166,9 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                                 .add_transition(
                                     AutomatonState::of(activity.id + 1),
                                     Some(value.state_2_activity[value.targets[i].0]),
-                                    value.state_2_activity[value.targets[i].0].id + 1,
+                                    AutomatonState::of(
+                                        value.state_2_activity[value.targets[i].0].id + 1,
+                                    ),
                                     &value.weights[i] / &sum,
                                 )
                                 .unwrap(); //by construction, remaining outgoing probability cannot become negative
@@ -212,7 +214,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAu
                         .add_transition(
                             initial_state,
                             Some(value.node_2_activity[node]),
-                            node + 1,
+                            AutomatonState::of(node + 1),
                             weight / &sum_of_start_activities,
                         )
                         .unwrap(); //by construction, outgoing probability cannot become lower than 0
@@ -247,9 +249,9 @@ impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAu
                     if value.weights[i].is_positive() {
                         result
                             .add_transition(
-                                source + 1,
+                                AutomatonState::of(source + 1),
                                 Some(value.node_2_activity[value.targets[i]]),
-                                value.targets[i] + 1,
+                                AutomatonState::of(value.targets[i] + 1),
                                 &value.weights[i] / &sum,
                             )
                             .unwrap(); //by construction, remaining outgoing probability cannot become negative
@@ -340,7 +342,7 @@ mod tests {
     use crate::{
         DirectlyFollowsGraph, FiniteStochasticLanguage, HasActivityKey,
         StochasticDirectlyFollowsModel, StochasticNondeterministicFiniteAutomaton,
-        StochasticProcessTree,
+        StochasticProcessTree, a,
     };
     use ebi_bpmn::ebi_arithmetic::{Fraction, One, Zero, f0, f1};
     use std::fs;
@@ -356,10 +358,10 @@ mod tests {
         assert_eq!(dfg.start_activity_weight(b), Fraction::from((3, 5)));
 
         let snfa: StochasticNondeterministicFiniteAutomaton = dfg.into();
-        assert_eq!(snfa.number_of_states(), 3);
-        assert_eq!(snfa.number_of_transitions(), 5);
-        assert_eq!(snfa.sources, [0, 0, 1, 1, 2]);
-        assert_eq!(snfa.targets, [1, 2, 1, 2, 1]);
+        assert_eq!(snfa.terminating_probabilities.len(), 3);
+        assert_eq!(snfa.sources.len(), 5);
+        assert_eq!(snfa.sources, [a!(0), a!(0), a!(1), a!(1), a!(2)]);
+        assert_eq!(snfa.targets, [a!(1), a!(2), a!(1), a!(2), a!(1)]);
         assert_eq!(
             snfa.probabilities,
             [
@@ -403,8 +405,8 @@ mod tests {
         let tree = fin.parse::<StochasticProcessTree>().unwrap();
 
         let snfa = StochasticNondeterministicFiniteAutomaton::from(tree);
-        assert_eq!(snfa.sources, [0, 1, 1, 2]);
-        assert_eq!(snfa.targets, [1, 2, 2, 3]);
+        assert_eq!(snfa.sources, [a!(0), a!(1), a!(1), a!(2)]);
+        assert_eq!(snfa.targets, [a!(1), a!(2), a!(2), a!(3)]);
         assert_eq!(
             snfa.probabilities,
             [f1!(), Fraction::from((1, 3)), Fraction::from((2, 3)), f1!()]
@@ -427,8 +429,8 @@ mod tests {
 
         let snfa = StochasticNondeterministicFiniteAutomaton::from(sdfm);
 
-        assert_eq!(snfa.sources, [0, 0, 1, 1, 2]);
-        assert_eq!(snfa.targets, [1, 2, 1, 2, 1]);
+        assert_eq!(snfa.sources, [a!(0), a!(0), a!(1), a!(1), a!(2)]);
+        assert_eq!(snfa.targets, [a!(1), a!(2), a!(1), a!(2), a!(1)]);
         assert_eq!(
             snfa.probabilities,
             [

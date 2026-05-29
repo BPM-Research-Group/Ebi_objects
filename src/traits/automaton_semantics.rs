@@ -1,7 +1,6 @@
 use ebi_activity_key::Activity;
 use ebi_bpmn::ebi_arithmetic::Signed;
 use intmap::IntKey;
-use resvg::usvg::AlignmentBaseline::Auto;
 use std::{
     fmt::Display,
     hash::Hash,
@@ -9,23 +8,37 @@ use std::{
 };
 
 use crate::{
-    DeterministicFiniteAutomaton, DirectlyFollowsGraph,
+    DeterministicFiniteAutomaton, DirectlyFollowsGraph, StochasticDeterministicFiniteAutomaton,
     ebi_objects::labelled_petri_net::TransitionIndex,
 };
 
 pub trait AutomatonSemantics {
+    /// Returns the initial state of the execution semantics of the automaton.
+    /// May return a virtual state.
+    /// May return None, in which case the automaton has an empty language.
     fn initial_state(&self) -> Option<AutomatonState>;
 
+    /// Returns the number of states in the execution semantics of the automaton.
+    /// May be larger than the states -in- the automaton.
     fn number_of_states(&self) -> usize;
 
-    fn number_of_transitions(&self) -> usize;
-
+    /// Returns the states in the execution semantics of the automaton.
+    /// May be larger than the states -in- the automaton.
     fn states(&self) -> impl Iterator<Item = AutomatonState>;
 
+    /// Returns whether a state in the execution semantics of the automaton is a final state.
     fn is_state_final(&self, state: AutomatonState) -> bool;
 
+    /// Returns the number of transitions in the execution semantics of the automaton.
+    /// May be larger than the transitions -in- the automaton.
+    fn number_of_transitions(&self) -> usize;
+
+    /// Returns the transitions in the execution semantics of the automaton.
+    /// Some of these transitions may be virtual.
     fn transitions(&self) -> impl Iterator<Item = TransitionIndex>;
 
+    /// Returns the outgoing transitions of a state in the execution semantics of the automaton.
+    /// Some of these transitions may be virtual.
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex>;
 
     fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState>;
@@ -213,7 +226,69 @@ impl AutomatonSemantics for DeterministicFiniteAutomaton {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
+impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
+    fn initial_state(&self) -> Option<AutomatonState> {
+        self.initial_state
+    }
+
+    fn number_of_states(&self) -> usize {
+        self.terminating_probabilities.len() + 1
+    }
+
+    fn number_of_transitions(&self) -> usize {
+        self.sources.len() + 1
+    }
+
+    fn states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 > self.terminating_probabilities.len()
+    }
+
+    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
+        0..(self.sources.len() + 1)
+    }
+
+    fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
+        let mut result = vec![];
+
+        //check the DFA for enabled transitions
+        let (_, mut i) = self.binary_search(state, 0);
+        while i < self.sources.len() && self.sources[i] == state {
+            result.push(i);
+            i += 1;
+        }
+
+        //if the DFA can terminate, then add a termination silent transition
+        if state.0 < self.terminating_probabilities.len()
+            && self.terminating_probabilities[state.0].is_positive()
+        {
+            result.push(self.sources.len())
+        }
+
+        return result;
+    }
+
+    fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
+        if transition == self.sources.len() {
+            return Some(AutomatonState::of(self.terminating_probabilities.len()));
+        }
+
+        Some(self.targets[transition])
+    }
+
+    fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity> {
+        if transition == self.sources.len() {
+            None
+        } else {
+            Some(self.activities[transition])
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub struct AutomatonState(pub usize);
 
 impl AutomatonState {
@@ -277,5 +352,68 @@ impl<T> IndexMut<AutomatonState> for Vec<T> {
 impl<T> IndexMut<&AutomatonState> for Vec<T> {
     fn index_mut(&mut self, index: &AutomatonState) -> &mut T {
         &mut self[index.0]
+    }
+}
+
+#[macro_export]
+macro_rules! a {
+    ($u:expr) => {
+        crate::AutomatonState::of($u)
+    };
+}
+pub use a;
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use ebi_activity_key::{HasActivityKey, TranslateActivityKey};
+
+    use crate::{AutomatonSemantics, DirectlyFollowsGraph, FiniteStochasticLanguage};
+
+    macro_rules! assert_execute_expect {
+        ($tree:ident, $state:ident, $t:expr, $e:expr) => {
+            println!("execute {} {}", ::std::stringify!($t), $t);
+            assert!($tree.outgoing_transitions($state).contains(&$t));
+            assert!(!$tree.is_state_final($state));
+            $state = $tree.transition_2_target($t).unwrap();
+            println!("state {}\n", $state);
+            assert_eq!($tree.outgoing_transitions($state), $e);
+        };
+    }
+
+    #[test]
+    fn dfg_semantics() {
+        let fin = fs::read_to_string("testfiles/bpic12-a.xes.gz-dfg.dfg").unwrap();
+        let mut dfg = fin.parse::<DirectlyFollowsGraph>().unwrap();
+
+        let fin2 = fs::read_to_string("testfiles/bpic12-a-sample.slang").unwrap();
+        let mut slang = fin2.parse::<FiniteStochasticLanguage>().unwrap();
+
+        dfg.translate_using_activity_key(slang.activity_key_mut());
+
+        let a_submitted = dfg.activity_key_mut().process_activity("A_SUBMITTED");
+        let a_partlysubmitted = dfg.activity_key_mut().process_activity("A_PARTLYSUBMITTED");
+        let a_cancelled = dfg.activity_key_mut().process_activity("A_CANCELLED");
+
+        println!("{:?}", dfg.activity_key);
+        println!("node_2_activity  {:?}", dfg.state_2_activity);
+        println!("start activities {:?}", dfg.start_activities);
+
+        let mut state = dfg.initial_state().unwrap();
+        println!("state {}\n", state);
+        assert_eq!(dfg.outgoing_transitions(state), [16]);
+        assert_eq!(dfg.transition_2_activity(16).unwrap(), a_submitted);
+
+        assert_execute_expect!(dfg, state, 16, [0]);
+        assert_eq!(dfg.transition_2_activity(0).unwrap(), a_partlysubmitted);
+
+        assert_execute_expect!(dfg, state, 0, [1, 2, 3]);
+        assert_eq!(dfg.transition_2_activity(3).unwrap(), a_cancelled);
+
+        assert_execute_expect!(dfg, state, 3, [15]);
+
+        assert_execute_expect!(dfg, state, 15, Vec::<usize>::new());
+        assert!(dfg.is_state_final(state));
     }
 }

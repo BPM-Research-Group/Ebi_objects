@@ -1,5 +1,7 @@
 use crate::{
-    ActivityKeyTranslator, AutomatonSemantics, HasActivityKey, PetriNetMarkupLanguage, StochasticNondeterministicFiniteAutomaton, ebi_objects::{
+    ActivityKeyTranslator, HasActivityKey, PetriNetMarkupLanguage,
+    StochasticNondeterministicFiniteAutomaton,
+    ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
         directly_follows_graph::DirectlyFollowsGraph,
         directly_follows_model::DirectlyFollowsModel,
@@ -11,7 +13,8 @@ use crate::{
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
         stochastic_process_tree::StochasticProcessTree,
-    }, marking::Marking
+    },
+    marking::Marking,
 };
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use std::collections::HashMap;
@@ -409,12 +412,12 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
 
         //add places
         let mut state2place = vec![];
-        for state in value.states() {
+        for state in 0..value.final_states.len() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 
             //add termination
-            if value.is_state_final(state) {
+            if value.final_states[state] {
                 let lpn_transition = result.add_transition(None);
                 result
                     .add_place_transition_arc(lpn_place, lpn_transition, 1)

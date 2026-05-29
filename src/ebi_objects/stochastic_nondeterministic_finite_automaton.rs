@@ -13,11 +13,7 @@ use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
-use std::{
-    cmp::{Ordering, max},
-    collections::HashMap,
-    fmt::Display,
-};
+use std::{cmp::Ordering, collections::HashMap, fmt::Display};
 
 pub const HEADER: &str = "stochastic non-deterministic finite automaton";
 
@@ -49,14 +45,6 @@ impl StochasticNondeterministicFiniteAutomaton {
         }
     }
 
-    pub fn get_activities(&self) -> &Vec<Option<Activity>> {
-        &self.activities
-    }
-
-    pub fn get_probabilities(&self) -> &Vec<Fraction> {
-        &self.probabilities
-    }
-
     pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
         if let Some(state) = state {
             self.ensure_states(state);
@@ -64,7 +52,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.initial_state = state;
     }
 
-    pub fn can_terminate_in_state(&self, state: usize) -> bool {
+    pub fn can_terminate_in_state(&self, state: AutomatonState) -> bool {
         self.get_termination_probability(state).is_positive()
     }
 
@@ -188,7 +176,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.terminating_probabilities = new_terminating_probabilities;
     }
 
-    pub fn get_termination_probability(&self, state: usize) -> &Fraction {
+    pub fn get_termination_probability(&self, state: AutomatonState) -> &Fraction {
         &self.terminating_probabilities[state]
     }
 
@@ -498,10 +486,10 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
             //read transitions
 
             //read source
-            let source = lreader.next_line_index().with_context(|| {
+            let source = AutomatonState::of(lreader.next_line_index().with_context(|| {
                 format!("could not read source state of transition {}", transition)
-            })?;
-            if source >= result.number_of_states() {
+            })?);
+            if source.0 >= number_of_states {
                 return Err(anyhow!(
                     "transition {} has an invalid source {}",
                     transition,
@@ -510,10 +498,10 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
             }
 
             //read target
-            let target = lreader.next_line_index().with_context(|| {
+            let target = AutomatonState::of(lreader.next_line_index().with_context(|| {
                 format!("could not read target state of transition {}", transition)
-            })?;
-            if target >= result.number_of_states() {
+            })?);
+            if target.0 >= number_of_states {
                 return Err(anyhow!(
                     "transition {} has an invalid target {}",
                     transition,
@@ -552,7 +540,11 @@ from_string!(StochasticNondeterministicFiniteAutomaton);
 
 impl Infoable for StochasticNondeterministicFiniteAutomaton {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-        writeln!(f, "Number of states\t{}", self.number_of_states())?;
+        writeln!(
+            f,
+            "Number of states\t{}",
+            self.terminating_probabilities.len()
+        )?;
         writeln!(f, "Number of transitions\t{}", self.number_of_transitions())?;
         writeln!(
             f,
@@ -629,16 +621,21 @@ impl Exportable for StochasticNondeterministicFiniteAutomaton {
 }
 
 impl<'a> IntoIterator for &'a StochasticNondeterministicFiniteAutomaton {
-    type Item = (&'a usize, &'a usize, &'a Option<Activity>, &'a Fraction);
+    type Item = (
+        &'a AutomatonState,
+        &'a AutomatonState,
+        &'a Option<Activity>,
+        &'a Fraction,
+    );
 
     type IntoIter = StochasticNondeterministicFiniteAutomatonIterator<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
-            it_sources: self.get_sources().iter(),
-            it_targets: self.get_targets().iter(),
-            it_activities: self.get_activities().iter(),
-            it_probabilities: self.get_probabilities().iter(),
+            it_sources: self.sources.iter(),
+            it_targets: self.targets.iter(),
+            it_activities: self.activities.iter(),
+            it_probabilities: self.probabilities.iter(),
         }
     }
 }
@@ -740,7 +737,7 @@ impl TestActivityKey for StochasticNondeterministicFiniteAutomaton {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Graphable, StochasticNondeterministicFiniteAutomaton};
+    use crate::{AutomatonState, Graphable, StochasticNondeterministicFiniteAutomaton};
     use itertools::Itertools;
     use std::fs;
 
@@ -751,14 +748,14 @@ mod tests {
             .parse::<StochasticNondeterministicFiniteAutomaton>()
             .unwrap();
 
-        let mut it = dfm.outgoing_edges(0);
+        let mut it = dfm.outgoing_edges(AutomatonState::of(0));
         assert_eq!(it.try_len().unwrap(), 3);
         assert!(it.next().is_some());
         assert!(it.next().is_some());
         assert!(it.next().is_some());
         assert!(it.next().is_none());
 
-        let mut it = dfm.outgoing_edges(1);
+        let mut it = dfm.outgoing_edges(AutomatonState::of(1));
         assert_eq!(it.try_len().unwrap(), 1);
         assert!(it.next().is_some());
         assert!(it.next().is_none());
@@ -771,8 +768,8 @@ mod tests {
             .parse::<StochasticNondeterministicFiniteAutomaton>()
             .unwrap();
 
-        assert_eq!(dfm.number_of_states(), 7);
-        assert_eq!(dfm.number_of_transitions(), 8);
+        assert_eq!(dfm.terminating_probabilities.len(), 7);
+        assert_eq!(dfm.sources.len(), 8);
 
         dfm.to_dot().unwrap();
     }

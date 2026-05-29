@@ -25,7 +25,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
 
             //create automaton
             for (trace, probability) in &value.traces {
-                let mut state = result.get_initial_state().unwrap();
+                let mut state = result.initial_state.unwrap();
                 for activity in trace {
                     state = result.take_or_add_transition(state, *activity, probability.clone());
                 }
@@ -78,9 +78,9 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
                 let activity = value.state_2_activity[node.0];
                 result
                     .add_transition(
-                        initial_state,
+                        AutomatonState::of(initial_state),
                         activity,
-                        activity.id + 1,
+                        AutomatonState::of(activity.id + 1),
                         weight / &sum_of_start_activities,
                     )
                     .unwrap(); //by construction, outgoing probability cannot become lower than 0
@@ -117,9 +117,11 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
                         if value.weights[i].is_positive() {
                             result
                                 .add_transition(
-                                    activity.id + 1,
+                                    AutomatonState::of(activity.id + 1),
                                     value.state_2_activity[value.targets[i].0],
-                                    value.state_2_activity[value.targets[i].0].id + 1,
+                                    AutomatonState::of(
+                                        value.state_2_activity[value.targets[i].0].id + 1,
+                                    ),
                                     &value.weights[i] / &sum,
                                 )
                                 .unwrap(); //by construction, remaining outgoing probability cannot become negative
@@ -154,7 +156,7 @@ macro_rules! log {
 
                     //create automaton
                     for trace in value.iter_traces() {
-                        let mut state = result.get_initial_state().unwrap();
+                        let mut state = result.initial_state.unwrap();
 
                         for activity in trace {
                             state = result.take_or_add_transition(
@@ -219,12 +221,11 @@ from_via_log!(CompressedEventLogTraceAttributes);
 
 #[cfg(test)]
 mod tests {
-    use ebi_bpmn::ebi_arithmetic::{Fraction, Zero, f0};
-
     use crate::{
         DirectlyFollowsGraph, FiniteStochasticLanguage, HasActivityKey, NumberOfTraces,
-        StochasticDeterministicFiniteAutomaton,
+        StochasticDeterministicFiniteAutomaton, a,
     };
+    use ebi_bpmn::ebi_arithmetic::{Fraction, Zero, f0};
     use std::fs;
 
     #[test]
@@ -233,8 +234,8 @@ mod tests {
         let slang = fin.parse::<FiniteStochasticLanguage>().unwrap();
         assert_eq!(slang.number_of_traces(), 3);
         let sdfa: StochasticDeterministicFiniteAutomaton = slang.into();
-        assert_eq!(sdfa.number_of_states(), 6);
-        assert_eq!(sdfa.number_of_transitions(), 5);
+        assert_eq!(sdfa.terminating_probabilities.len(), 6);
+        assert_eq!(sdfa.sources.len(), 5);
     }
 
     #[test]
@@ -248,10 +249,10 @@ mod tests {
         assert_eq!(dfg.start_activity_weight(b), Fraction::from((3, 5)));
 
         let snfa: StochasticDeterministicFiniteAutomaton = dfg.into();
-        assert_eq!(snfa.number_of_states(), 3);
-        assert_eq!(snfa.number_of_transitions(), 5);
-        assert_eq!(snfa.sources, [0, 0, 1, 1, 2]);
-        assert_eq!(snfa.targets, [1, 2, 1, 2, 1]);
+        assert_eq!(snfa.terminating_probabilities.len(), 3);
+        assert_eq!(snfa.sources.len(), 5);
+        assert_eq!(snfa.sources, [a!(0), a!(0), a!(1), a!(1), a!(2)]);
+        assert_eq!(snfa.targets, [a!(1), a!(2), a!(1), a!(2), a!(1)]);
         assert_eq!(
             snfa.probabilities,
             [

@@ -387,8 +387,8 @@ mod tests {
 
         let dfa = DeterministicFiniteAutomaton::from(snfa);
 
-        assert_eq!(dfa.number_of_states(), 4);
-        assert_eq!(dfa.get_sources().len(), 5);
+        assert_eq!(dfa.final_states.len(), 4);
+        assert_eq!(dfa.sources.len(), 5);
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod tests {
 
         let dfa = DeterministicFiniteAutomaton::from(sdfm);
 
-        assert_eq!(dfa.number_of_states(), 3);
+        assert_eq!(dfa.final_states.len(), 3);
         assert_eq!(dfa.sources.len(), 5);
     }
 }

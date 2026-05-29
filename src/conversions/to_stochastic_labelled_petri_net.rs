@@ -1,5 +1,6 @@
 use crate::{
-    ActivityKeyTranslator, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
+    ActivityKeyTranslator, AutomatonState, HasActivityKey,
+    StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
         directly_follows_graph::DirectlyFollowsGraph, labelled_petri_net::LabelledPetriNet,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -13,7 +14,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
     fn from(value: StochasticDeterministicFiniteAutomaton) -> Self {
         log::info!("convert SDFA to SLPN");
 
-        if let Some(initial_state) = value.get_initial_state() {
+        if let Some(initial_state) = value.initial_state {
             let mut result = LabelledPetriNet::new();
             let translator =
                 ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
@@ -21,14 +22,21 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
 
             //add places
             let mut state2place = vec![];
-            for state in 0..value.number_of_states() {
+            for state in 0..value.terminating_probabilities.len() {
                 let lpn_place = result.add_place();
                 state2place.push(lpn_place);
 
                 //add termination
-                if value.get_termination_probability(state).is_positive() {
+                if value
+                    .get_termination_probability(AutomatonState::of(state))
+                    .is_positive()
+                {
                     let lpn_transition = result.add_transition(None);
-                    weights.push(value.get_termination_probability(state).clone());
+                    weights.push(
+                        value
+                            .get_termination_probability(AutomatonState::of(state))
+                            .clone(),
+                    );
                     result
                         .add_place_transition_arc(lpn_place, lpn_transition, 1)
                         .unwrap();
@@ -206,7 +214,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
 
         //add places
         let mut state2place = vec![];
-        for state in 0..value.number_of_states() {
+        for state in 0..value.terminating_probabilities.len() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 

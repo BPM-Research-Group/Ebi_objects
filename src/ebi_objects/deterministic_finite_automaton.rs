@@ -13,7 +13,7 @@ use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 use std::{
-    cmp::{Ordering, max},
+    cmp::Ordering,
     fmt::{Display, Formatter},
     io::BufRead,
 };
@@ -41,18 +41,6 @@ impl DeterministicFiniteAutomaton {
             activities: vec![],
             final_states: vec![false],
         }
-    }
-
-    pub fn get_sources(&self) -> &Vec<AutomatonState> {
-        &self.sources
-    }
-
-    pub fn get_targets(&self) -> &Vec<AutomatonState> {
-        &self.targets
-    }
-
-    pub fn get_activities(&self) -> &Vec<Activity> {
-        &self.activities
     }
 
     pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
@@ -396,8 +384,6 @@ mod tests {
         let mut dfa = DeterministicFiniteAutomaton::new();
         let state = dfa.initial_state.unwrap();
         let activity = dfa.activity_key_mut().process_activity("a");
-
-        dfa.get_sources();
 
         assert!(dfa.add_transition(state, activity, state).is_ok());
         assert!(dfa.add_transition(state, activity, state).is_err());
