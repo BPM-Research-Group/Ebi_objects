@@ -23,6 +23,7 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, hash_map},
     fmt::Display,
+    ops::{Index, IndexMut},
 };
 
 #[derive(ActivityKey, Clone, Debug)]
@@ -151,7 +152,7 @@ impl DirectlyFollowsGraph {
     }
 
     fn add_or_get_node(&mut self, activity: Activity) -> Node {
-        let new_node = Node(self.activity_2_node.len(), ());
+        let new_node = Node::of(self.activity_2_node.len());
         match self.activity_2_node.entry(activity) {
             intmap::Entry::Occupied(occupied_entry) => *occupied_entry.get(),
             intmap::Entry::Vacant(vacant_entry) => {
@@ -670,15 +671,15 @@ impl TestActivityKey for DirectlyFollowsGraph {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
-pub struct Node(pub usize, ());
+pub struct Node(pub usize);
 
 impl Node {
     pub fn zero() -> Self {
-        Node(0, ())
+        Node(0)
     }
 
     pub fn of(id: usize) -> Self {
-        Node(id, ())
+        Node(id)
     }
 }
 
@@ -689,5 +690,19 @@ impl IntKey for Node {
 
     fn into_int(self) -> Self::Int {
         self.0
+    }
+}
+
+impl<T> Index<Node> for Vec<T> {
+    type Output = T;
+
+    fn index(&self, index: Node) -> &Self::Output {
+        &self[index.0]
+    }
+}
+
+impl<T> IndexMut<Node> for Vec<T> {
+    fn index_mut(&mut self, index: Node) -> &mut T {
+        &mut self[index.0]
     }
 }
