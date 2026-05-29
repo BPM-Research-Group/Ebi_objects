@@ -59,17 +59,14 @@ impl DirectlyFollowsGraph {
         self.state_2_activity.len() + 2
     }
 
-    pub fn edge_weight(&self, source: Activity, target: Activity) -> Option<&Fraction> {
-        if let (Some(source), Some(target)) = (
-            self.activity_2_state.get(source),
-            self.activity_2_state.get(target),
-        ) {
-            let (found, from) = self.binary_search(*source, *target);
-            if found {
-                Some(&self.weights[from])
-            } else {
-                None
-            }
+    pub fn get_states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+    }
+
+    pub fn edge_weight(&self, source: AutomatonState, target: AutomatonState) -> Option<&Fraction> {
+        let (found, from) = self.binary_search(source, target);
+        if found {
+            Some(&self.weights[from])
         } else {
             None
         }
