@@ -53,8 +53,8 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn edge_weight(&self, source: AutomatonState, target: AutomatonState) -> Option<&Fraction> {
-        let (found, from) = self.binary_search(source, target);
+    pub fn edge_weight(&self, source: Option<AutomatonState>, target: Option<AutomatonState>) -> Option<&Fraction> {
+        let (found, from) = self.binary_search(source?, target?);
         if found {
             Some(&self.weights[from])
         } else {
