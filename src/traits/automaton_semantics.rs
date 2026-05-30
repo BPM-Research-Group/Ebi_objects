@@ -9,9 +9,11 @@ use std::{
 
 use crate::{
     DeterministicFiniteAutomaton, DirectlyFollowsGraph, StochasticDeterministicFiniteAutomaton,
-    ebi_objects::labelled_petri_net::TransitionIndex,
+    StochasticNondeterministicFiniteAutomaton, ebi_objects::labelled_petri_net::TransitionIndex,
 };
 
+/// In an AutomatonSemantics, a state is an AutomatonState. A transition is a TransitionIndex,
+/// which points uniquely to a target state. A transition may have multiple sources.
 pub trait AutomatonSemantics {
     /// Returns the initial state of the execution semantics of the automaton.
     /// May return a virtual state.
@@ -44,6 +46,8 @@ pub trait AutomatonSemantics {
     fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState>;
 
     fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity>;
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool;
 }
 
 /**
@@ -160,6 +164,10 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
             None
         }
     }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
+    }
 }
 
 /**
@@ -224,6 +232,10 @@ impl AutomatonSemantics for DeterministicFiniteAutomaton {
             Some(self.activities[transition])
         }
     }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
+    }
 }
 
 impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
@@ -257,7 +269,9 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
         //check the DFA for enabled transitions
         let (_, mut i) = self.binary_search(state, 0);
         while i < self.sources.len() && self.sources[i] == state {
-            result.push(i);
+            if self.probabilities[i].is_positive() {
+                result.push(i);
+            }
             i += 1;
         }
 
@@ -285,6 +299,84 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
         } else {
             Some(self.activities[transition])
         }
+    }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
+    }
+}
+
+/**
+ * terminating_probabilities.len() = final state
+ *
+ * 0..sources.len() = explicit transitions
+ * sources.len()    = transition to final state
+ */
+impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
+    fn initial_state(&self) -> Option<AutomatonState> {
+        self.initial_state
+    }
+
+    fn number_of_states(&self) -> usize {
+        self.sources.len() + 1
+    }
+
+    fn states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.terminating_probabilities.len() + 1).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 == self.terminating_probabilities.len()
+    }
+
+    fn number_of_transitions(&self) -> usize {
+        self.sources.len() + 1
+    }
+
+    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
+        0..AutomatonSemantics::number_of_transitions(self)
+    }
+
+    fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
+        let mut result = vec![];
+
+        //check the DFA for enabled transitions
+        let (_, mut i) = self.binary_search(state, 0, AutomatonState::zero());
+        while i < self.sources.len() && self.sources[i] == state {
+            if self.probabilities[i].is_positive() {
+                result.push(i);
+            }
+            i += 1;
+        }
+
+        //if the DFA can terminate, then add a termination silent transition
+        if state.0 <= self.terminating_probabilities.len()
+            && self.terminating_probabilities[state].is_positive()
+        {
+            result.push(self.sources.len())
+        }
+
+        return result;
+    }
+
+    fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
+        if transition >= self.sources.len() {
+            return Some(AutomatonState::of(self.terminating_probabilities.len()));
+        }
+
+        Some(self.targets[transition])
+    }
+
+    fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity> {
+        if transition == self.sources.len() {
+            None
+        } else {
+            self.activities[transition]
+        }
+    }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
     }
 }
 
@@ -365,11 +457,9 @@ pub use a;
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
-    use ebi_activity_key::{HasActivityKey, TranslateActivityKey};
-
     use crate::{AutomatonSemantics, DirectlyFollowsGraph, FiniteStochasticLanguage};
+    use ebi_activity_key::{HasActivityKey, TranslateActivityKey};
+    use std::fs;
 
     macro_rules! assert_execute_expect {
         ($tree:ident, $state:ident, $t:expr, $e:expr) => {
