@@ -787,7 +787,7 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
         }
 
         //if the DFA can terminate, then add a termination silent transition
-        if state.0 <= self.terminating_probabilities.len()
+        if state.0 < self.terminating_probabilities.len()
             && self.terminating_probabilities[state].is_positive()
         {
             result.push(self.sources.len())
