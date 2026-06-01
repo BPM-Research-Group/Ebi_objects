@@ -95,6 +95,7 @@ pub mod traits {
     pub mod infoable;
     pub mod number_of_traces;
     pub mod start_end_activities;
+    pub mod stochastic_automaton_semantics;
     pub mod trace_attribute_iterators;
     pub mod trace_attributes;
     pub mod trace_iterators;
@@ -115,6 +116,7 @@ pub use crate::traits::graphable::Graphable;
 pub use crate::traits::importable::Importable;
 pub use crate::traits::infoable::Infoable;
 pub use crate::traits::number_of_traces::NumberOfTraces;
+pub use crate::traits::stochastic_automaton_semantics::*;
 pub use crate::traits::trace_attribute_iterators::*;
 pub use crate::traits::trace_attributes::*;
 pub use crate::traits::trace_iterators::*;

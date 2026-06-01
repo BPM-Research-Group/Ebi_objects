@@ -1,9 +1,15 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, Graphable, HasActivityKey, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject, dfg_format_comparison, ebi_objects::labelled_petri_net::TransitionIndex, json, traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, Graphable,
+    HasActivityKey, Infoable, StochasticAutomatonSemantics, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    dfg_format_comparison,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+    json,
+    traits::{
         exportable::Exportable,
         graphable,
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
-    }
+    },
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
@@ -21,6 +27,8 @@ use std::{
     fmt::Display,
 };
 
+/// A directly follows graph: a graph of weighted transitions, supports empty traces, and explicit start and end activities.
+/// The fields are public, however for convenience of access, the traits `AutomatonSemantics` and `StochasticAutomatonSemantics` are recommended.
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
     pub activity_key: ActivityKey,
@@ -87,7 +95,7 @@ impl DirectlyFollowsGraph {
 
     pub fn end_activity_weight(&self, activity: Activity) -> Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            self.start_activities
+            self.end_activities
                 .get(*node)
                 .cloned()
                 .unwrap_or_else(|| Fraction::zero())
@@ -834,6 +842,36 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
 
     fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
         transition == self.sources.len()
+    }
+}
+
+impl StochasticAutomatonSemantics for DirectlyFollowsGraph {
+    fn outgoing_transitions_weight_sum(&self, state: AutomatonState) -> Fraction {
+        self.outgoing_transitions(state)
+            .into_iter()
+            .filter_map(|transition| self.transition_2_weight(state, transition))
+            .sum()
+    }
+
+    fn transition_2_weight(
+        &self,
+        state: AutomatonState,
+        transition: TransitionIndex,
+    ) -> Option<&Fraction> {
+        if transition == self.sources.len() {
+            //end
+            self.end_activities.get(state)
+        } else if transition < self.sources.len() {
+            //edge
+            let node = transition;
+            self.weights.get(node)
+        } else if transition < self.sources.len() + 1 + self.state_2_activity.len() {
+            //start
+            let node = transition - (self.sources.len() + 1);
+            self.start_activities.get(AutomatonState::of(node))
+        } else {
+            None
+        }
     }
 }
 

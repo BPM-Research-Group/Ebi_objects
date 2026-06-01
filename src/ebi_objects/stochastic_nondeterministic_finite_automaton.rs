@@ -1,7 +1,7 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject,
-    Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey,
-    dfg_format_comparison,
+    Exportable, Graphable, HasActivityKey, Importable, Infoable, StochasticAutomatonSemantics,
+    TranslateActivityKey, dfg_format_comparison,
     ebi_objects::labelled_petri_net::TransitionIndex,
     line_reader::LineReader,
     traits::{
@@ -814,6 +814,25 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
 
     fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
         transition == self.sources.len()
+    }
+}
+
+impl StochasticAutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
+    fn outgoing_transitions_weight_sum(&self, _state: AutomatonState) -> Fraction {
+        Fraction::one()
+    }
+
+    fn transition_2_weight(
+        &self,
+        source: AutomatonState,
+        transition: TransitionIndex,
+    ) -> Option<&Fraction> {
+        if transition == self.sources.len() {
+            //terminating transition
+            self.terminating_probabilities.get(source.0)
+        } else {
+            self.probabilities.get(transition)
+        }
     }
 }
 
