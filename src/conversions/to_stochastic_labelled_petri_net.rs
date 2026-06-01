@@ -214,14 +214,14 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
 
         //add places
         let mut state2place = vec![];
-        for state in 0..value.terminating_probabilities.len() {
+        for state in 0..value.termination_probabilities.len() {
             let lpn_place = result.add_place();
             state2place.push(lpn_place);
 
             //add termination
-            if value.terminating_probabilities[state].is_positive() {
+            if value.termination_probabilities[state].is_positive() {
                 let lpn_transition = result.add_transition(None);
-                weights.push(value.terminating_probabilities[state].clone());
+                weights.push(value.termination_probabilities[state].clone());
                 result
                     .add_place_transition_arc(lpn_place, lpn_transition, 1)
                     .unwrap();

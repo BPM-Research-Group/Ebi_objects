@@ -98,7 +98,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticNondeterministic
             targets,
             activities: activities.into_iter().map(|a| Some(a)).collect(),
             probabilities,
-            terminating_probabilities,
+            termination_probabilities: terminating_probabilities,
         }
     }
 }
@@ -284,7 +284,7 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
                 targets: vec![],
                 activities: vec![],
                 probabilities: vec![],
-                terminating_probabilities: vec![],
+                termination_probabilities: vec![],
             };
         };
 
@@ -358,7 +358,7 @@ mod tests {
         assert_eq!(dfg.start_activity_weight(b), Fraction::from((3, 5)));
 
         let snfa: StochasticNondeterministicFiniteAutomaton = dfg.into();
-        assert_eq!(snfa.terminating_probabilities.len(), 3);
+        assert_eq!(snfa.termination_probabilities.len(), 3);
         assert_eq!(snfa.sources.len(), 5);
         assert_eq!(snfa.sources, [a!(0), a!(0), a!(1), a!(1), a!(2)]);
         assert_eq!(snfa.targets, [a!(1), a!(2), a!(1), a!(2), a!(1)]);
@@ -373,7 +373,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            snfa.terminating_probabilities,
+            snfa.termination_probabilities,
             [f0!(), Fraction::from((2, 3)), Fraction::from((1, 4))]
         );
     }
@@ -386,15 +386,15 @@ mod tests {
         let sdfa = StochasticNondeterministicFiniteAutomaton::from(slang);
 
         assert!(
-            sdfa.terminating_probabilities
+            sdfa.termination_probabilities
                 .contains(&Fraction::from((8, 15)))
         );
         assert!(
-            sdfa.terminating_probabilities
+            sdfa.termination_probabilities
                 .contains(&Fraction::from((2, 3)))
         );
         assert!(
-            sdfa.terminating_probabilities
+            sdfa.termination_probabilities
                 .contains(&Fraction::from((4, 7)))
         );
     }
@@ -411,7 +411,7 @@ mod tests {
             snfa.probabilities,
             [f1!(), Fraction::from((1, 3)), Fraction::from((2, 3)), f1!()]
         );
-        assert_eq!(snfa.terminating_probabilities, [f0!(), f0!(), f0!(), f1!()]);
+        assert_eq!(snfa.termination_probabilities, [f0!(), f0!(), f0!(), f1!()]);
     }
 
     #[test]
@@ -442,7 +442,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            snfa.terminating_probabilities,
+            snfa.termination_probabilities,
             [
                 Fraction::zero(),
                 Fraction::from((2, 3)),

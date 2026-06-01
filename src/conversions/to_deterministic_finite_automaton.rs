@@ -311,7 +311,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
 
                 //walk through all markings
                 while let Some(marking) = inner_queue.pop_front() {
-                    if snfa.get_termination_probability(marking).is_positive() {
+                    if snfa.termination_probabilities[marking].is_positive() {
                         result.set_final_state(node, true);
                     } else {
                         for (_, target_marking, label, _) in snfa.outgoing_edges(marking) {
