@@ -343,7 +343,27 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
             Option<Activity>,
         ),
     > {
-        
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter().zip(self.activities.iter()))
+            .enumerate()
+            .map(|(transition, (source, (target, activity)))| {
+                (transition, *source, *target, Some(*activity))
+            });
+
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.terminating_probabilities.len());
+        let it2 = self
+            .terminating_probabilities
+            .iter()
+            .enumerate()
+            .filter(|(_, terminating_probability)| terminating_probability.is_positive())
+            .map(move |(state, _)| (end_transition, AutomatonState::of(state), end_state, None));
+
+        it1.chain(it2)
     }
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
@@ -422,7 +442,27 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
             Option<Activity>,
         ),
     > {
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter().zip(self.activities.iter()))
+            .enumerate()
+            .map(|(transition, (source, (target, activity)))| {
+                (transition, *source, *target, *activity)
+            });
 
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.terminating_probabilities.len());
+        let it2 = self
+            .terminating_probabilities
+            .iter()
+            .enumerate()
+            .filter(|(_, terminating_probability)| terminating_probability.is_positive())
+            .map(move |(state, _)| (end_transition, AutomatonState::of(state), end_state, None));
+
+        it1.chain(it2)
     }
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
