@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// In an AutomatonSemantics, a state is an AutomatonState. A transition is a TransitionIndex,
-/// which points uniquely to a target state. A transition may have multiple sources.
+/// which points uniquely to a target state and an activity. However, a transition may have multiple sources.
 pub trait AutomatonSemantics {
     /// Returns the initial state of the execution semantics of the automaton.
     /// May return a virtual state.
@@ -31,13 +31,20 @@ pub trait AutomatonSemantics {
     /// Returns whether a state in the execution semantics of the automaton is a final state.
     fn is_state_final(&self, state: AutomatonState) -> bool;
 
-    /// Returns the number of transitions in the execution semantics of the automaton.
-    /// May be larger than the transitions -in- the automaton.
-    fn number_of_transitions(&self) -> usize;
-
     /// Returns the transitions in the execution semantics of the automaton.
     /// Some of these transitions may be virtual.
-    fn transitions(&self) -> impl Iterator<Item = TransitionIndex>;
+    /// Returns: (transition index, source state, target state, activity)
+    /// Note that the indices of transitions are not unique.
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    >;
 
     /// Returns the outgoing transitions of a state in the execution semantics of the automaton.
     /// Some of these transitions may be virtual.
@@ -57,7 +64,7 @@ pub trait AutomatonSemantics {
  *
  * Transitions:
  * End activity/Initial state -> final state = edges[len]
- * initial state -> start activity = edges[len] + 1 + ...
+ * initial state -> start activity = edges[len] + 1
  */
 impl AutomatonSemantics for DirectlyFollowsGraph {
     fn initial_state(&self) -> Option<AutomatonState> {
@@ -72,10 +79,6 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
         self.state_2_activity.len() + 2
     }
 
-    fn number_of_transitions(&self) -> usize {
-        self.sources.len() + 1 + self.state_2_activity.len()
-    }
-
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
         (0..self.number_of_states()).map(|x| AutomatonState::of(x))
     }
@@ -84,8 +87,58 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
         state.0 > self.state_2_activity.len()
     }
 
-    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
-        0..self.number_of_transitions()
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter().zip(self.weights.iter()))
+            .enumerate()
+            .filter(|(_, (_, (_, weight)))| weight.is_positive())
+            .map(|(transition, (source, (target, _)))| {
+                (
+                    transition,
+                    *source,
+                    *target,
+                    Some(self.state_2_activity[target]),
+                )
+            });
+
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.state_2_activity.len() + 1);
+        let it2 = self
+            .end_activities
+            .iter()
+            .filter(|(_, weight)| weight.is_positive())
+            .map(move |(state, _)| (end_transition, state, end_state, None));
+
+        //start transitions
+        let start_transition = self.sources.len() + 1;
+        let start_state = AutomatonState::of(self.state_2_activity.len());
+        let it3 = self
+            .start_activities
+            .iter()
+            .filter(|(_, weight)| weight.is_positive())
+            .map(move |(state, _)| {
+                (
+                    start_transition,
+                    start_state,
+                    state,
+                    Some(self.state_2_activity[state]),
+                )
+            });
+
+        it1.chain(it2).chain(it3)
     }
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<usize> {
@@ -140,7 +193,7 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
         } else if transition < self.sources.len() {
             //edge
             Some(AutomatonState::of(self.targets[transition].0))
-        } else if transition < self.number_of_transitions() {
+        } else if transition < self.sources.len() + 1 + self.state_2_activity.len() {
             //start
             Some(AutomatonState::of(transition - (self.sources.len() + 1)))
         } else {
@@ -156,7 +209,7 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
             //edge
             let node = transition;
             Some(self.state_2_activity[self.targets[node].0])
-        } else if transition < self.number_of_transitions() {
+        } else if transition < self.sources.len() + 1 + self.state_2_activity.len() {
             //start
             let node = transition - (self.sources.len() + 1);
             Some(self.state_2_activity[node])
@@ -183,10 +236,6 @@ impl AutomatonSemantics for DeterministicFiniteAutomaton {
         self.final_states.len() + 1
     }
 
-    fn number_of_transitions(&self) -> usize {
-        self.sources.len() + 1
-    }
-
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
         (0..self.number_of_states()).map(|x| AutomatonState::of(x))
     }
@@ -195,8 +244,37 @@ impl AutomatonSemantics for DeterministicFiniteAutomaton {
         state.0 > self.final_states.len()
     }
 
-    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
-        0..(self.sources.len() + 1)
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter().zip(self.activities.iter()))
+            .enumerate()
+            .map(|(transition, (source, (target, activity)))| {
+                (transition, *source, *target, Some(*activity))
+            });
+
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.final_states.len());
+        let it2 = self
+            .final_states
+            .iter()
+            .enumerate()
+            .filter(|(_, is_final)| **is_final)
+            .map(move |(state, _)| (end_transition, AutomatonState::of(state), end_state, None));
+
+        it1.chain(it2)
     }
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
@@ -247,10 +325,6 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
         self.terminating_probabilities.len() + 1
     }
 
-    fn number_of_transitions(&self) -> usize {
-        self.sources.len() + 1
-    }
-
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
         (0..self.number_of_states()).map(|x| AutomatonState::of(x))
     }
@@ -259,8 +333,17 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
         state.0 > self.terminating_probabilities.len()
     }
 
-    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
-        0..(self.sources.len() + 1)
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
+        
     }
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
@@ -329,12 +412,17 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
         state.0 == self.terminating_probabilities.len()
     }
 
-    fn number_of_transitions(&self) -> usize {
-        self.sources.len() + 1
-    }
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
 
-    fn transitions(&self) -> impl Iterator<Item = TransitionIndex> {
-        0..AutomatonSemantics::number_of_transitions(self)
     }
 
     fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
