@@ -1,6 +1,8 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, AutomatonState, EbiObject, Exportable, Graphable,
-    HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison,
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject,
+    Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey,
+    dfg_format_comparison,
+    ebi_objects::labelled_petri_net::TransitionIndex,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -103,10 +105,6 @@ impl StochasticNondeterministicFiniteAutomaton {
             }
         }
         Ok(())
-    }
-
-    pub fn number_of_transitions(&self) -> usize {
-        self.sources.len()
     }
 
     /**
@@ -267,7 +265,7 @@ impl StochasticNondeterministicFiniteAutomaton {
             let mut transition = 0; //next transition to check
             let mut sum = self.terminating_probabilities[0].clone(); //sum probability of the next state
             while state < self.terminating_probabilities.len() {
-                if transition == self.number_of_transitions() {
+                if transition == self.sources.len() {
                     //there are no more transitions, so move to the next state
                     if (sum > Fraction::one() || sum < Fraction::one()) && !sum.is_one() {
                         return Err(anyhow!(
@@ -378,13 +376,9 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
             "# number of states\n{}",
             self.terminating_probabilities.len()
         )?;
-        writeln!(
-            f,
-            "# number of transitions\n{}",
-            self.number_of_transitions()
-        )?;
+        writeln!(f, "# number of transitions\n{}", self.sources.len())?;
 
-        for transition in 0..self.number_of_transitions() {
+        for transition in 0..self.sources.len() {
             writeln!(
                 f,
                 "# transition {}\n# source\n{}\n# target\n{}\n# probability\n{}",
@@ -545,7 +539,7 @@ impl Infoable for StochasticNondeterministicFiniteAutomaton {
             "Number of states\t{}",
             self.terminating_probabilities.len()
         )?;
-        writeln!(f, "Number of transitions\t{}", self.number_of_transitions())?;
+        writeln!(f, "Number of transitions\t{}", self.sources.len())?;
         writeln!(
             f,
             "Number of activities\t{}",
@@ -571,7 +565,7 @@ impl Graphable for StochasticNondeterministicFiniteAutomaton {
             ));
         }
 
-        for transition in 0..self.number_of_transitions() {
+        for transition in 0..self.sources.len() {
             let source = places[self.sources[transition]];
             let target = places[self.targets[transition]];
             let probability = &self.probabilities[transition];
@@ -721,6 +715,105 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.it_sources.size_hint()
+    }
+}
+
+/**
+ * terminating_probabilities.len() = final state
+ *
+ * 0..sources.len() = explicit transitions
+ * sources.len()    = transition to final state
+ */
+impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
+    fn initial_state(&self) -> Option<AutomatonState> {
+        self.initial_state
+    }
+
+    fn number_of_states(&self) -> usize {
+        self.sources.len() + 1
+    }
+
+    fn states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.terminating_probabilities.len() + 1).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 == self.terminating_probabilities.len()
+    }
+
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter().zip(self.activities.iter()))
+            .enumerate()
+            .map(|(transition, (source, (target, activity)))| {
+                (transition, *source, *target, *activity)
+            });
+
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.terminating_probabilities.len());
+        let it2 = self
+            .terminating_probabilities
+            .iter()
+            .enumerate()
+            .filter(|(_, terminating_probability)| terminating_probability.is_positive())
+            .map(move |(state, _)| (end_transition, AutomatonState::of(state), end_state, None));
+
+        it1.chain(it2)
+    }
+
+    fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
+        let mut result = vec![];
+
+        //check the DFA for enabled transitions
+        let (_, mut i) = self.binary_search(state, 0, AutomatonState::zero());
+        while i < self.sources.len() && self.sources[i] == state {
+            if self.probabilities[i].is_positive() {
+                result.push(i);
+            }
+            i += 1;
+        }
+
+        //if the DFA can terminate, then add a termination silent transition
+        if state.0 <= self.terminating_probabilities.len()
+            && self.terminating_probabilities[state].is_positive()
+        {
+            result.push(self.sources.len())
+        }
+
+        return result;
+    }
+
+    fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
+        if transition >= self.sources.len() {
+            return Some(AutomatonState::of(self.terminating_probabilities.len()));
+        }
+
+        Some(self.targets[transition])
+    }
+
+    fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity> {
+        if transition == self.sources.len() {
+            None
+        } else {
+            self.activities[transition]
+        }
+    }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
     }
 }
 

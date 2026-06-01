@@ -1,10 +1,8 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, AutomatonState, EbiObject, Exportable, Graphable,
-    HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, json,
-    traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, ebi_objects::labelled_petri_net::TransitionIndex, json, traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    },
+    }
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
@@ -362,6 +360,99 @@ impl Graphable for DeterministicFiniteAutomaton {
         }
 
         Ok(graph)
+    }
+}
+
+/**
+ * states.len() = final state
+ * sources.len() = silent transition to final state
+ */
+impl AutomatonSemantics for DeterministicFiniteAutomaton {
+    fn initial_state(&self) -> Option<AutomatonState> {
+        self.initial_state
+    }
+
+    fn number_of_states(&self) -> usize {
+        self.final_states.len() + 1
+    }
+
+    fn states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 >= self.final_states.len()
+    }
+
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter().zip(self.activities.iter()))
+            .enumerate()
+            .map(|(transition, (source, (target, activity)))| {
+                (transition, *source, *target, Some(*activity))
+            });
+
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.final_states.len());
+        let it2 = self
+            .final_states
+            .iter()
+            .enumerate()
+            .filter(|(_, is_final)| **is_final)
+            .map(move |(state, _)| (end_transition, AutomatonState::of(state), end_state, None));
+
+        it1.chain(it2)
+    }
+
+    fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
+        let mut result = vec![];
+
+        //check the DFA for enabled transitions
+        let (_, mut i) = self.binary_search(state, 0);
+        while i < self.sources.len() && self.sources[i] == state {
+            result.push(i);
+            i += 1;
+        }
+
+        //if the DFA can terminate, then add a termination silent transition
+        if state.0 < self.final_states.len() && self.final_states[state.0] {
+            result.push(self.sources.len())
+        }
+
+        return result;
+    }
+
+    fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
+        if transition == self.sources.len() {
+            return Some(AutomatonState::of(self.final_states.len()));
+        }
+
+        Some(self.targets[transition])
+    }
+
+    fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity> {
+        if transition == self.sources.len() {
+            None
+        } else {
+            Some(self.activities[transition])
+        }
+    }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
     }
 }
 
