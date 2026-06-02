@@ -190,7 +190,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAu
     fn from(value: StochasticDirectlyFollowsModel) -> Self {
         let mut result = Self::new();
 
-        if value.node_2_activity.is_empty() && !value.has_empty_traces() {
+        if value.node_2_activity.is_empty() && !value.empty_traces_weight.is_positive() {
             //empty language
             result.initial_state = None;
             return result;
@@ -230,8 +230,10 @@ impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAu
                 //gather the outgoing sum
                 let mut sum = Fraction::zero();
                 {
-                    let (_, mut i) = value.binary_search(source, 0);
-                    while i < value.sources.len() && value.sources[i] == source {
+                    let (_, mut i) =
+                        value.binary_search(AutomatonState::of(source), AutomatonState::zero());
+                    while i < value.sources.len() && value.sources[i] == AutomatonState::of(source)
+                    {
                         if value.weights[i].is_positive() {
                             sum += &value.weights[i];
                         }
@@ -244,14 +246,15 @@ impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAu
                 }
 
                 // add the edges
-                let (_, mut i) = value.binary_search(source, 0);
-                while i < value.sources.len() && value.sources[i] == source {
+                let (_, mut i) =
+                    value.binary_search(AutomatonState::of(source), AutomatonState::zero());
+                while i < value.sources.len() && value.sources[i] == AutomatonState::of(source) {
                     if value.weights[i].is_positive() {
                         result
                             .add_transition(
                                 AutomatonState::of(source + 1),
                                 Some(value.node_2_activity[value.targets[i]]),
-                                AutomatonState::of(value.targets[i] + 1),
+                                AutomatonState::of(value.targets[i].0 + 1),
                                 &value.weights[i] / &sum,
                             )
                             .unwrap(); //by construction, remaining outgoing probability cannot become negative

@@ -86,7 +86,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
     fn from(value: StochasticDirectlyFollowsModel) -> Self {
         log::info!("convert SDFM to SLPN");
 
-        if value.node_2_activity.is_empty() && !value.has_empty_traces() {
+        if value.node_2_activity.is_empty() && !value.empty_traces_weight.is_positive() {
             //SDFA has an empty language, return a livelocked SLPN
             return Self::new_empty_language();
         }
@@ -106,7 +106,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
         /*
          * empty traces
          */
-        if value.has_empty_traces() {
+        if value.empty_traces_weight.is_positive() {
             let transition = result.add_transition(None, value.empty_traces_weight);
 
             result

@@ -70,7 +70,7 @@ impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
     fn from(value: DirectlyFollowsModel) -> Self {
         log::info!("convert DFM into DFA");
 
-        if value.node_2_activity.is_empty() && !value.has_empty_traces() {
+        if value.node_2_activity.is_empty() && !value.empty_traces {
             //empty language
             return Self {
                 activity_key: ActivityKey::new(),
@@ -98,8 +98,6 @@ impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
             .iter()
             .map(|target| node_2_activity[*target])
             .collect();
-        let sources = sources.into_iter().map(|x| AutomatonState::of(x)).collect();
-        let targets = targets.into_iter().map(|x| AutomatonState::of(x)).collect();
 
         //prepare final states: initial state is final if empty traces are present
         let mut final_states = end_nodes;
