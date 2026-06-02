@@ -30,6 +30,7 @@ pub trait AutomatonSemantics {
     /// Some of these transitions may be virtual.
     /// Returns: (transition index, source state, target state, activity)
     /// Note that the indices of transitions are not unique.
+    /// If the automaton is stochastic, then each returned transition has a non-zero weight.
     fn transitions(
         &self,
     ) -> impl Iterator<
