@@ -320,7 +320,8 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
                     });
 
                 //add the transition
-                let probability = get_transition_weight(&tree, &marking, transition) / &sum_weight;
+                let probability =
+                    get_transition_weight(&tree, &marking, transition).unwrap() / &sum_weight;
                 if let Some(activity) = get_transition_activity(&tree, transition) {
                     //labelled transition
                     let new_activity = translator.translate_activity(&activity);

@@ -411,11 +411,11 @@ pub fn get_transition_weight<'a>(
     tree: &'a StochasticProcessTree,
     _state: &TreeMarking,
     transition: TransitionIndex,
-) -> &'a Fraction {
+) -> Option<&'a Fraction> {
     if transition < tree.transition2node.len() {
-        &tree.weights[transition]
+        tree.weights.get(transition)
     } else {
-        &tree.termination_weight
+        Some(&tree.termination_weight)
     }
 }
 
