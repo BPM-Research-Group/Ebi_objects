@@ -7,6 +7,7 @@ use crate::{
     traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
+        stochastic_automaton_semantics::StochasticAutomatonSemantics,
     },
 };
 #[cfg(any(test, feature = "testactivities"))]
@@ -616,6 +617,25 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
 
     fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
         transition == self.sources.len()
+    }
+}
+
+impl StochasticAutomatonSemantics for StochasticDeterministicFiniteAutomaton {
+    fn outgoing_transitions_weight_sum(&self, _state: AutomatonState) -> Fraction {
+        Fraction::one()
+    }
+
+    fn transition_2_weight(
+        &self,
+        source: AutomatonState,
+        transition: TransitionIndex,
+    ) -> Option<&Fraction> {
+        if transition == self.sources.len() {
+            //terminating transition
+            self.terminating_probabilities.get(source.0)
+        } else {
+            self.probabilities.get(transition)
+        }
     }
 }
 

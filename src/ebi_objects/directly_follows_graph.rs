@@ -1,9 +1,15 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, Graphable, HasActivityKey, Infoable, TranslateActivityKey, constants::ebi_object::EbiObject, dfg_format_comparison, ebi_objects::labelled_petri_net::TransitionIndex, json, traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, Graphable,
+    HasActivityKey, Infoable, StochasticAutomatonSemantics, TranslateActivityKey,
+    constants::ebi_object::EbiObject,
+    dfg_format_comparison,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+    json,
+    traits::{
         exportable::Exportable,
         graphable,
         importable::{Importable, ImporterParameter, ImporterParameterValues, from_string},
-    }
+    },
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
@@ -21,6 +27,8 @@ use std::{
     fmt::Display,
 };
 
+/// A directly follows graph: a graph of weighted transitions, supports empty traces, and explicit start and end activities.
+/// The fields are public, however for convenience of access, the traits `AutomatonSemantics` and `StochasticAutomatonSemantics` are recommended.
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
     pub activity_key: ActivityKey,
@@ -87,7 +95,7 @@ impl DirectlyFollowsGraph {
 
     pub fn end_activity_weight(&self, activity: Activity) -> Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            self.start_activities
+            self.end_activities
                 .get(*node)
                 .cloned()
                 .unwrap_or_else(|| Fraction::zero())
@@ -155,7 +163,7 @@ impl DirectlyFollowsGraph {
             .map(|state| self.state_2_activity[state])
     }
 
-    fn add_or_get_node(&mut self, activity: Activity) -> AutomatonState {
+    fn add_or_get_state(&mut self, activity: Activity) -> AutomatonState {
         let new_node = AutomatonState::of(self.activity_2_state.len());
         match self.activity_2_state.entry(activity) {
             intmap::Entry::Occupied(occupied_entry) => *occupied_entry.get(),
@@ -172,7 +180,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn add_start_activity(&mut self, activity: Activity, weight: &Fraction) {
-        let node = self.add_or_get_node(activity);
+        let node = self.add_or_get_state(activity);
         match self.start_activities.entry(node) {
             Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += weight,
             Entry::Vacant(vacant_entry) => {
@@ -182,7 +190,7 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn add_end_activity(&mut self, activity: Activity, weight: &Fraction) {
-        let node = self.add_or_get_node(activity);
+        let node = self.add_or_get_state(activity);
         match self.end_activities.entry(node) {
             Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += weight,
             Entry::Vacant(vacant_entry) => {
@@ -192,8 +200,8 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn add_edge(&mut self, source: Activity, target: Activity, weight: &Fraction) {
-        let source = self.add_or_get_node(source);
-        let target = self.add_or_get_node(target);
+        let source = self.add_or_get_state(source);
+        let target = self.add_or_get_state(target);
         let (found, from) = self.binary_search(source, target);
         if found {
             //edge already present
@@ -678,7 +686,7 @@ impl Graphable for DirectlyFollowsGraph {
  *
  * Transitions:
  * End activity/Initial state -> final state = edges[len]
- * initial state -> start activity = edges[len] + 1
+ * initial state -> start activity = edges[len] + 1 ...
  */
 impl AutomatonSemantics for DirectlyFollowsGraph {
     fn initial_state(&self) -> Option<AutomatonState> {
@@ -834,6 +842,36 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
 
     fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
         transition == self.sources.len()
+    }
+}
+
+impl StochasticAutomatonSemantics for DirectlyFollowsGraph {
+    fn outgoing_transitions_weight_sum(&self, state: AutomatonState) -> Fraction {
+        self.outgoing_transitions(state)
+            .into_iter()
+            .filter_map(|transition| self.transition_2_weight(state, transition))
+            .sum()
+    }
+
+    fn transition_2_weight(
+        &self,
+        state: AutomatonState,
+        transition: TransitionIndex,
+    ) -> Option<&Fraction> {
+        if transition == self.sources.len() {
+            //end
+            self.end_activities.get(state)
+        } else if transition < self.sources.len() {
+            //edge
+            let node = transition;
+            self.weights.get(node)
+        } else if transition < self.sources.len() + 1 + self.state_2_activity.len() {
+            //start
+            let node = transition - (self.sources.len() + 1);
+            self.start_activities.get(AutomatonState::of(node))
+        } else {
+            None
+        }
     }
 }
 

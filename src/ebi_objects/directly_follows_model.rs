@@ -1,7 +1,8 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey,
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, Exportable,
+    Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    ebi_objects::labelled_petri_net::TransitionIndex,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -15,8 +16,6 @@ use ebi_derive::ActivityKey;
 use itertools::Itertools;
 use layout::topo::layout::VisualGraph;
 use std::{cmp::Ordering, fmt::Display, io::Write};
-
-use super::stochastic_directly_follows_model::NodeIndex;
 
 pub const HEADER: &str = "directly follows model";
 
@@ -45,10 +44,10 @@ pub struct DirectlyFollowsModel {
     pub activity_key: ActivityKey,
     pub node_2_activity: Vec<Activity>,
     pub empty_traces: bool,
-    pub sources: Vec<NodeIndex>, //edge -> source of edge
-    pub targets: Vec<NodeIndex>, //edge -> target of edge
-    pub start_nodes: Vec<bool>,  //node -> how often observed
-    pub end_nodes: Vec<bool>,    //node -> how often observed
+    pub sources: Vec<AutomatonState>, //edge -> source of edge
+    pub targets: Vec<AutomatonState>, //edge -> target of edge
+    pub start_nodes: Vec<bool>,       //node -> how often observed
+    pub end_nodes: Vec<bool>,         //node -> how often observed
 }
 
 impl DirectlyFollowsModel {
@@ -67,55 +66,19 @@ impl DirectlyFollowsModel {
         }
     }
 
-    pub fn has_empty_traces(&self) -> bool {
-        self.empty_traces
-    }
-
-    pub fn can_terminate_in_node(&self, node: NodeIndex) -> bool {
-        self.end_nodes[node]
-    }
-
-    pub fn number_of_start_nodes(&self) -> usize {
-        self.start_nodes
-            .iter()
-            .fold(0, |a, b| if *b { a + 1 } else { a })
-    }
-
-    pub fn number_of_end_nodes(&self) -> usize {
-        self.start_nodes
-            .iter()
-            .fold(0, |a, b| if *b { a + 1 } else { a })
-    }
-
-    pub fn is_start_node(&self, node: NodeIndex) -> bool {
-        self.start_nodes[node]
-    }
-
-    pub fn is_end_node(&self, node: NodeIndex) -> bool {
-        self.end_nodes[node]
-    }
-
-    pub fn can_execute_edge(&self, _edge: usize) -> bool {
-        true
-    }
-
-    pub fn number_of_states(&self) -> usize {
-        self.node_2_activity.len() + 2
-    }
-
     pub fn add_empty_trace(&mut self) {
         self.empty_traces = true;
     }
 
-    pub fn add_node(&mut self, activity: Activity) -> NodeIndex {
+    pub fn add_node(&mut self, activity: Activity) -> AutomatonState {
         let index = self.node_2_activity.len();
         self.node_2_activity.push(activity);
         self.start_nodes.push(false);
         self.end_nodes.push(false);
-        index
+        AutomatonState::of(index)
     }
 
-    pub fn add_edge(&mut self, source: NodeIndex, target: NodeIndex) {
+    pub fn add_edge(&mut self, source: AutomatonState, target: AutomatonState) {
         let (found, from) = self.binary_search(source, target);
         if found {
             //edge already present
@@ -126,7 +89,7 @@ impl DirectlyFollowsModel {
         }
     }
 
-    pub fn binary_search(&self, source: NodeIndex, target: NodeIndex) -> (bool, usize) {
+    pub fn binary_search(&self, source: AutomatonState, target: AutomatonState) -> (bool, usize) {
         if self.sources.is_empty() {
             return (false, 0);
         }
@@ -154,10 +117,10 @@ impl DirectlyFollowsModel {
     }
 
     fn compare(
-        source1: NodeIndex,
-        target1: NodeIndex,
-        source2: NodeIndex,
-        target2: NodeIndex,
+        source1: AutomatonState,
+        target1: AutomatonState,
+        source2: AutomatonState,
+        target2: AutomatonState,
     ) -> Ordering {
         if source1 < source2 {
             return Ordering::Greater;
@@ -293,12 +256,16 @@ impl Importable for DirectlyFollowsModel {
 
             let mut arr = edge_line.split('>');
             if let Some((source, target)) = arr.next_tuple() {
-                let source = source
-                    .parse::<usize>()
-                    .with_context(|| format!("could not read source of edge {}", e))?;
-                let target = target
-                    .parse::<usize>()
-                    .with_context(|| format!("could not read target of edge {}", e))?;
+                let source = AutomatonState::of(
+                    source
+                        .parse::<usize>()
+                        .with_context(|| format!("could not read source of edge {}", e))?,
+                );
+                let target = AutomatonState::of(
+                    target
+                        .parse::<usize>()
+                        .with_context(|| format!("could not read target of edge {}", e))?,
+                );
                 result.add_edge(source, target);
             } else {
                 return Err(anyhow!(
@@ -427,8 +394,16 @@ impl Infoable for DirectlyFollowsModel {
         )?;
         writeln!(f, "Number of nodes\t\t{}", self.node_2_activity.len())?;
         writeln!(f, "Number of edges\t\t{}", self.sources.len())?;
-        writeln!(f, "Number of start nodes\t{}", self.number_of_start_nodes())?;
-        writeln!(f, "Number of end nodes\t{}", self.number_of_end_nodes())?;
+        writeln!(
+            f,
+            "Number of start nodes\t{}",
+            self.start_nodes.iter().filter(|x| **x).count()
+        )?;
+        writeln!(
+            f,
+            "Number of end nodes\t{}",
+            self.end_nodes.iter().filter(|x| **x).count()
+        )?;
 
         writeln!(f, "")?;
         self.activity_key().info(f)?;
@@ -443,5 +418,162 @@ impl TestActivityKey for DirectlyFollowsModel {
         self.node_2_activity
             .iter()
             .for_each(|activity| self.activity_key().assert_activity_is_of_key(activity));
+    }
+}
+
+impl AutomatonSemantics for DirectlyFollowsModel {
+    fn initial_state(&self) -> Option<AutomatonState> {
+        if self.node_2_activity.is_empty() && !self.empty_traces {
+            None
+        } else {
+            Some(AutomatonState::of(self.node_2_activity.len()))
+        }
+    }
+
+    fn number_of_states(&self) -> usize {
+        self.node_2_activity.len() + 2
+    }
+
+    fn states(&self) -> impl Iterator<Item = AutomatonState> {
+        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+    }
+
+    fn is_state_final(&self, state: AutomatonState) -> bool {
+        state.0 == self.node_2_activity.len() + 1
+    }
+
+    fn transitions(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            TransitionIndex,
+            AutomatonState,
+            AutomatonState,
+            Option<Activity>,
+        ),
+    > {
+        //model transitions
+        let it1 = self
+            .sources
+            .iter()
+            .zip(self.targets.iter())
+            .enumerate()
+            .map(|(transition, (source, target))| {
+                (
+                    transition,
+                    *source,
+                    *target,
+                    Some(self.node_2_activity[*target]),
+                )
+            });
+
+        //end transitions
+        let end_transition = self.sources.len();
+        let end_state = AutomatonState::of(self.node_2_activity.len() + 1);
+        let it2 = self
+            .end_nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, is)| **is)
+            .map(move |(state, _)| (end_transition, AutomatonState::of(state), end_state, None));
+
+        //start transitions
+        let start_transition = self.sources.len() + 1;
+        let start_state = AutomatonState::of(self.node_2_activity.len());
+        let it3 = self
+            .end_nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, is)| **is)
+            .map(move |(state, _)| {
+                (
+                    start_transition,
+                    start_state,
+                    AutomatonState::of(state),
+                    Some(self.node_2_activity[state]),
+                )
+            });
+
+        it1.chain(it2).chain(it3)
+    }
+
+    fn outgoing_transitions(&self, state: AutomatonState) -> Vec<TransitionIndex> {
+        if state.0 == self.node_2_activity.len() {
+            //we are in the initial state
+            let mut result = self
+                .start_nodes
+                .iter()
+                .enumerate()
+                .filter_map(|(node, is)| {
+                    if *is {
+                        Some(self.sources.len() + 1 + node)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if self.empty_traces {
+                result.push(self.sources.len())
+            }
+
+            result
+        } else if state.0 > self.node_2_activity.len() {
+            //we are in the final state
+            vec![]
+        } else {
+            //we are not in the initial state
+            let mut result = vec![];
+
+            //add edges
+            let (_, mut i) = self.binary_search(state, AutomatonState::zero());
+            while i < self.sources.len() && self.sources[i] == state {
+                result.push(i);
+                i += 1;
+            }
+
+            //add transition to final state
+            if self.end_nodes[state] {
+                result.push(self.sources.len())
+            }
+
+            result
+        }
+    }
+
+    fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
+        if transition == self.sources.len() {
+            //end / empty
+            Some(AutomatonState::of(self.node_2_activity.len() + 1))
+        } else if transition < self.sources.len() {
+            //edge
+            Some(AutomatonState::of(self.targets[transition].0))
+        } else if transition < self.sources.len() + 1 + self.node_2_activity.len() {
+            //start
+            Some(AutomatonState::of(transition - (self.sources.len() + 1)))
+        } else {
+            None
+        }
+    }
+
+    fn transition_2_activity(&self, transition: TransitionIndex) -> Option<Activity> {
+        if transition == self.sources.len() {
+            //end
+            None
+        } else if transition < self.sources.len() {
+            //edge
+            let node = transition;
+            Some(self.node_2_activity[self.targets[node].0])
+        } else if transition < self.sources.len() + 1 + self.node_2_activity.len() {
+            //start
+            let node = transition - (self.sources.len() + 1);
+            Some(self.node_2_activity[node])
+        } else {
+            None
+        }
+    }
+
+    fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
+        transition == self.sources.len()
     }
 }

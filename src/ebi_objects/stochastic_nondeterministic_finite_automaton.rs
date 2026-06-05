@@ -1,7 +1,7 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject,
-    Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey,
-    dfg_format_comparison,
+    Exportable, Graphable, HasActivityKey, Importable, Infoable, StochasticAutomatonSemantics,
+    TranslateActivityKey, dfg_format_comparison,
     ebi_objects::labelled_petri_net::TransitionIndex,
     line_reader::LineReader,
     traits::{
@@ -30,7 +30,7 @@ pub struct StochasticNondeterministicFiniteAutomaton {
     pub targets: Vec<AutomatonState>, //transition -> target of arc
     pub activities: Vec<Option<Activity>>, //transition -> activity of arc
     pub probabilities: Vec<Fraction>, //transition -> probability of arc
-    pub terminating_probabilities: Vec<Fraction>, //state -> termination probability
+    pub termination_probabilities: Vec<Fraction>, //state -> termination probability
 }
 
 impl StochasticNondeterministicFiniteAutomaton {
@@ -43,7 +43,7 @@ impl StochasticNondeterministicFiniteAutomaton {
             targets: vec![],
             activities: vec![],
             probabilities: vec![],
-            terminating_probabilities: vec![Fraction::one()],
+            termination_probabilities: vec![Fraction::one()],
         }
     }
 
@@ -54,20 +54,9 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.initial_state = state;
     }
 
-    pub fn can_terminate_in_state(&self, state: AutomatonState) -> bool {
-        self.get_termination_probability(state).is_positive()
-    }
-
-    /**
-     * Returns whether a transition is not permanently disabled.
-     */
-    pub fn can_execute_transition(&self, transition: usize) -> bool {
-        self.probabilities[transition].is_positive()
-    }
-
     /// Ensures that a state with index `new_max_state` exists
     fn ensure_states(&mut self, new_max_state: AutomatonState) {
-        while self.terminating_probabilities.len() <= new_max_state.0 {
+        while self.termination_probabilities.len() <= new_max_state.0 {
             self.add_state();
         }
     }
@@ -83,7 +72,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         self.ensure_states(source);
         self.ensure_states(target);
 
-        self.terminating_probabilities[source] -= &probability;
+        self.termination_probabilities[source] -= &probability;
 
         let (found, from) = self.binary_search(source, self.label_to_id(activity), target);
         if found {
@@ -95,12 +84,12 @@ impl StochasticNondeterministicFiniteAutomaton {
             self.activities.insert(from, activity);
             self.probabilities.insert(from, probability);
 
-            if self.terminating_probabilities[source].is_negative() {
+            if self.termination_probabilities[source].is_negative() {
                 return Err(anyhow!(
                     "tried to insert edge from {} to {}, which brings the sum outgoing probability of the source state (1 - {}) below 0",
                     source,
                     target,
-                    self.terminating_probabilities[source]
+                    self.termination_probabilities[source]
                 ));
             }
         }
@@ -118,7 +107,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         activity: Option<Activity>,
         probability: Fraction,
     ) -> AutomatonState {
-        self.terminating_probabilities[source_state] -= &probability;
+        self.termination_probabilities[source_state] -= &probability;
 
         let (found, mut transition) = self.binary_search(
             source_state,
@@ -138,7 +127,7 @@ impl StochasticNondeterministicFiniteAutomaton {
             let (_, transition2) = self.binary_search(
                 source_state,
                 self.label_to_id(activity),
-                AutomatonState::of(self.terminating_probabilities.len()),
+                AutomatonState::of(self.termination_probabilities.len()),
             );
 
             //our edge could be anywhere between transition1 (inclusive) and transition2 (inclusive)
@@ -164,24 +153,20 @@ impl StochasticNondeterministicFiniteAutomaton {
      */
     pub fn scale_outgoing_probabilities(&mut self, state2scale: HashMap<AutomatonState, Fraction>) {
         let mut new_terminating_probabilities =
-            vec![Fraction::one(); self.terminating_probabilities.len()];
+            vec![Fraction::one(); self.termination_probabilities.len()];
         for (state, _, _, outgoing_probability) in &mut self.into_iter() {
             if let Some(factor) = state2scale.get(state) {
                 *outgoing_probability /= factor;
             }
             new_terminating_probabilities[*state] -= outgoing_probability;
         }
-        self.terminating_probabilities = new_terminating_probabilities;
-    }
-
-    pub fn get_termination_probability(&self, state: AutomatonState) -> &Fraction {
-        &self.terminating_probabilities[state]
+        self.termination_probabilities = new_terminating_probabilities;
     }
 
     //Adds a state with 1 terminating probability.
     pub fn add_state(&mut self) -> AutomatonState {
-        let state = self.terminating_probabilities.len();
-        self.terminating_probabilities.push(Fraction::one());
+        let state = self.termination_probabilities.len();
+        self.termination_probabilities.push(Fraction::one());
         return AutomatonState::of(state);
     }
 
@@ -260,23 +245,23 @@ impl StochasticNondeterministicFiniteAutomaton {
     pub fn check_consistency(&self) -> Result<()> {
         let zero = Fraction::zero();
         //verify that sum of outgoing edges for each state is one
-        if self.terminating_probabilities.len() > 0 {
+        if self.termination_probabilities.len() > 0 {
             let mut state = 0; //next state to check
             let mut transition = 0; //next transition to check
-            let mut sum = self.terminating_probabilities[0].clone(); //sum probability of the next state
-            while state < self.terminating_probabilities.len() {
+            let mut sum = self.termination_probabilities[0].clone(); //sum probability of the next state
+            while state < self.termination_probabilities.len() {
                 if transition == self.sources.len() {
                     //there are no more transitions, so move to the next state
                     if (sum > Fraction::one() || sum < Fraction::one()) && !sum.is_one() {
                         return Err(anyhow!(
                             "outgoing probabilities of state {} do not sum to 1, but to {}",
                             state,
-                            self.terminating_probabilities[state]
+                            self.termination_probabilities[state]
                         ));
                     }
                     state += 1;
                     sum = self
-                        .terminating_probabilities
+                        .termination_probabilities
                         .get(state)
                         .unwrap_or(&zero)
                         .clone();
@@ -290,12 +275,12 @@ impl StochasticNondeterministicFiniteAutomaton {
                         return Err(anyhow!(
                             "outgoing probabilities of state {} do not sum to 1, but to {}",
                             state,
-                            self.terminating_probabilities[state]
+                            self.termination_probabilities[state]
                         ));
                     }
                     state += 1;
                     sum = self
-                        .terminating_probabilities
+                        .termination_probabilities
                         .get(state)
                         .unwrap_or(&zero)
                         .clone();
@@ -374,7 +359,7 @@ impl Display for StochasticNondeterministicFiniteAutomaton {
         writeln!(
             f,
             "# number of states\n{}",
-            self.terminating_probabilities.len()
+            self.termination_probabilities.len()
         )?;
         writeln!(f, "# number of transitions\n{}", self.sources.len())?;
 
@@ -537,7 +522,7 @@ impl Infoable for StochasticNondeterministicFiniteAutomaton {
         writeln!(
             f,
             "Number of states\t{}",
-            self.terminating_probabilities.len()
+            self.termination_probabilities.len()
         )?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
         writeln!(
@@ -558,7 +543,7 @@ impl Graphable for StochasticNondeterministicFiniteAutomaton {
         let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
 
         let mut places = vec![];
-        for termination_probability in &self.terminating_probabilities {
+        for termination_probability in &self.termination_probabilities {
             places.push(graphable::create_place(
                 &mut graph,
                 &format!("{}", termination_probability),
@@ -734,11 +719,11 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
     }
 
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
-        (0..self.terminating_probabilities.len() + 1).map(|x| AutomatonState::of(x))
+        (0..self.termination_probabilities.len() + 1).map(|x| AutomatonState::of(x))
     }
 
     fn is_state_final(&self, state: AutomatonState) -> bool {
-        state.0 == self.terminating_probabilities.len()
+        state.0 == self.termination_probabilities.len()
     }
 
     fn transitions(
@@ -763,9 +748,9 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
 
         //end transitions
         let end_transition = self.sources.len();
-        let end_state = AutomatonState::of(self.terminating_probabilities.len());
+        let end_state = AutomatonState::of(self.termination_probabilities.len());
         let it2 = self
-            .terminating_probabilities
+            .termination_probabilities
             .iter()
             .enumerate()
             .filter(|(_, terminating_probability)| terminating_probability.is_positive())
@@ -787,8 +772,8 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
         }
 
         //if the DFA can terminate, then add a termination silent transition
-        if state.0 < self.terminating_probabilities.len()
-            && self.terminating_probabilities[state].is_positive()
+        if state.0 < self.termination_probabilities.len()
+            && self.termination_probabilities[state].is_positive()
         {
             result.push(self.sources.len())
         }
@@ -798,7 +783,7 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
 
     fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {
         if transition >= self.sources.len() {
-            return Some(AutomatonState::of(self.terminating_probabilities.len()));
+            return Some(AutomatonState::of(self.termination_probabilities.len()));
         }
 
         Some(self.targets[transition])
@@ -814,6 +799,25 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
 
     fn is_transition_silent(&self, transition: TransitionIndex) -> bool {
         transition == self.sources.len()
+    }
+}
+
+impl StochasticAutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
+    fn outgoing_transitions_weight_sum(&self, _state: AutomatonState) -> Fraction {
+        Fraction::one()
+    }
+
+    fn transition_2_weight(
+        &self,
+        source: AutomatonState,
+        transition: TransitionIndex,
+    ) -> Option<&Fraction> {
+        if transition == self.sources.len() {
+            //terminating transition
+            self.termination_probabilities.get(source.0)
+        } else {
+            self.probabilities.get(transition)
+        }
     }
 }
 
@@ -861,7 +865,7 @@ mod tests {
             .parse::<StochasticNondeterministicFiniteAutomaton>()
             .unwrap();
 
-        assert_eq!(dfm.terminating_probabilities.len(), 7);
+        assert_eq!(dfm.termination_probabilities.len(), 7);
         assert_eq!(dfm.sources.len(), 8);
 
         dfm.to_dot().unwrap();

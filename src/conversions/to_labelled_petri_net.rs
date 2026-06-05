@@ -251,134 +251,119 @@ tree!(StochasticProcessTree);
 
 impl From<ProcessTreeMarkupLanguage> for LabelledPetriNet {
     fn from(value: ProcessTreeMarkupLanguage) -> Self {
-        log::info!("convert process tree markup language to LPN");
         value.tree.into()
     }
 }
 
 impl From<LolaNet> for LabelledPetriNet {
     fn from(value: LolaNet) -> Self {
-        log::info!("convert Lola net to LPN");
         value.0
     }
 }
 
 impl From<PetriNetMarkupLanguage> for LabelledPetriNet {
     fn from(value: PetriNetMarkupLanguage) -> Self {
-        log::info!("convert PNML to LPN");
         value.0
     }
 }
 
-macro_rules! dfm {
-    ($t:ident) => {
-        impl From<$t> for LabelledPetriNet {
-            fn from(value: $t) -> LabelledPetriNet {
-                log::info!("convert (S)DFM to LPN");
+impl From<DirectlyFollowsModel> for LabelledPetriNet {
+    fn from(value: DirectlyFollowsModel) -> LabelledPetriNet {
+        log::info!("convert DFM to LPN");
 
-                if value.node_2_activity.is_empty() && !value.has_empty_traces() {
-                    //SDFA has an empty language, return a livelocked SLPN
-                    return Self::new_empty_language();
-                }
+        if value.node_2_activity.is_empty() && !value.empty_traces {
+            //SDFA has an empty language, return a livelocked SLPN
+            return Self::new_empty_language();
+        }
 
-                let mut result = LabelledPetriNet::new();
-                let translator =
-                    ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
-                let source = result.add_place();
-                let sink = result.add_place();
+        let mut result = LabelledPetriNet::new();
+        let translator =
+            ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
+        let source = result.add_place();
+        let sink = result.add_place();
+        result
+            .get_initial_marking_mut()
+            .as_mut()
+            .unwrap()
+            .increase(source, 1)
+            .unwrap();
+
+        /*
+         * empty traces
+         */
+        if value.empty_traces {
+            let transition = result.add_transition(None);
+
+            result
+                .add_place_transition_arc(source, transition, 1)
+                .unwrap();
+            result
+                .add_transition_place_arc(transition, sink, 1)
+                .unwrap();
+        }
+
+        /*
+         * Nodes (states): after doing a node you end up in the corresponding place.
+         */
+        let mut node2place = vec![];
+        for _ in 0..value.node_2_activity.len() {
+            let place = result.add_place();
+            node2place.push(place);
+        }
+
+        /*
+         * Transitions
+         */
+        for (source_node, target_node) in value.sources.iter().zip(value.targets.iter()) {
+            let from_place = node2place[*source_node];
+            let to_place = node2place[*target_node];
+            let activity = translator.translate_activity(&value.node_2_activity[*target_node]);
+            let transition = result.add_transition(Some(activity));
+
+            result
+                .add_place_transition_arc(from_place, transition, 1)
+                .unwrap();
+            result
+                .add_transition_place_arc(transition, to_place, 1)
+                .unwrap();
+        }
+
+        /*
+         * Starts
+         */
+        for node in 0..value.node_2_activity.len() {
+            if value.start_nodes[node] {
+                let activity = translator.translate_activity(&value.node_2_activity[node]);
+                let transition = result.add_transition(Some(activity));
                 result
-                    .get_initial_marking_mut()
-                    .as_mut()
-                    .unwrap()
-                    .increase(source, 1)
+                    .add_place_transition_arc(source, transition, 1)
                     .unwrap();
-
-                /*
-                 * empty traces
-                 */
-                if value.has_empty_traces() {
-                    let transition = result.add_transition(None);
-
-                    result
-                        .add_place_transition_arc(source, transition, 1)
-                        .unwrap();
-                    result
-                        .add_transition_place_arc(transition, sink, 1)
-                        .unwrap();
-                }
-
-                /*
-                 * Nodes (states): after doing a node you end up in the corresponding place.
-                 */
-                let mut node2place = vec![];
-                for _ in 0..value.node_2_activity.len() {
-                    let place = result.add_place();
-                    node2place.push(place);
-                }
-
-                /*
-                 * Transitions
-                 */
-                for (edge, (source_node, target_node)) in
-                    value.sources.iter().zip(value.targets.iter()).enumerate()
-                {
-                    if value.can_execute_edge(edge) {
-                        let from_place = node2place[*source_node];
-                        let to_place = node2place[*target_node];
-                        let activity =
-                            translator.translate_activity(&value.node_2_activity[*target_node]);
-                        let transition = result.add_transition(Some(activity));
-
-                        result
-                            .add_place_transition_arc(from_place, transition, 1)
-                            .unwrap();
-                        result
-                            .add_transition_place_arc(transition, to_place, 1)
-                            .unwrap();
-                    }
-                }
-
-                /*
-                 * Starts
-                 */
-                for node in 0..value.node_2_activity.len() {
-                    if value.is_start_node(node) {
-                        let activity = translator.translate_activity(&value.node_2_activity[node]);
-                        let transition = result.add_transition(Some(activity));
-                        result
-                            .add_place_transition_arc(source, transition, 1)
-                            .unwrap();
-                        let target_place = node2place[node];
-                        result
-                            .add_transition_place_arc(transition, target_place, 1)
-                            .unwrap();
-                    }
-                }
-
-                /*
-                 * Ends
-                 */
-                for node in 0..value.node_2_activity.len() {
-                    if value.is_end_node(node) {
-                        let transition = result.add_transition(None);
-                        let source_place = node2place[node];
-                        result
-                            .add_place_transition_arc(source_place, transition, 1)
-                            .unwrap();
-                        result
-                            .add_transition_place_arc(transition, sink, 1)
-                            .unwrap();
-                    }
-                }
-
+                let target_place = node2place[node];
                 result
+                    .add_transition_place_arc(transition, target_place, 1)
+                    .unwrap();
             }
         }
-    };
-}
 
-dfm!(DirectlyFollowsModel);
-dfm!(StochasticDirectlyFollowsModel);
+        /*
+         * Ends
+         */
+        for node in 0..value.node_2_activity.len() {
+            if value.end_nodes[node] {
+                let transition = result.add_transition(None);
+                let source_place = node2place[node];
+                result
+                    .add_place_transition_arc(source_place, transition, 1)
+                    .unwrap();
+                result
+                    .add_transition_place_arc(transition, sink, 1)
+                    .unwrap();
+            }
+        }
+
+        result
+    }
+}
 
 impl From<StochasticLabelledPetriNet> for LabelledPetriNet {
     fn from(value: StochasticLabelledPetriNet) -> Self {
@@ -582,6 +567,13 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
         }
 
         Ok(result)
+    }
+}
+
+impl From<StochasticDirectlyFollowsModel> for LabelledPetriNet {
+    fn from(value: StochasticDirectlyFollowsModel) -> Self {
+        let dfm = DirectlyFollowsModel::from(value);
+        dfm.into()
     }
 }
 
