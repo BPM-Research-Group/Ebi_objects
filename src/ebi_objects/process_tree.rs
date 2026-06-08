@@ -630,8 +630,8 @@ macro_rules! xor {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            $opt.translate_using_activity_key(&mut activity_key);
-            tree.extend($opt.tree);
+            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
+            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Xor, len));
@@ -1430,13 +1430,12 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ActivityKey, HasActivityKey, ProcessTree, StochasticProcessTree,
+        ActivityKey, ActivityKeyTranslator, HasActivityKey, ProcessTree, StochasticProcessTree,
         ebi_objects::process_tree::{
             Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
             get_transition_activity,
         },
     };
-    use ebi_activity_key::TranslateActivityKey;
     use std::fs;
 
     #[test]
