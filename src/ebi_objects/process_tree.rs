@@ -605,6 +605,126 @@ impl Exportable for ProcessTree {
     }
 }
 
+#[macro_export]
+macro_rules! tau {
+    () => {
+        ProcessTree::from((ActivityKey::new(), vec![Node::Tau]))
+    };
+}
+pub use tau;
+
+#[macro_export]
+macro_rules! activity {
+    ($a:expr) => {{
+        let mut activity_key = ActivityKey::new();
+        let act = activity_key.process_activity($a);
+        ProcessTree::from((activity_key, vec![Node::Activity(act)]))
+    }};
+}
+pub use activity;
+
+#[macro_export]
+macro_rules! xor {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Xor, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use xor;
+
+#[macro_export]
+macro_rules! seq {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Sequence, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use seq;
+
+#[macro_export]
+macro_rules! con {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Concurrent, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use con;
+
+#[macro_export]
+macro_rules! or {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Or, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use or;
+
+#[macro_export]
+macro_rules! int {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Interleaved, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use int;
+
+#[macro_export]
+macro_rules! tloop {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Loop, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use tloop;
+
 #[derive(Debug, Clone)]
 pub enum Node {
     Tau,
@@ -628,6 +748,13 @@ impl Node {
         }
     }
 
+    pub fn is_tau(&self) -> bool {
+        match self {
+            Self::Tau => true,
+            _ => false,
+        }
+    }
+
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
         if let Self::Operator(_, old_number_of_children) = self {
             *old_number_of_children = number_of_children;
@@ -638,9 +765,77 @@ impl Node {
             ))
         }
     }
+
+    pub fn number_of_children(&self) -> usize {
+        match self {
+            Node::Tau => 0,
+            Node::Activity(_) => 0,
+            Node::Operator(_, number_of_children) => *number_of_children,
+        }
+    }
+
+    pub fn is_operator_of_type(&self, operator: Operator) -> bool {
+        match self {
+            Node::Tau => false,
+            Node::Activity(_) => false,
+            Node::Operator(op, _) => *op == operator,
+        }
+    }
+
+    pub fn is_operator_and_matches(&self, other: &Node) -> bool {
+        match (self, other) {
+            (Node::Tau, _) => false,
+            (Node::Activity(_), _) => false,
+            (_, Node::Tau) => false,
+            (_, Node::Activity(_)) => false,
+            (Node::Operator(op, _), Node::Operator(op2, _)) => op == op2,
+        }
+    }
+
+    pub fn is_operator_xor(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Xor, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_or(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Or, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_interleaved(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Interleaved, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_concurrent(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Concurrent, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_loop(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Loop, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_sequence(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Sequence, _) => true,
+            _ => false,
+        }
+    }
 }
 
-#[derive(EnumIter, Debug, Clone, Copy)]
+#[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
     Xor,
     Sequence,
@@ -1235,12 +1430,21 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        HasActivityKey, ProcessTree, StochasticProcessTree,
+        ActivityKey, HasActivityKey, ProcessTree, StochasticProcessTree,
         ebi_objects::process_tree::{
-            execute_transition, get_enabled_transitions, get_initial_state, get_transition_activity,
+            Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
+            get_transition_activity,
         },
     };
+    use ebi_activity_key::TranslateActivityKey;
     use std::fs;
+
+    #[test]
+    fn tree_create() {
+        let xor = xor!(tau!(), activity!("a"));
+
+        assert_eq!(xor.get_number_of_nodes(), 3)
+    }
 
     #[test]
     fn ptree_semantics_loop() {

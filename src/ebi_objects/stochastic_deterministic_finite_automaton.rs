@@ -53,10 +53,6 @@ impl StochasticDeterministicFiniteAutomaton {
         self.initial_state = state;
     }
 
-    pub fn can_terminate_in_state(&self, state: AutomatonState) -> bool {
-        self.get_termination_probability(state).is_positive()
-    }
-
     /**
      * Returns whether a transition is not permanently disabled.
      */
@@ -153,10 +149,6 @@ impl StochasticDeterministicFiniteAutomaton {
             new_terminating_probabilities[*state] -= outgoing_probability;
         }
         self.terminating_probabilities = new_terminating_probabilities;
-    }
-
-    pub fn get_termination_probability(&self, state: AutomatonState) -> &Fraction {
-        &self.terminating_probabilities[state]
     }
 
     pub fn add_state(&mut self) -> AutomatonState {

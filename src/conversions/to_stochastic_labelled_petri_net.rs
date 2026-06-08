@@ -1,6 +1,5 @@
 use crate::{
-    ActivityKeyTranslator, AutomatonState, HasActivityKey,
-    StochasticNondeterministicFiniteAutomaton,
+    ActivityKeyTranslator, HasActivityKey, StochasticNondeterministicFiniteAutomaton,
     ebi_objects::{
         directly_follows_graph::DirectlyFollowsGraph, labelled_petri_net::LabelledPetriNet,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -27,16 +26,9 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
                 state2place.push(lpn_place);
 
                 //add termination
-                if value
-                    .get_termination_probability(AutomatonState::of(state))
-                    .is_positive()
-                {
+                if value.terminating_probabilities[state].is_positive() {
                     let lpn_transition = result.add_transition(None);
-                    weights.push(
-                        value
-                            .get_termination_probability(AutomatonState::of(state))
-                            .clone(),
-                    );
+                    weights.push(value.terminating_probabilities[state].clone());
                     result
                         .add_place_transition_arc(lpn_place, lpn_transition, 1)
                         .unwrap();
