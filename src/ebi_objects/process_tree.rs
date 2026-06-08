@@ -605,6 +605,35 @@ impl Exportable for ProcessTree {
     }
 }
 
+#[macro_export]
+macro_rules! count {
+    () => (0usize);
+    ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
+}
+pub use count;
+
+#[macro_export]
+macro_rules! xor {
+    ($e:expr) => {
+        vec![Node::Operator(Operator::Xor, 1), $e]
+    };
+    ($e:expr, $($opt:expr),+) => {
+        vec![Node::Operator(Operator::Xor, count!($($opt:expr),+)), $e, $($opt, )+]
+    };
+}
+pub use xor;
+
+#[macro_export]
+macro_rules! seq {
+    ($e:expr) => {
+        vec![Node::Operator(Operator::Sequence, 1), $e]
+    };
+    ($e:expr, $($opt:expr),+) => {
+        vec![Node::Operator(Operator::Sequence, count!($($opt:expr),+)), $e, $($opt, )+]
+    };
+}
+pub use seq;
+
 #[derive(Debug, Clone)]
 pub enum Node {
     Tau,
@@ -654,7 +683,7 @@ impl Node {
             (Node::Activity(_), _) => false,
             (_, Node::Tau) => false,
             (_, Node::Activity(_)) => false,
-            (Node::Operator(op, _), Node::Operator(op2, _)) => *op == op2,
+            (Node::Operator(op, _), Node::Operator(op2, _)) => op == op2,
         }
     }
 
@@ -1298,10 +1327,19 @@ mod tests {
     use crate::{
         HasActivityKey, ProcessTree, StochasticProcessTree,
         ebi_objects::process_tree::{
-            execute_transition, get_enabled_transitions, get_initial_state, get_transition_activity,
+            Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
+            get_transition_activity,
         },
     };
     use std::fs;
+
+    #[test]
+    fn tree_create() {
+        let leaf = Node::Tau;
+        let xor = xor!(leaf.clone(), leaf.clone());
+
+        assert_eq!(xor.len(), 3)
+    }
 
     #[test]
     fn ptree_semantics_loop() {
