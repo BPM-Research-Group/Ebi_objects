@@ -657,6 +657,74 @@ macro_rules! seq {
 }
 pub use seq;
 
+#[macro_export]
+macro_rules! con {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Concurrent, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use con;
+
+#[macro_export]
+macro_rules! or {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Or, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use or;
+
+#[macro_export]
+macro_rules! int {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Interleaved, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use int;
+
+#[macro_export]
+macro_rules! tloop {
+    ($($opt:expr),+) => {{
+        let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
+        let mut len = 0;
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+            len += 1;
+        )+
+        tree.insert(0, Node::Operator(Operator::Loop, len));
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use tloop;
+
 #[derive(Debug, Clone)]
 pub enum Node {
     Tau,
