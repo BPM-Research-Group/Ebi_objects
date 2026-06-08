@@ -613,6 +613,16 @@ macro_rules! count {
 pub use count;
 
 #[macro_export]
+macro_rules! tree {
+    ($t:expr) => {
+        ProcessTree:from((ActivityKey::new(), $t))
+    };
+    ($t:expr, $a:expr) => {
+        ProcessTree:from(($a, $t))
+    }
+}
+
+#[macro_export]
 macro_rules! xor {
     ($e:expr) => {
         vec![Node::Operator(Operator::Xor, 1), $e]
