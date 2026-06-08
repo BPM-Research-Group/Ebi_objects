@@ -606,13 +606,6 @@ impl Exportable for ProcessTree {
 }
 
 #[macro_export]
-macro_rules! count {
-    () => (0usize);
-    ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
-}
-pub use count;
-
-#[macro_export]
 macro_rules! tau {
     () => {
         ProcessTree::from((ActivityKey::new(), vec![Node::Tau]))
@@ -633,13 +626,14 @@ pub use activity;
 #[macro_export]
 macro_rules! xor {
     ($($opt:expr),+) => {{
-        let len = count!($($opt:expr),+);
-        let mut tree = vec![Node::Operator(Operator::Xor, len)];
         let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
         $(
             $opt.translate_using_activity_key(&mut activity_key);
             tree.extend($opt.tree);
         )+
+        let len = tree.len();
+        tree.insert(0, Node::Operator(Operator::Xor, len));
         ProcessTree::from((activity_key, tree))
     }};
 }
@@ -648,13 +642,14 @@ pub use xor;
 #[macro_export]
 macro_rules! seq {
     ($($opt:expr),+) => {{
-        let len = count!($($opt:expr),+);
-        let mut tree = vec![Node::Operator(Operator::Sequence, len)];
         let mut activity_key = ActivityKey::new();
+        let mut tree = vec![];
         $(
             $opt.translate_using_activity_key(&mut activity_key);
             tree.extend($opt.tree);
         )+
+        let len = tree.len();
+        tree.insert(0, Node::Operator(Operator::Sequence, len));
         ProcessTree::from((activity_key, tree))
     }};
 }
