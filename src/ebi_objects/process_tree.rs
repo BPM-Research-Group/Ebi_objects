@@ -628,11 +628,12 @@ macro_rules! xor {
     ($($opt:expr),+) => {{
         let mut activity_key = ActivityKey::new();
         let mut tree = vec![];
+        let mut len = 0;
         $(
             $opt.translate_using_activity_key(&mut activity_key);
             tree.extend($opt.tree);
+            len += 1;
         )+
-        let len = tree.len();
         tree.insert(0, Node::Operator(Operator::Xor, len));
         ProcessTree::from((activity_key, tree))
     }};
@@ -644,11 +645,12 @@ macro_rules! seq {
     ($($opt:expr),+) => {{
         let mut activity_key = ActivityKey::new();
         let mut tree = vec![];
+        let mut len = 0;
         $(
             $opt.translate_using_activity_key(&mut activity_key);
             tree.extend($opt.tree);
+            len += 1;
         )+
-        let len = tree.len();
         tree.insert(0, Node::Operator(Operator::Sequence, len));
         ProcessTree::from((activity_key, tree))
     }};
