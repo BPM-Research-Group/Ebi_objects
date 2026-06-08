@@ -645,6 +645,21 @@ macro_rules! xor {
 }
 pub use xor;
 
+#[macro_export]
+macro_rules! seq {
+    ($($opt:expr),+) => {{
+        let len = count!($($opt:expr),+);
+        let mut tree = vec![Node::Operator(Operator::Sequence, len)];
+        let mut activity_key = ActivityKey::new();
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+        )+
+        ProcessTree::from((activity_key, tree))
+    }};
+}
+pub use seq;
+
 #[derive(Debug, Clone)]
 pub enum Node {
     Tau,
