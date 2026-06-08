@@ -621,6 +621,7 @@ macro_rules! tree {
         ProcessTree:from(($a, $t))
     }
 }
+pub use tree;
 
 #[macro_export]
 macro_rules! xor {
@@ -643,6 +644,50 @@ macro_rules! seq {
     };
 }
 pub use seq;
+
+#[macro_export]
+macro_rules! oloop {
+    ($e:expr) => {
+        vec![Node::Operator(Operator::Loop, 1), $e]
+    };
+    ($e:expr, $($opt:expr),+) => {
+        vec![Node::Operator(Operator::Loop, count!($($opt:expr),+)), $e, $($opt, )+]
+    };
+}
+pub use oloop;
+
+#[macro_export]
+macro_rules! or {
+    ($e:expr) => {
+        vec![Node::Operator(Operator::Or, 1), $e]
+    };
+    ($e:expr, $($opt:expr),+) => {
+        vec![Node::Operator(Operator::Or, count!($($opt:expr),+)), $e, $($opt, )+]
+    };
+}
+pub use or;
+
+#[macro_export]
+macro_rules! con {
+    ($e:expr) => {
+        vec![Node::Operator(Operator::Concurrent, 1), $e]
+    };
+    ($e:expr, $($opt:expr),+) => {
+        vec![Node::Operator(Operator::Concurrent, count!($($opt:expr),+)), $e, $($opt, )+]
+    };
+}
+pub use con;
+
+#[macro_export]
+macro_rules! int {
+    ($e:expr) => {
+        vec![Node::Operator(Operator::Interleaved, 1), $e]
+    };
+    ($e:expr, $($opt:expr),+) => {
+        vec![Node::Operator(Operator::Interleaved, count!($($opt:expr),+)), $e, $($opt, )+]
+    };
+}
+pub use int;
 
 #[derive(Debug, Clone)]
 pub enum Node {
