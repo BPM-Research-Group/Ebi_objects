@@ -613,81 +613,37 @@ macro_rules! count {
 pub use count;
 
 #[macro_export]
-macro_rules! tree {
-    ($t:expr) => {
-        ProcessTree::from((ActivityKey::new(), $t))
+macro_rules! tau {
+    () => {
+        ProcessTree::from((ActivityKey::new(), vec![Node::Tau]))
     };
-    ($t:expr, $a:expr) => {
-        ProcessTree::from(($a, $t))
-    }
 }
-pub use tree;
+pub use tau;
+
+#[macro_export]
+macro_rules! activity {
+    ($a:expr) => {{
+        let mut activity_key = ActivityKey::new();
+        let act = activity_key.process_activity($a);
+        ProcessTree::from((activity_key, vec![Node::Activity(act)]))
+    }};
+}
+pub use activity;
 
 #[macro_export]
 macro_rules! xor {
-    ($e:expr) => {
-        vec![Node::Operator(Operator::Xor, 1), $e]
-    };
-    ($e:expr, $($opt:expr),+) => {
-        vec![Node::Operator(Operator::Xor, count!($($opt:expr),+)), $e, $($opt, )+]
-    };
+    ($($opt:expr),+) => {{
+        let len = count!($($opt:expr),+);
+        let mut tree = vec![Node::Operator(Operator::Xor, len)];
+        let mut activity_key = ActivityKey::new();
+        $(
+            $opt.translate_using_activity_key(&mut activity_key);
+            tree.extend($opt.tree);
+        )+
+        ProcessTree::from((activity_key, tree))
+    }};
 }
 pub use xor;
-
-#[macro_export]
-macro_rules! seq {
-    ($e:expr) => {
-        vec![Node::Operator(Operator::Sequence, 1), $e]
-    };
-    ($e:expr, $($opt:expr),+) => {
-        vec![Node::Operator(Operator::Sequence, count!($($opt:expr),+)), $e, $($opt, )+]
-    };
-}
-pub use seq;
-
-#[macro_export]
-macro_rules! oloop {
-    ($e:expr) => {
-        vec![Node::Operator(Operator::Loop, 1), $e]
-    };
-    ($e:expr, $($opt:expr),+) => {
-        vec![Node::Operator(Operator::Loop, count!($($opt:expr),+)), $e, $($opt, )+]
-    };
-}
-pub use oloop;
-
-#[macro_export]
-macro_rules! or {
-    ($e:expr) => {
-        vec![Node::Operator(Operator::Or, 1), $e]
-    };
-    ($e:expr, $($opt:expr),+) => {
-        vec![Node::Operator(Operator::Or, count!($($opt:expr),+)), $e, $($opt, )+]
-    };
-}
-pub use or;
-
-#[macro_export]
-macro_rules! con {
-    ($e:expr) => {
-        vec![Node::Operator(Operator::Concurrent, 1), $e]
-    };
-    ($e:expr, $($opt:expr),+) => {
-        vec![Node::Operator(Operator::Concurrent, count!($($opt:expr),+)), $e, $($opt, )+]
-    };
-}
-pub use con;
-
-#[macro_export]
-macro_rules! int {
-    ($e:expr) => {
-        vec![Node::Operator(Operator::Interleaved, 1), $e]
-    };
-    ($e:expr, $($opt:expr),+) => {
-        vec![Node::Operator(Operator::Interleaved, count!($($opt:expr),+)), $e, $($opt, )+]
-    };
-}
-pub use int;
 
 #[derive(Debug, Clone)]
 pub enum Node {
@@ -1380,20 +1336,20 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        HasActivityKey, ProcessTree, StochasticProcessTree,
+        ActivityKey, HasActivityKey, ProcessTree, StochasticProcessTree,
         ebi_objects::process_tree::{
             Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
             get_transition_activity,
         },
     };
+    use ebi_activity_key::TranslateActivityKey;
     use std::fs;
 
     #[test]
     fn tree_create() {
-        let leaf = Node::Tau;
-        let xor = xor!(leaf.clone(), leaf.clone());
+        let xor = xor!(tau!(), activity!("a"));
 
-        assert_eq!(xor.len(), 3)
+        assert_eq!(xor.get_number_of_nodes(), 3)
     }
 
     #[test]
