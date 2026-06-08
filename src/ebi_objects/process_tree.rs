@@ -9,7 +9,6 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use core::num;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
@@ -641,6 +640,14 @@ impl Node {
         }
     }
 
+    pub fn is_operator_and_matches(&self, operator: Operator) -> bool {
+        match self {
+            Node::Tau => false,
+            Node::Activity(_) => false,
+            Node::Operator(op, _) => *op == operator,
+        }
+    }
+
     pub fn is_operator_xor(&self) -> bool {
         match self {
             Node::Operator(Operator::Xor, _) => true,
@@ -684,7 +691,7 @@ impl Node {
     }
 }
 
-#[derive(EnumIter, Debug, Clone, Copy)]
+#[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
     Xor,
     Sequence,
