@@ -648,7 +648,7 @@ impl Node {
         }
     }
 
-    pub fn is_operator_and_matches(&self, other: Node) -> bool {
+    pub fn is_operator_and_matches(&self, other: &Node) -> bool {
         match (self, other) {
             (Node::Tau, _) => false,
             (Node::Activity(_), _) => false,
