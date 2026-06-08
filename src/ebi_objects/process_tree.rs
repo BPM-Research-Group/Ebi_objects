@@ -631,6 +631,48 @@ impl Node {
             ))
         }
     }
+
+    pub fn is_operator_xor(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Xor, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_or(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Or, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_interleaved(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Interleaved, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_concurrent(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Concurrent, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_loop(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Loop, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator_sequence(&self) -> bool {
+        match self {
+            Node::Operator(Operator::Sequence, _) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(EnumIter, Debug, Clone, Copy)]
