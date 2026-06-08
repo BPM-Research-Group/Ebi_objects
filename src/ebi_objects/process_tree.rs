@@ -9,6 +9,7 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
+use core::num;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
@@ -629,6 +630,14 @@ impl Node {
             Err(anyhow!(
                 "attempted to alter the number of children of an activity or a tau"
             ))
+        }
+    }
+
+    pub fn number_of_children(&self) -> usize {
+        match self {
+            Node::Tau => 0,
+            Node::Activity(_) => 0,
+            Node::Operator(_, number_of_children) => *number_of_children,
         }
     }
 
