@@ -640,6 +640,14 @@ impl Node {
         }
     }
 
+    pub fn is_operator_of_type(&self, operator: Operator) -> bool {
+        match self {
+            Node::Tau => false,
+            Node::Activity(_) => false,
+            Node::Operator(op, _) => *op == operator,
+        }
+    }
+
     pub fn is_operator_and_matches(&self, other: Node) -> bool {
         match (self, other) {
             (Node::Tau, _) => false,
