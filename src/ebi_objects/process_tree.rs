@@ -615,10 +615,10 @@ pub use count;
 #[macro_export]
 macro_rules! tree {
     ($t:expr) => {
-        ProcessTree:from((ActivityKey::new(), $t))
+        ProcessTree::from((ActivityKey::new(), $t))
     };
     ($t:expr, $a:expr) => {
-        ProcessTree:from(($a, $t))
+        ProcessTree::from(($a, $t))
     }
 }
 pub use tree;
