@@ -741,6 +741,13 @@ impl Node {
         }
     }
 
+    pub fn is_tau(&self) -> bool {
+        match self {
+            Self::Tau => true,
+            _ => false
+        }
+    }
+
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
         if let Self::Operator(_, old_number_of_children) = self {
             *old_number_of_children = number_of_children;
