@@ -274,13 +274,33 @@ impl ProcessTree {
                 "activity {}",
                 self.activity_key.deprocess_activity(&activity)
             ),
-            Node::Operator(operator, _) => format!(
+            Node::Operator(Operator::Concurrent, _)
+            | Node::Operator(Operator::Xor, _)
+            | Node::Operator(Operator::Or, _)
+            | Node::Operator(Operator::Interleaved, _) => format!(
                 "node {:?} [{:?}]",
-                operator,
+                self.operator(node).unwrap(),
                 self.get_children(node)
                     .map(|child| self.node_to_hash_string(child))
                     .sorted()
             ),
+            Node::Operator(Operator::Sequence, _) => format!(
+                "node sequence [{:?}]",
+                self.get_children(node)
+                    .map(|child| self.node_to_hash_string(child))
+                    .collect::<Vec<_>>()
+            ),
+            Node::Operator(Operator::Loop, _) => {
+                format!(
+                    "node loop {} [{:?}]",
+                    self.node_to_hash_string(node + 1),
+                    self.get_children(node)
+                        .skip(1)
+                        .map(|child| self.node_to_hash_string(child))
+                        .sorted()
+                        .collect::<Vec<_>>()
+                )
+            }
         }
     }
 }
@@ -298,6 +318,13 @@ macro_rules! tree {
 
             pub fn root(&self) -> usize {
                 0
+            }
+
+            pub fn operator(&self, node: usize) -> Option<Operator> {
+                match self.tree.get(node)? {
+                    Node::Tau | Node::Activity(_) => None,
+                    Node::Operator(operator, _) => Some(*operator),
+                }
             }
 
             pub fn get_node_of_transition(&self, transition: TransitionIndex) -> Result<&Node> {
