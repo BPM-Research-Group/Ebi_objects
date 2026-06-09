@@ -263,7 +263,7 @@ impl ProcessTree {
         Ok(())
     }
 
-    pub fn tree_to_hash_string(&self) -> String {
+    pub fn to_hash_string(&self) -> String {
         self.node_to_hash_string(0)
     }
 
