@@ -13,6 +13,7 @@ use crate::{
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_derive::ActivityKey;
+use itertools::Itertools;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
 use std::{
     fmt::Display,
@@ -260,6 +261,27 @@ impl ProcessTree {
         }
 
         Ok(())
+    }
+
+    pub fn tree_to_hash_string(&self) -> String {
+        self.node_to_hash_string(0)
+    }
+
+    fn node_to_hash_string(&self, node: usize) -> String {
+        match self.tree[node] {
+            Node::Tau => "tau".to_string(),
+            Node::Activity(activity) => format!(
+                "activity {}",
+                self.activity_key.deprocess_activity(&activity)
+            ),
+            Node::Operator(operator, _) => format!(
+                "node {:?} [{:?}]",
+                operator,
+                self.get_children(node)
+                    .map(|child| self.node_to_hash_string(child))
+                    .sorted()
+            ),
+        }
     }
 }
 
