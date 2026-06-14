@@ -161,7 +161,7 @@ mod tests {
 
         println!("{:?}", dfg.activity_key);
         println!("node_2_activity  {:?}", dfg.state_2_activity);
-        println!("start activities {:?}", dfg.start_activities);
+        println!("start activities {:?}", dfg.start_states);
 
         let mut state = dfg.initial_state().unwrap();
         println!("state {}\n", state);

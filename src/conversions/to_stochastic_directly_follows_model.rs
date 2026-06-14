@@ -18,8 +18,8 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
             sources,
             targets,
             weights,
-            start_activities,
-            end_activities,
+            start_states: start_activities,
+            end_states: end_activities,
             ..
         } = dfg;
 

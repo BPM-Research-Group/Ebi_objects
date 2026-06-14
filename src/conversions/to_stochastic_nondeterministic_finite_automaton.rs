@@ -116,12 +116,12 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
         //start activities
         {
             let mut sum_of_start_activities = value
-                .start_activities
+                .start_states
                 .iter()
                 .map(|(_, f)| f)
                 .sum::<Fraction>();
             sum_of_start_activities += &value.empty_traces_weight;
-            for (node, weight) in &value.start_activities {
+            for (node, weight) in &value.start_states {
                 let activity = value.state_2_activity[node.0];
                 result
                     .add_transition(
@@ -151,7 +151,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
                             i += 1;
                         }
 
-                        if let Some(w) = value.end_activities.get(*node)
+                        if let Some(w) = value.end_states.get(*node)
                             && w.is_positive()
                         {
                             sum += w;

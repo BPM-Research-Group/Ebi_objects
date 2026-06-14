@@ -13,7 +13,7 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
 
         let start_nodes = (0..value.state_2_activity.len())
             .map(
-                |state| match value.start_activities.get(AutomatonState::of(state)) {
+                |state| match value.start_states.get(AutomatonState::of(state)) {
                     Some(weight) => weight.is_positive(),
                     None => false,
                 },
@@ -22,7 +22,7 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
 
         let end_nodes = (0..value.state_2_activity.len())
             .map(
-                |state| match value.start_activities.get(AutomatonState::of(state)) {
+                |state| match value.start_states.get(AutomatonState::of(state)) {
                     Some(weight) => weight.is_positive(),
                     None => false,
                 },

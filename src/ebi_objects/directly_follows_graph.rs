@@ -38,8 +38,8 @@ pub struct DirectlyFollowsGraph {
     pub sources: Vec<AutomatonState>, //edge -> source of edge
     pub targets: Vec<AutomatonState>, //edge -> target of edge
     pub weights: Vec<Fraction>,       //edge -> how often observed
-    pub start_activities: IntMap<AutomatonState, Fraction>, //node -> how often observed
-    pub end_activities: IntMap<AutomatonState, Fraction>, //node -> how often observed
+    pub start_states: IntMap<AutomatonState, Fraction>, //state -> how often observed
+    pub end_states: IntMap<AutomatonState, Fraction>, //state -> how often observed
 }
 
 impl DirectlyFollowsGraph {
@@ -52,8 +52,8 @@ impl DirectlyFollowsGraph {
             sources: vec![],
             targets: vec![],
             weights: vec![],
-            start_activities: IntMap::new(),
-            end_activities: IntMap::new(),
+            start_states: IntMap::new(),
+            end_states: IntMap::new(),
         }
     }
 
@@ -82,9 +82,29 @@ impl DirectlyFollowsGraph {
         }
     }
 
+    pub fn start_activities(&self) -> impl Iterator<Item = Activity> {
+        self.start_states.iter().filter_map(|(state, weight)| {
+            if weight.is_positive() {
+                Some(self.state_2_activity[state])
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn end_activities(&self) -> impl Iterator<Item = Activity> {
+        self.end_states.iter().filter_map(|(state, weight)| {
+            if weight.is_positive() {
+                Some(self.state_2_activity[state])
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn start_activity_weight(&self, activity: Activity) -> Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            self.start_activities
+            self.start_states
                 .get(*node)
                 .cloned()
                 .unwrap_or_else(|| Fraction::zero())
@@ -95,7 +115,7 @@ impl DirectlyFollowsGraph {
 
     pub fn end_activity_weight(&self, activity: Activity) -> Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            self.end_activities
+            self.end_states
                 .get(*node)
                 .cloned()
                 .unwrap_or_else(|| Fraction::zero())
@@ -106,7 +126,7 @@ impl DirectlyFollowsGraph {
 
     pub fn is_start_node(&self, activity: Activity) -> bool {
         if let Some(node) = self.activity_2_state.get(activity) {
-            match self.start_activities.get(*node) {
+            match self.start_states.get(*node) {
                 Some(w) => w.is_positive(),
                 None => false,
             }
@@ -117,7 +137,7 @@ impl DirectlyFollowsGraph {
 
     pub fn is_end_node(&self, activity: Activity) -> bool {
         if let Some(node) = self.activity_2_state.get(activity) {
-            match self.end_activities.get(*node) {
+            match self.end_states.get(*node) {
                 Some(w) => w.is_positive(),
                 None => false,
             }
@@ -128,7 +148,7 @@ impl DirectlyFollowsGraph {
 
     pub fn activity_cardinality(&self, activity: Activity) -> Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            let mut result = match self.end_activities.get(*node) {
+            let mut result = match self.end_states.get(*node) {
                 Some(a) => a.clone(),
                 None => Fraction::zero(),
             };
@@ -181,7 +201,7 @@ impl DirectlyFollowsGraph {
 
     pub fn add_start_activity(&mut self, activity: Activity, weight: &Fraction) {
         let node = self.add_or_get_state(activity);
-        match self.start_activities.entry(node) {
+        match self.start_states.entry(node) {
             Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += weight,
             Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(weight.clone());
@@ -191,7 +211,7 @@ impl DirectlyFollowsGraph {
 
     pub fn add_end_activity(&mut self, activity: Activity, weight: &Fraction) {
         let node = self.add_or_get_state(activity);
-        match self.end_activities.entry(node) {
+        match self.end_states.entry(node) {
             Entry::Occupied(mut occupied_entry) => *occupied_entry.get_mut() += weight,
             Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(weight.clone());
@@ -491,16 +511,12 @@ impl Infoable for DirectlyFollowsGraph {
             "Number of activities\t\t{}",
             self.activity_key.activity2name.len()
         )?;
-        writeln!(
-            f,
-            "Number of start activities\t{}",
-            self.start_activities.len()
-        )?;
-        writeln!(f, "Number of end activities\t{}", self.end_activities.len())?;
+        writeln!(f, "Number of start activities\t{}", self.start_states.len())?;
+        writeln!(f, "Number of end activities\t{}", self.end_states.len())?;
 
         let mut sum: Fraction = self.weights.iter().sum();
-        sum += &self.start_activities.values().sum::<Fraction>();
-        sum += &self.end_activities.values().sum::<Fraction>();
+        sum += &self.start_states.values().sum::<Fraction>();
+        sum += &self.end_states.values().sum::<Fraction>();
         writeln!(f, "Sum weight of edges\t\t{}", sum)?;
 
         writeln!(f, "")?;
@@ -530,7 +546,7 @@ impl Display for DirectlyFollowsGraph {
                 .collect(),
         );
         let start_activities = Value::Array(
-            self.start_activities
+            self.start_states
                 .iter()
                 .filter_map(|(a, w)| {
                     if w.is_positive() {
@@ -546,7 +562,7 @@ impl Display for DirectlyFollowsGraph {
                 .collect(),
         );
         let end_activities = Value::Array(
-            self.end_activities
+            self.end_states
                 .iter()
                 .filter_map(|(a, w)| {
                     if w.is_positive() {
@@ -630,7 +646,7 @@ impl Graphable for DirectlyFollowsGraph {
         }
 
         //start activities
-        for (activity, weight) in self.start_activities.iter() {
+        for (activity, weight) in self.start_states.iter() {
             if weight.is_positive() {
                 graphable::create_edge(
                     &mut graph,
@@ -644,7 +660,7 @@ impl Graphable for DirectlyFollowsGraph {
         }
 
         //end activities
-        for (activity, weight) in self.end_activities.iter() {
+        for (activity, weight) in self.end_states.iter() {
             if weight.is_positive() {
                 graphable::create_edge(
                     &mut graph,
@@ -690,7 +706,7 @@ impl Graphable for DirectlyFollowsGraph {
  */
 impl AutomatonSemantics for DirectlyFollowsGraph {
     fn initial_state(&self) -> Option<AutomatonState> {
-        if !self.has_empty_traces() && !self.start_activities.iter().any(|(_, w)| w.is_positive()) {
+        if !self.has_empty_traces() && !self.start_states.iter().any(|(_, w)| w.is_positive()) {
             None
         } else {
             Some(AutomatonState::of(self.state_2_activity.len()))
@@ -739,7 +755,7 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
         let end_transition = self.sources.len();
         let end_state = AutomatonState::of(self.state_2_activity.len() + 1);
         let it2 = self
-            .end_activities
+            .end_states
             .iter()
             .filter(|(_, weight)| weight.is_positive())
             .map(move |(state, _)| (end_transition, state, end_state, None));
@@ -748,7 +764,7 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
         let start_transition = self.sources.len() + 1;
         let start_state = AutomatonState::of(self.state_2_activity.len());
         let it3 = self
-            .start_activities
+            .start_states
             .iter()
             .filter(|(_, weight)| weight.is_positive())
             .map(move |(state, _)| {
@@ -767,7 +783,7 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
         if state.0 == self.state_2_activity.len() {
             //we are in the initial state
             let mut result = self
-                .start_activities
+                .start_states
                 .iter()
                 .filter_map(|(node, w)| {
                     if w.is_positive() {
@@ -860,7 +876,7 @@ impl StochasticAutomatonSemantics for DirectlyFollowsGraph {
     ) -> Option<&Fraction> {
         if transition == self.sources.len() {
             //end
-            self.end_activities.get(state)
+            self.end_states.get(state)
         } else if transition < self.sources.len() {
             //edge
             let node = transition;
@@ -868,7 +884,7 @@ impl StochasticAutomatonSemantics for DirectlyFollowsGraph {
         } else if transition < self.sources.len() + 1 + self.state_2_activity.len() {
             //start
             let node = transition - (self.sources.len() + 1);
-            self.start_activities.get(AutomatonState::of(node))
+            self.start_states.get(AutomatonState::of(node))
         } else {
             None
         }
