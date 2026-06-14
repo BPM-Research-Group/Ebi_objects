@@ -679,8 +679,9 @@ macro_rules! xor {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
-            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
+            let opt = $opt;
+            let translator = ActivityKeyTranslator::new(&opt.activity_key, &mut activity_key);
+            tree.extend(opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Xor, len));
@@ -696,8 +697,9 @@ macro_rules! seq {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
-            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
+            let opt = $opt;
+            let translator = ActivityKeyTranslator::new(&opt.activity_key, &mut activity_key);
+            tree.extend(opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Sequence, len));
@@ -713,8 +715,9 @@ macro_rules! con {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
-            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
+            let opt = $opt;
+            let translator = ActivityKeyTranslator::new(&opt.activity_key, &mut activity_key);
+            tree.extend(opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Concurrent, len));
@@ -730,8 +733,9 @@ macro_rules! or {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
-            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
+            let opt = $opt;
+            let translator = ActivityKeyTranslator::new(&opt.activity_key, &mut activity_key);
+            tree.extend(opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Or, len));
@@ -747,8 +751,9 @@ macro_rules! int {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
-            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
+            let opt = $opt;
+            let translator = ActivityKeyTranslator::new(&opt.activity_key, &mut activity_key);
+            tree.extend(opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Interleaved, len));
@@ -764,8 +769,9 @@ macro_rules! tloop {
         let mut tree = vec![];
         let mut len = 0;
         $(
-            let translator = ActivityKeyTranslator::new(&$opt.activity_key, &mut activity_key);
-            tree.extend($opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
+            let opt = $opt;
+            let translator = ActivityKeyTranslator::new(&opt.activity_key, &mut activity_key);
+            tree.extend(opt.tree.into_iter().map(|node| if let Node::Activity(act) = node {Node::Activity(translator.translate_activity(&act))} else {node}));
             len += 1;
         )+
         tree.insert(0, Node::Operator(Operator::Loop, len));
