@@ -82,6 +82,30 @@ impl DirectlyFollowsGraph {
         }
     }
 
+    pub fn is_start_activity(&self, activity: Activity) -> bool {
+        if let Some(state) = self.activity_2_state.get(activity) {
+            if let Some(weight) = self.start_states.get(*state) {
+                weight.is_positive()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn is_end_activity(&self, activity: Activity) -> bool {
+        if let Some(state) = self.activity_2_state.get(activity) {
+            if let Some(weight) = self.end_states.get(*state) {
+                weight.is_positive()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
     pub fn start_activities(&self) -> impl Iterator<Item = Activity> {
         self.start_states.iter().filter_map(|(state, weight)| {
             if weight.is_positive() {
