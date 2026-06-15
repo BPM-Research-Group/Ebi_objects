@@ -149,3 +149,27 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLog {
         result
     }
 }
+
+#[macro_export]
+macro_rules! trace {
+    ($($opt:expr),*) => {{
+        let mut result:Vec<&str> = vec![];
+        $(
+            result.push($opt);
+        )*
+        result
+    }};
+}
+pub use trace;
+
+#[macro_export]
+macro_rules! event_log {
+    ($($opt:expr),*) => {{
+        let mut result = EventLog{activity_key: ActivityKey::new(), traces: vec![]};
+        $(
+            let trace = result.activity_key.process_trace_ref(&$opt);
+            result.traces.push(trace);
+        )*
+        result
+    }};
+}

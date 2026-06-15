@@ -339,8 +339,7 @@ impl TestActivityKey for EventLog {
 mod tests {
     use super::EventLog;
     use crate::{
-        ActivityKey, TranslateActivityKey,
-        ebi_objects::finite_stochastic_language::FiniteStochasticLanguage,
+        ActivityKey, NumberOfTraces, TranslateActivityKey, ebi_objects::finite_stochastic_language::FiniteStochasticLanguage, event_log, trace
     };
     use std::fs;
 
@@ -370,5 +369,13 @@ mod tests {
         let log = fin.parse::<EventLog>().unwrap();
 
         assert_eq!(format!("{}", log), "event log with 2 traces");
+    }
+
+    #[test]
+    fn log_macro() {
+        let trace = trace!("a", "b");
+        let log = event_log!(trace);
+
+        assert_eq!(log.number_of_events(), 2);
     }
 }
