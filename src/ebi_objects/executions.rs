@@ -1,5 +1,5 @@
 use crate::{
-    Exportable, Importable, Infoable,
+    Attribute, AttributeKey, Exportable, Importable, Infoable,
     constants::ebi_object::EbiObject,
     json,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -14,6 +14,8 @@ use ebi_bpmn::ebi_arithmetic::{
     anyhow::{Error, Result},
 };
 use ebi_derive::ActivityKey;
+use intmap::IntMap;
+use process_mining::core::event_data::case_centric::AttributeValue;
 use serde_json::{Number, Value, json};
 use std::{
     fmt::{self, Display},
@@ -35,11 +37,13 @@ pub const JSON_KEY_RESOURCE_UTILISATION_FIRED_TRANSITION: &str =
     "resource_utilisation_fired_transition";
 pub const JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS: &str =
     "other_enabled_transitions_resource_utilisation";
+pub const JSON_KEY_EVENT_ATTRIBUTES: &str = "event_attributes";
 
 #[derive(Clone, ActivityKey)]
 pub struct Executions {
     pub(crate) activity_key: ActivityKey,
     pub resource_key: ActivityKey,
+    pub attribute_key: AttributeKey,
     pub executions: Vec<Execution>,
 }
 
@@ -100,6 +104,7 @@ impl Importable for Executions {
 
         let mut activity_key = ActivityKey::new();
         let mut resource_key = ActivityKey::new();
+        let mut attribute_key = AttributeKey::new();
         let mut executions = Vec::with_capacity(json_executions.len());
 
         for (execution_i, json_execution) in json_executions.into_iter().enumerate() {
@@ -215,26 +220,60 @@ impl Importable for Executions {
             })?;
 
             //utilisation of enabled transitions
-            let json_utilisation_enabled =
-                json::read_field_list(&json_execution, JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS)
-                    .with_context(|| {
-                        anyhow!(
-                            "Resource utilisation of enabled transitions are missing for execution {}.",
-                            execution_i
-                        )
-                    })?;
-            let mut resource_utilisation_other_enabled_transitions = Vec::with_capacity(json_utilisation_enabled.len());
+            let json_utilisation_enabled = json::read_field_list(
+                &json_execution,
+                JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS,
+            )
+            .with_context(|| {
+                anyhow!(
+                    "Resource utilisation of enabled transitions are missing for execution {}.",
+                    execution_i
+                )
+            })?;
+            let mut resource_utilisation_other_enabled_transitions =
+                Vec::with_capacity(json_utilisation_enabled.len());
             for (enabledd_i, json_enabledd) in json_utilisation_enabled.into_iter().enumerate() {
-                resource_utilisation_other_enabled_transitions.push(json::read_fraction_or_null(&json_enabledd).with_context(
-                    || {
+                resource_utilisation_other_enabled_transitions.push(
+                    json::read_fraction_or_null(&json_enabledd).with_context(|| {
                         anyhow!(
                             "Could not read utilisation of enabled transition {} of execution {}.",
                             enabledd_i,
                             execution_i
                         )
-                    },
-                )?);
+                    })?,
+                );
             }
+
+            //event attributes
+            let json_event_attributes =
+                json::read_field_object_or_null(&json_execution, JSON_KEY_EVENT_ATTRIBUTES)
+                    .with_context(|| {
+                        anyhow!(
+                            "Event attributes of enabled transitions are missing for execution {}.",
+                            execution_i
+                        )
+                    })?;
+            let event_attributes = if let Some(json_event_attributes) = json_event_attributes {
+                let mut map = IntMap::new();
+                for (attribute_name, json_attribute_value) in json_event_attributes.into_iter() {
+                    let attribute_value = AttributeKey::json_attribute_value2attribute_value(
+                        json_attribute_value.clone(),
+                    )
+                    .with_context(|| {
+                        anyhow!(
+                            "Could not transform attribute {} with value {} to XES",
+                            attribute_name,
+                            json_attribute_value
+                        )
+                    })?;
+                    let attribute =
+                        attribute_key.process_attribute_value(attribute_name, &attribute_value);
+                    map.insert(attribute, attribute_value);
+                }
+                Some(map)
+            } else {
+                None
+            };
 
             executions.push(Execution {
                 trace,
@@ -245,13 +284,14 @@ impl Importable for Executions {
                 other_enabled_transitions,
                 move_index_of_enablement,
                 time_of_execution,
+                event_attributes,
                 resource,
                 resource_utilisation_fired_transition,
-                resource_utilisation_other_enabled_transitions
+                resource_utilisation_other_enabled_transitions,
             });
         }
 
-        Ok((activity_key, resource_key, executions).into())
+        Ok((activity_key, resource_key, attribute_key, executions).into())
     }
 }
 from_string!(Executions);
@@ -268,7 +308,11 @@ impl Display for Executions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut json_executions = Vec::with_capacity(self.executions.len());
         for execution in &self.executions {
-            json_executions.push(execution.to_json(&self.activity_key, &self.resource_key));
+            json_executions.push(execution.to_json(
+                &self.activity_key,
+                &self.resource_key,
+                &self.attribute_key,
+            ));
         }
         let mut json = serde_json::Map::new();
         json.insert(
@@ -306,10 +350,16 @@ pub struct Execution {
     pub resource: Option<Activity>,
     pub resource_utilisation_fired_transition: Option<Fraction>,
     pub resource_utilisation_other_enabled_transitions: Vec<Option<Fraction>>,
+    pub event_attributes: Option<IntMap<Attribute, AttributeValue>>,
 }
 
 impl Execution {
-    fn to_json(&self, activity_key: &ActivityKey, resource_key: &ActivityKey) -> Value {
+    fn to_json(
+        &self,
+        activity_key: &ActivityKey,
+        resource_key: &ActivityKey,
+        attribute_key: &AttributeKey,
+    ) -> Value {
         let mut json_execution = serde_json::Map::new();
 
         //trace
@@ -403,6 +453,31 @@ impl Execution {
                     .collect(),
             ),
         );
+
+        //event attributes
+        if let Some(event_attributes) = &self.event_attributes {
+            json_execution.insert(
+                JSON_KEY_EVENT_ATTRIBUTES.to_string(),
+                Value::Object(
+                    event_attributes
+                        .iter()
+                        .map(|(attribute, value)| {
+                            //name
+                            let name = attribute_key
+                                .attribute_to_label(attribute)
+                                .unwrap()
+                                .to_string();
+
+                            //value
+                            let value = Value::String(value.to_string());
+                            (name, value)
+                        })
+                        .collect::<serde_json::Map<_, _>>(),
+                ),
+            );
+        } else {
+            json_execution.insert(JSON_KEY_EVENT_ATTRIBUTES.to_string(), Value::Null);
+        }
 
         Value::Object(json_execution)
     }

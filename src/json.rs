@@ -64,6 +64,20 @@ pub fn read_field_object<'a>(json: &'a Value, field: &str) -> Result<&'a Map<Str
     }
 }
 
+pub fn read_field_object_or_null<'a>(
+    json: &'a Value,
+    field: &str,
+) -> Result<Option<&'a Map<String, Value>>> {
+    match &json[field] {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where object expected")),
+        Value::Number(_) => return Err(anyhow!("field is a number, where object expected")),
+        Value::String(_) => return Err(anyhow!("field is a literal, where object expected")),
+        Value::Array(_) => return Err(anyhow!("field is an array, where object expected")),
+        Value::Object(obj) => Ok(Some(&obj)),
+    }
+}
+
 pub fn read_field_string<'a>(json: &'a Value, field: &str) -> Result<String> {
     match &json[field] {
         Value::Null => return Err(anyhow!("field not found")),

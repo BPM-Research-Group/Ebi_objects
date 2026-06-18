@@ -1,4 +1,5 @@
 use crate::{Attribute, DataType, Infoable};
+use anyhow::anyhow;
 use ebi_bpmn::ebi_arithmetic::anyhow::Result;
 use process_mining::core::event_data::{
     case_centric::AttributeValue, object_centric::OCELAttributeValue,
@@ -119,6 +120,50 @@ impl<'a> AttributeKey {
             OCELAttributeValue::Boolean(b) => AttributeValue::Boolean(b),
             OCELAttributeValue::String(s) => AttributeValue::String(s),
             OCELAttributeValue::Null => AttributeValue::None(),
+        }
+    }
+
+    pub fn json_attribute_value2attribute_value(
+        json_value: serde_json::Value,
+    ) -> Result<AttributeValue> {
+        match json_value {
+            serde_json::Value::Null => Ok(AttributeValue::None()),
+            serde_json::Value::Bool(b) => Ok(AttributeValue::Boolean(b)),
+            serde_json::Value::Number(number) => Ok(if let Some(int) = number.as_i64() {
+                AttributeValue::Int(int)
+            } else {
+                AttributeValue::Float(
+                    number
+                        .as_f64()
+                        .ok_or_else(|| anyhow!("Number must be float but does not fit in f64."))?,
+                )
+            }),
+            serde_json::Value::String(s) => Ok(AttributeValue::String(s)),
+            serde_json::Value::Array(values) => Ok(AttributeValue::List(
+                values
+                    .into_iter()
+                    .map(|json_value| {
+                        Ok(
+                            process_mining::core::event_data::case_centric::Attribute::new(
+                                String::new(),
+                                Self::json_attribute_value2attribute_value(json_value)?,
+                            ),
+                        )
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            )),
+            serde_json::Value::Object(map) => Ok(AttributeValue::Container(
+                map.into_iter()
+                    .map(|(attribute_name, json_value)| {
+                        Ok(
+                            process_mining::core::event_data::case_centric::Attribute::new(
+                                attribute_name,
+                                Self::json_attribute_value2attribute_value(json_value)?,
+                            ),
+                        )
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            )),
         }
     }
 
