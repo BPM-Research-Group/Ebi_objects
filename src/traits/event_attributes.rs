@@ -1,8 +1,17 @@
 use crate::Attribute;
 use chrono::{DateTime, FixedOffset};
 use ebi_bpmn::ebi_arithmetic::Fraction;
+use intmap::IntMap;
+use process_mining::core::event_data::case_centric::AttributeValue;
 
 pub trait EventAttributes {
+    /// Return a map of event attributes for the given trace and event, if it exists.
+    fn get_event_attributes(
+        &self,
+        trace_index: usize,
+        event_index: usize,
+    ) -> Option<&IntMap<Attribute, AttributeValue>>;
+
     fn get_event_attribute_categorical(
         &self,
         trace_index: usize,
