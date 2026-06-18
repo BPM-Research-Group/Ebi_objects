@@ -98,17 +98,13 @@ impl Display for LanguageOfAlignments {
                 writeln!(f, "# move {}", j)?;
 
                 match movee {
-                    Move::LogMove {
-                        activity,
-                        event_index,
-                    } => {
+                    Move::LogMove { activity } => {
                         writeln!(f, "log move")?;
                         writeln!(
                             f,
                             "label {}",
                             self.activity_key.get_activity_label(activity)
                         )?;
-                        writeln!(f, "# event index\n{}", event_index)?;
                     }
                     Move::ModelMove {
                         activity,
@@ -125,7 +121,6 @@ impl Display for LanguageOfAlignments {
                     Move::SynchronousMove {
                         activity,
                         transition,
-                        event_index,
                     } => {
                         writeln!(f, "synchronous move")?;
                         writeln!(
@@ -134,7 +129,6 @@ impl Display for LanguageOfAlignments {
                             self.activity_key.get_activity_label(activity)
                         )?;
                         writeln!(f, "# transition\n{}", transition)?;
-                        writeln!(f, "# event index\n{}", event_index)?;
                     }
                     Move::SilentMove { transition, .. } => {
                         writeln!(f, "silent move")?;
@@ -210,7 +204,6 @@ impl Importable for LanguageOfAlignments {
                     alignment_number
                 )
             })?;
-            let mut next_event_index = 0;
 
             for move_number in 0..number_of_moves {
                 //read type of move
@@ -232,31 +225,7 @@ impl Importable for LanguageOfAlignments {
                         let label = label_line[6..].to_string();
                         let activity = activity_key.process_activity(&label);
 
-                        //read the event index
-                        let event_index = lreader.next_line_index().with_context(|| {
-                            anyhow!(
-                                "Could not read event index of alignment {} move {}.",
-                                alignment_number,
-                                move_number
-                            )
-                        })?;
-
-                        if event_index != next_event_index {
-                            return Err(anyhow!(
-                                "Expected the next event index of alignment {} move {} to be {}, but found {}.",
-                                alignment_number,
-                                move_number,
-                                next_event_index,
-                                event_index
-                            ));
-                        } else {
-                            next_event_index += 1;
-                        }
-
-                        moves.push(Move::LogMove {
-                            activity,
-                            event_index,
-                        });
+                        moves.push(Move::LogMove { activity });
                     } else {
                         return Err(anyhow!("Line must have a label"));
                     }
@@ -308,31 +277,9 @@ impl Importable for LanguageOfAlignments {
                             )
                         })?;
 
-                        //read the event index
-                        let event_index = lreader.next_line_index().with_context(|| {
-                            anyhow!(
-                                "Could not read event index of alignment {} move {}",
-                                alignment_number,
-                                move_number
-                            )
-                        })?;
-
-                        if event_index != next_event_index {
-                            return Err(anyhow!(
-                                "Expected the next event index of alignment {} move {} to be {}, but found {}.",
-                                alignment_number,
-                                move_number,
-                                next_event_index,
-                                event_index
-                            ));
-                        } else {
-                            next_event_index += 1;
-                        }
-
                         moves.push(Move::SynchronousMove {
                             activity,
                             transition,
-                            event_index,
                         });
                     } else {
                         return Err(anyhow!("Line must have a label"));
@@ -382,7 +329,6 @@ impl Infoable for LanguageOfAlignments {
 pub enum Move {
     LogMove {
         activity: Activity,
-        event_index: usize,
     },
     ModelMove {
         activity: Activity,
@@ -391,7 +337,6 @@ pub enum Move {
     SynchronousMove {
         activity: Activity,
         transition: TransitionIndex,
-        event_index: usize,
     },
     SilentMove {
         transition: TransitionIndex,
