@@ -45,7 +45,7 @@ impl Importable for LolaNet {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A LoLA Petri net language file adheres to the grammar described in~\\cite{DBLP:conf/apn/Wolf18a}.
     Note that Ebi does not support place bounds or fairness, and that LoLA nets do not support silent transitions, and has some restrictions on labeling.
 For instance:
-    \\lstinputlisting[language=xml, style=boxed]{../testfiles/mutex.lola}";
+    \\lstinputlisting[language=xml, style=boxed]{../testfiles/mutex_livelock.lola}";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 

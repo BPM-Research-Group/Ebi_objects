@@ -3,6 +3,7 @@
     {
       "activity": "a",
       "also_in_log": true,
+      "event_attributes": null,
       "fired_transition": 0,
       "move_index": 0,
       "move_index_of_enablement": null,
@@ -22,6 +23,7 @@
     {
       "activity": null,
       "also_in_log": false,
+      "event_attributes": null,
       "fired_transition": 4,
       "move_index": 1,
       "move_index_of_enablement": 0,
@@ -35,6 +37,7 @@
     {
       "activity": "b",
       "also_in_log": true,
+      "event_attributes": null,
       "fired_transition": 1,
       "move_index": 0,
       "move_index_of_enablement": null,
@@ -54,6 +57,7 @@
     {
       "activity": null,
       "also_in_log": false,
+      "event_attributes": null,
       "fired_transition": 4,
       "move_index": 1,
       "move_index_of_enablement": 0,
