@@ -326,8 +326,8 @@ impl EventAttributes for EventLogEventAttributes {
         &self,
         trace_index: usize,
         event_index: usize,
-    ) -> Option<&IntMap<Attribute, AttributeValue>> {
-        self.traces.get(trace_index)?.1.get(event_index)
+    ) -> Option<IntMap<Attribute, AttributeValue>> {
+        self.traces.get(trace_index)?.1.get(event_index).cloned()
     }
 
     fn get_event_attribute_categorical(

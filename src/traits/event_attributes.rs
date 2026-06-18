@@ -6,11 +6,12 @@ use process_mining::core::event_data::case_centric::AttributeValue;
 
 pub trait EventAttributes {
     /// Return a map of event attributes for the given trace and event, if it exists.
+    /// This is an expensive operation, as the returned values are cloned.
     fn get_event_attributes(
         &self,
         trace_index: usize,
         event_index: usize,
-    ) -> Option<&IntMap<Attribute, AttributeValue>>;
+    ) -> Option<IntMap<Attribute, AttributeValue>>;
 
     fn get_event_attribute_categorical(
         &self,
