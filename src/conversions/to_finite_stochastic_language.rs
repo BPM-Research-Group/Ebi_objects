@@ -8,12 +8,13 @@ use crate::{
     },
 };
 use ebi_bpmn::ebi_arithmetic::{Fraction, f};
+use fnv::FnvBuildHasher;
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<EventLog> for FiniteStochasticLanguage {
     fn from(value: EventLog) -> Self {
         log::info!("create stochastic language");
-        let mut map = HashMap::new();
+        let mut map = Self::new_hashmap();
 
         if value.number_of_traces() == 0 {
             return FiniteStochasticLanguage::empty();
@@ -62,11 +63,21 @@ impl From<HashMap<Vec<String>, Fraction>> for FiniteStochasticLanguage {
     }
 }
 
-impl From<(ActivityKey, HashMap<Vec<Activity>, Fraction>)> for FiniteStochasticLanguage {
+impl
+    From<(
+        ActivityKey,
+        HashMap<Vec<Activity>, Fraction, FnvBuildHasher>,
+    )> for FiniteStochasticLanguage
+{
     /**
      * Normalises the distribution. Use new_raw to avoid normalisation.
      */
-    fn from(value: (ActivityKey, HashMap<Vec<Activity>, Fraction>)) -> Self {
+    fn from(
+        value: (
+            ActivityKey,
+            HashMap<Vec<Activity>, Fraction, FnvBuildHasher>,
+        ),
+    ) -> Self {
         let mut result = Self {
             activity_key: value.0,
             traces: value.1,

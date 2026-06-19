@@ -1,5 +1,6 @@
 use crate::{Activity, Attribute};
 use ebi_bpmn::ebi_arithmetic::Fraction;
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
 use rayon::iter::{
@@ -230,8 +231,8 @@ pub struct ParallelHashMapKeysIterator<'a, K, V> {
 }
 
 /// The parallel iterator can be created from a reference to a hashmap.
-impl<'a, K, V> From<&'a HashMap<K, V>> for ParallelHashMapKeysIterator<'a, K, V> {
-    fn from(value: &'a HashMap<K, V>) -> Self {
+impl<'a, K, V> From<&'a HashMap<K, V, FnvBuildHasher>> for ParallelHashMapKeysIterator<'a, K, V> {
+    fn from(value: &'a HashMap<K, V, FnvBuildHasher>) -> Self {
         Self { keys: value.keys() }
     }
 }
@@ -522,7 +523,8 @@ impl<'a, K, V> DoubleEndedIterator for ParallelVecTupleIteratorIterator<'a, K, V
 
 #[cfg(test)]
 mod tests {
-    use rayon::iter::ParallelIterator;
+    use fnv::FnvBuildHasher;
+use rayon::iter::ParallelIterator;
     use std::collections::HashMap;
 
     use crate::iterators::parallel_ref_trace_iterator::{
@@ -552,7 +554,7 @@ mod tests {
 
     #[test]
     fn par_keys_iterator() {
-        let mut umap = HashMap::new();
+        let mut umap: HashMap<i32, i32, FnvBuildHasher> = HashMap::default();
         for i in 10..100 {
             umap.insert(i, i + 200);
         }
