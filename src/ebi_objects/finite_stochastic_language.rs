@@ -123,7 +123,7 @@ impl FiniteStochasticLanguage {
 
     /// Adds the trace to the language. Does not normalise, thus the total probability mass of all traces will increase.
     /// Return an error if probability is not positive.
-    pub fn push_raw(&mut self, trace: Vec<Activity>, probability: Fraction) -> Result<()> {
+    pub fn push_raw(&mut self, trace: Vec<Activity>, probability: &Fraction) -> Result<()> {
         if probability.is_not_positive() {
             return Err(anyhow!("Cannot add a trace with a negative probability."));
         }
