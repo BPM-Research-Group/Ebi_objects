@@ -260,7 +260,7 @@ impl DirectlyFollowsGraph {
             let (_, mut i) = self.binary_search(*source_state, AutomatonState::zero());
             while i < self.sources.len() && self.sources[i] == *source_state {
                 if self.weights[i].is_positive() {
-                    result.push((self.state_2_activity[i], &self.weights[i]));
+                    result.push((self.state_2_activity[self.targets[i]], &self.weights[i]));
                 }
                 i += 1;
             }
