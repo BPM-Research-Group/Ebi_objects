@@ -271,6 +271,18 @@ impl DirectlyFollowsGraph {
         }
     }
 
+    pub fn edges_mut(&mut self) -> impl Iterator<Item = (Activity, (Activity, &mut Fraction))> {
+        self.sources
+            .iter()
+            .map(|state| self.state_2_activity[state])
+            .zip(
+                self.targets
+                    .iter()
+                    .map(|state| self.state_2_activity[state])
+                    .zip(self.weights.iter_mut()),
+            )
+    }
+
     /// Sets the weight of an edge to 0. Does not actually remove the edge.
     pub fn remove_edge(&mut self, source: Activity, target: Activity) {
         let source = self.add_or_get_state(source);
