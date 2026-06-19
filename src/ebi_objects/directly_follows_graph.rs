@@ -253,14 +253,14 @@ impl DirectlyFollowsGraph {
         self.end_states.remove(node);
     }
 
-    pub fn outgoing_edges(&mut self, source: Activity) -> Vec<Activity> {
+    pub fn outgoing_edges(&mut self, source: Activity) -> Vec<(Activity, &Fraction)> {
         let mut result = vec![];
         if let Some(source_state) = self.activity_2_state.get(source) {
             //add edges
             let (_, mut i) = self.binary_search(*source_state, AutomatonState::zero());
             while i < self.sources.len() && self.sources[i] == *source_state {
                 if self.weights[i].is_positive() {
-                    result.push(self.state_2_activity[i]);
+                    result.push((self.state_2_activity[i], &self.weights[i]));
                 }
                 i += 1;
             }
