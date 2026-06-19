@@ -271,6 +271,17 @@ impl DirectlyFollowsGraph {
         }
     }
 
+    /// Sets the weight of an edge to 0. Does not actually remove the edge.
+    pub fn remove_edge(&mut self, source: Activity, target: Activity) {
+        let source = self.add_or_get_state(source);
+        let target = self.add_or_get_state(target);
+        let (found, from) = self.binary_search(source, target);
+        if found {
+            //edge already present
+            self.weights[from] = Fraction::zero();
+        }
+    }
+
     pub fn add_edge(&mut self, source: Activity, target: Activity, weight: &Fraction) {
         let source = self.add_or_get_state(source);
         let target = self.add_or_get_state(target);
@@ -283,18 +294,6 @@ impl DirectlyFollowsGraph {
             self.sources.insert(from, source);
             self.targets.insert(from, target);
             self.weights.insert(from, weight.clone());
-        }
-    }
-
-    pub fn remove_edge(&mut self, source: Activity, target: Activity) {
-        let source = self.add_or_get_state(source);
-        let target = self.add_or_get_state(target);
-        let (found, from) = self.binary_search(source, target);
-        if found {
-            //edge already present
-            self.sources.remove(from);
-            self.targets.remove(from);
-            self.weights.remove(from);
         }
     }
 
