@@ -21,6 +21,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed, Zero};
 use ebi_derive::ActivityKey;
+use fnv::FnvBuildHasher;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator};
 use std::{
     collections::{
@@ -36,14 +37,17 @@ pub const HEADER: &str = "finite stochastic language";
 #[derive(Clone, Debug, ActivityKey)]
 pub struct FiniteStochasticLanguage {
     pub activity_key: ActivityKey,
-    pub traces: HashMap<Vec<Activity>, Fraction>,
+    pub traces: HashMap<Vec<Activity>, Fraction, FnvBuildHasher>,
 }
 
 impl FiniteStochasticLanguage {
     /**
      * Does not normalise the distribution.
      */
-    pub fn new_raw(traces: HashMap<Vec<Activity>, Fraction>, activity_key: ActivityKey) -> Self {
+    pub fn new_raw(
+        traces: HashMap<Vec<Activity>, Fraction, FnvBuildHasher>,
+        activity_key: ActivityKey,
+    ) -> Self {
         Self {
             activity_key: activity_key,
             traces: traces,
@@ -53,8 +57,29 @@ impl FiniteStochasticLanguage {
     pub fn empty() -> Self {
         Self {
             activity_key: ActivityKey::new(),
-            traces: HashMap::new(),
+            traces: Self::new_hashmap(),
         }
+    }
+
+    pub fn new_with_activity_key_from<T>(obj: &T) -> Self
+    where
+        T: HasActivityKey,
+    {
+        Self {
+            activity_key: obj.activity_key().clone(),
+            traces: Self::new_hashmap(),
+        }
+    }
+
+    pub fn new_with_activity_key(activity_key: ActivityKey) -> Self {
+        Self {
+            activity_key,
+            traces: Self::new_hashmap(),
+        }
+    }
+
+    pub fn new_hashmap() -> HashMap<Vec<Activity>, Fraction, FnvBuildHasher> {
+        HashMap::<_, _, FnvBuildHasher>::default()
     }
 
     pub fn normalise_before(traces: &mut HashMap<Vec<String>, Fraction>) {
@@ -95,6 +120,18 @@ impl FiniteStochasticLanguage {
         }
         return false;
     }
+
+    /// Adds the trace to the language. Does not normalise, thus the total probability mass of all traces will increase.
+    /// Return an error if probability is not positive.
+    pub fn push_raw(&mut self, trace: Vec<Activity>, probability: &Fraction) -> Result<()> {
+        if probability.is_not_positive() {
+            return Err(anyhow!("Cannot add a trace with a negative probability."));
+        }
+
+        *self.traces.entry(trace).or_insert_with(|| Fraction::zero()) += probability;
+
+        Ok(())
+    }
 }
 
 impl TranslateActivityKey for FiniteStochasticLanguage {
@@ -102,7 +139,7 @@ impl TranslateActivityKey for FiniteStochasticLanguage {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
         //a hashmap needs to be rebuilt, unfortunately
-        let translated_traces: HashMap<Vec<Activity>, Fraction> = self
+        let translated_traces: HashMap<Vec<Activity>, Fraction, FnvBuildHasher> = self
             .traces
             .drain() // `drain` is used to take ownership of the original traces (use `into_iter()` or `drain()` if we want to consume)
             .map(|(trace, fraction)| (translator.translate_trace(&trace), fraction))
@@ -189,7 +226,7 @@ impl Importable for FiniteStochasticLanguage {
             .next_line_index()
             .context("Failed to read number of traces.")?;
 
-        let mut traces = HashMap::new();
+        let mut traces = Self::new_hashmap();
         let mut sum = Fraction::zero();
         let mut activity_key = ActivityKey::new();
         for trace_i in 0..number_of_traces {

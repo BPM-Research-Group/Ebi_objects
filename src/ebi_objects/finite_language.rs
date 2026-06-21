@@ -39,6 +39,16 @@ impl FiniteLanguage {
         }
     }
 
+    pub fn new_with_activity_key_from<T>(obj: &T) -> Self
+    where
+        T: HasActivityKey,
+    {
+        Self {
+            activity_key: obj.activity_key().clone(),
+            traces: Self::new_hashmap(),
+        }
+    }
+
     pub fn new_with_activity_key(activity_key: ActivityKey) -> Self {
         Self {
             activity_key,

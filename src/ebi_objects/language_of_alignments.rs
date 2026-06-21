@@ -58,9 +58,9 @@ impl TranslateActivityKey for LanguageOfAlignments {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
         self.alignments.iter_mut().for_each(|alignment| {
             alignment.iter_mut().for_each(|activity| match activity {
-                Move::SynchronousMove(activity, _)
-                | Move::LogMove(activity)
-                | Move::ModelMove(activity, _) => {
+                Move::SynchronousMove { activity, .. }
+                | Move::LogMove { activity, .. }
+                | Move::ModelMove { activity, .. } => {
                     *activity = translator.translate_activity(&activity)
                 }
                 _ => {}
@@ -98,7 +98,7 @@ impl Display for LanguageOfAlignments {
                 writeln!(f, "# move {}", j)?;
 
                 match movee {
-                    Move::LogMove(activity) => {
+                    Move::LogMove { activity } => {
                         writeln!(f, "log move")?;
                         writeln!(
                             f,
@@ -106,27 +106,33 @@ impl Display for LanguageOfAlignments {
                             self.activity_key.get_activity_label(activity)
                         )?;
                     }
-                    Move::ModelMove(activity, transition) => {
+                    Move::ModelMove {
+                        activity,
+                        transition,
+                    } => {
                         writeln!(f, "model move")?;
                         writeln!(
                             f,
                             "label {}",
                             self.activity_key.get_activity_label(activity)
                         )?;
-                        writeln!(f, "{}", transition)?;
+                        writeln!(f, "# transition\n{}", transition)?;
                     }
-                    Move::SynchronousMove(activity, transition) => {
+                    Move::SynchronousMove {
+                        activity,
+                        transition,
+                    } => {
                         writeln!(f, "synchronous move")?;
                         writeln!(
                             f,
                             "label {}",
                             self.activity_key.get_activity_label(activity)
                         )?;
-                        writeln!(f, "{}", transition)?;
+                        writeln!(f, "# transition\n{}", transition)?;
                     }
-                    Move::SilentMove(transition) => {
+                    Move::SilentMove { transition, .. } => {
                         writeln!(f, "silent move")?;
-                        writeln!(f, "{}", transition)?;
+                        writeln!(f, "# transition\n{}", transition)?;
                     }
                 };
             }
@@ -194,7 +200,7 @@ impl Importable for LanguageOfAlignments {
 
             let number_of_moves = lreader.next_line_index().with_context(|| {
                 format!(
-                    "failed to read number of moves in alignemnt {}",
+                    "failed to read number of moves in alignment {}",
                     alignment_number
                 )
             })?;
@@ -218,7 +224,8 @@ impl Importable for LanguageOfAlignments {
                     if label_line.trim_start().starts_with("label ") {
                         let label = label_line[6..].to_string();
                         let activity = activity_key.process_activity(&label);
-                        moves.push(Move::LogMove(activity));
+
+                        moves.push(Move::LogMove { activity });
                     } else {
                         return Err(anyhow!("Line must have a label"));
                     }
@@ -241,12 +248,15 @@ impl Importable for LanguageOfAlignments {
                     //read the transition
                     let transition = lreader.next_line_index().with_context(|| {
                         format!(
-                            "failed to read transition of move {} in alignemnt {}",
+                            "failed to read transition of move {} in alignment {}",
                             move_number, alignment_number
                         )
                     })?;
 
-                    moves.push(Move::ModelMove(activity, transition));
+                    moves.push(Move::ModelMove {
+                        activity,
+                        transition,
+                    });
                 } else if move_type_line.trim_start().starts_with("synchronous move") {
                     //read the label
                     let label_line = lreader.next_line_string().with_context(|| {
@@ -262,12 +272,15 @@ impl Importable for LanguageOfAlignments {
                         //read the transition
                         let transition = lreader.next_line_index().with_context(|| {
                             format!(
-                                "failed to read transition of move {} in alignemnt {}",
+                                "failed to read transition of move {} in alignment {}",
                                 move_number, alignment_number
                             )
                         })?;
 
-                        moves.push(Move::SynchronousMove(activity, transition));
+                        moves.push(Move::SynchronousMove {
+                            activity,
+                            transition,
+                        });
                     } else {
                         return Err(anyhow!("Line must have a label"));
                     }
@@ -275,12 +288,12 @@ impl Importable for LanguageOfAlignments {
                     //read the transition
                     let transition = lreader.next_line_index().with_context(|| {
                         format!(
-                            "failed to read transition of move {} in alignemnt {}",
+                            "failed to read transition of move {} in alignment {}",
                             move_number, alignment_number
                         )
                     })?;
 
-                    moves.push(Move::SilentMove(transition));
+                    moves.push(Move::SilentMove { transition });
                 } else {
                     return Err(anyhow!(
                         "Type of log move {} of alignment {} is not recognised.",
@@ -314,19 +327,29 @@ impl Infoable for LanguageOfAlignments {
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone)]
 pub enum Move {
-    LogMove(Activity),
-    ModelMove(Activity, TransitionIndex),
-    SynchronousMove(Activity, TransitionIndex),
-    SilentMove(TransitionIndex),
+    LogMove {
+        activity: Activity,
+    },
+    ModelMove {
+        activity: Activity,
+        transition: TransitionIndex,
+    },
+    SynchronousMove {
+        activity: Activity,
+        transition: TransitionIndex,
+    },
+    SilentMove {
+        transition: TransitionIndex,
+    },
 }
 
 impl Move {
     pub fn get_transition(&self) -> Option<TransitionIndex> {
         match self {
-            Move::LogMove(_) => None,
-            Move::ModelMove(_, transition)
-            | Move::SilentMove(transition)
-            | Move::SynchronousMove(_, transition) => Some(*transition),
+            Move::LogMove { .. } => None,
+            Move::ModelMove { transition, .. }
+            | Move::SilentMove { transition, .. }
+            | Move::SynchronousMove { transition, .. } => Some(*transition),
         }
     }
 }
@@ -336,15 +359,31 @@ impl TestActivityKey for LanguageOfAlignments {
     fn test_activity_key(&self) {
         self.alignments.iter().for_each(|alignment| {
             alignment.iter().for_each(|activity| match activity {
-                Move::SynchronousMove(activity, _)
-                | Move::LogMove(activity)
-                | Move::ModelMove(activity, _) => {
+                Move::SynchronousMove { activity, .. }
+                | Move::LogMove { activity, .. }
+                | Move::ModelMove { activity, .. } => {
                     use crate::HasActivityKey;
 
                     self.activity_key().assert_activity_is_of_key(activity)
                 }
-                Move::SilentMove(_) => {}
+                Move::SilentMove { .. } => {}
             })
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::LanguageOfAlignments;
+    use std::fs;
+
+    #[test]
+    fn ali_read() {
+        let fin = fs::read_to_string("testfiles/aa-ab-ba.ali").unwrap();
+        let ali = fin.parse::<LanguageOfAlignments>().unwrap();
+
+        println!("{}", ali);
+
+        assert_eq!(fin, ali.to_string());
     }
 }

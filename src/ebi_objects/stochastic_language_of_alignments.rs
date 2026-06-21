@@ -7,7 +7,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Result, anyhow, Error};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed};
 use ebi_derive::ActivityKey;
 use std::fmt::Display;
@@ -59,9 +59,9 @@ impl TranslateActivityKey for StochasticLanguageOfAlignments {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
         self.alignments.iter_mut().for_each(|alignment| {
             alignment.iter_mut().for_each(|activity| match activity {
-                Move::SynchronousMove(activity, _)
-                | Move::LogMove(activity)
-                | Move::ModelMove(activity, _) => {
+                Move::SynchronousMove { activity, .. }
+                | Move::LogMove { activity, .. }
+                | Move::ModelMove { activity, .. } => {
                     *activity = translator.translate_activity(&activity)
                 }
                 _ => {}
@@ -103,7 +103,7 @@ impl Display for StochasticLanguageOfAlignments {
                 writeln!(f, "# move {}", j)?;
 
                 match movee {
-                    Move::LogMove(activity) => {
+                    Move::LogMove { activity } => {
                         writeln!(f, "log move")?;
                         writeln!(
                             f,
@@ -111,7 +111,10 @@ impl Display for StochasticLanguageOfAlignments {
                             self.activity_key.get_activity_label(activity)
                         )?;
                     }
-                    Move::ModelMove(activity, transition) => {
+                    Move::ModelMove {
+                        activity,
+                        transition,
+                    } => {
                         writeln!(f, "model move")?;
                         writeln!(
                             f,
@@ -120,18 +123,21 @@ impl Display for StochasticLanguageOfAlignments {
                         )?;
                         writeln!(f, "{}", transition)?;
                     }
-                    Move::SynchronousMove(activity, transition) => {
+                    Move::SynchronousMove {
+                        activity,
+                        transition,
+                    } => {
                         writeln!(f, "synchronous move")?;
                         writeln!(
                             f,
                             "label {}",
                             self.activity_key.get_activity_label(activity)
                         )?;
-                        writeln!(f, "{}", transition)?;
+                        writeln!(f, "# transition\n{}", transition)?;
                     }
-                    Move::SilentMove(transition) => {
+                    Move::SilentMove { transition } => {
                         writeln!(f, "silent move")?;
-                        writeln!(f, "{}", transition)?;
+                        writeln!(f, "# transition\n{}", transition)?;
                     }
                 };
             }
@@ -170,10 +176,7 @@ impl Importable for StochasticLanguageOfAlignments {
         )?))
     }
 
-    fn import(
-        reader: &mut dyn std::io::BufRead,
-        _: &ImporterParameterValues,
-    ) -> Result<Self>
+    fn import(reader: &mut dyn std::io::BufRead, _: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized,
     {
@@ -220,7 +223,7 @@ impl Importable for StochasticLanguageOfAlignments {
 
             let number_of_moves = lreader.next_line_index().with_context(|| {
                 format!(
-                    "failed to read number of moves in alignemnt {}",
+                    "failed to read number of moves in alignment {}",
                     alignment_number
                 )
             })?;
@@ -244,7 +247,8 @@ impl Importable for StochasticLanguageOfAlignments {
                     if label_line.trim_start().starts_with("label ") {
                         let label = label_line[6..].to_string();
                         let activity = activity_key.process_activity(&label);
-                        moves.push(Move::LogMove(activity));
+
+                        moves.push(Move::LogMove { activity });
                     } else {
                         return Err(anyhow!("Line must have a label"));
                     }
@@ -267,12 +271,15 @@ impl Importable for StochasticLanguageOfAlignments {
                     //read the transition
                     let transition = lreader.next_line_index().with_context(|| {
                         format!(
-                            "failed to read transition of move {} in alignemnt {}",
+                            "failed to read transition of move {} in alignment {}",
                             move_number, alignment_number
                         )
                     })?;
 
-                    moves.push(Move::ModelMove(activity, transition));
+                    moves.push(Move::ModelMove {
+                        activity,
+                        transition,
+                    });
                 } else if move_type_line.trim_start().starts_with("synchronous move") {
                     //read the label
                     let label_line = lreader.next_line_string().with_context(|| {
@@ -288,12 +295,15 @@ impl Importable for StochasticLanguageOfAlignments {
                         //read the transition
                         let transition = lreader.next_line_index().with_context(|| {
                             format!(
-                                "failed to read transition of move {} in alignemnt {}",
+                                "failed to read transition of move {} in alignment {}",
                                 move_number, alignment_number
                             )
                         })?;
 
-                        moves.push(Move::SynchronousMove(activity, transition));
+                        moves.push(Move::SynchronousMove {
+                            activity,
+                            transition,
+                        });
                     } else {
                         return Err(anyhow!("Line must have a label"));
                     }
@@ -301,12 +311,12 @@ impl Importable for StochasticLanguageOfAlignments {
                     //read the transition
                     let transition = lreader.next_line_index().with_context(|| {
                         format!(
-                            "failed to read transition of move {} in alignemnt {}",
+                            "failed to read transition of move {} in alignment {}",
                             move_number, alignment_number
                         )
                     })?;
 
-                    moves.push(Move::SilentMove(transition));
+                    moves.push(Move::SilentMove { transition });
                 } else {
                     return Err(anyhow!(
                         "Type of log move {} of alignment {} is not recognised.",
@@ -370,14 +380,14 @@ impl TestActivityKey for StochasticLanguageOfAlignments {
     fn test_activity_key(&self) {
         self.alignments.iter().for_each(|alignment| {
             alignment.iter().for_each(|activity| match activity {
-                Move::SynchronousMove(activity, _)
-                | Move::LogMove(activity)
-                | Move::ModelMove(activity, _) => {
+                Move::SynchronousMove { activity, .. }
+                | Move::LogMove { activity, .. }
+                | Move::ModelMove { activity, .. } => {
                     use crate::HasActivityKey;
 
                     self.activity_key().assert_activity_is_of_key(activity)
                 }
-                Move::SilentMove(_) => {}
+                Move::SilentMove { .. } => {}
             })
         });
     }

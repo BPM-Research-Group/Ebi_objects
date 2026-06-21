@@ -27,7 +27,7 @@ use std::{
     fmt::Display,
 };
 
-/// A directly follows graph: a graph of weighted transitions, supports empty traces, and explicit start and end activities.
+/// A directly follows graph: a graph of weighted transitions (normalised on-the-fly), supports empty traces, and explicit start and end activities.
 /// The fields are public, however for convenience of access, the traits `AutomatonSemantics` and `StochasticAutomatonSemantics` are recommended.
 #[derive(ActivityKey, Clone, Debug)]
 pub struct DirectlyFollowsGraph {
@@ -240,6 +240,71 @@ impl DirectlyFollowsGraph {
             Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(weight.clone());
             }
+        }
+    }
+
+    pub fn remove_start_activity(&mut self, activity: Activity) {
+        let node = self.add_or_get_state(activity);
+        self.start_states.remove(node);
+    }
+
+    pub fn remove_end_activity(&mut self, activity: Activity) {
+        let node = self.add_or_get_state(activity);
+        self.end_states.remove(node);
+    }
+
+    pub fn outgoing_edges(&mut self, source: Activity) -> Vec<(Activity, &Fraction)> {
+        let mut result = vec![];
+        if let Some(source_state) = self.activity_2_state.get(source) {
+            //add edges
+            let (_, mut i) = self.binary_search(*source_state, AutomatonState::zero());
+            while i < self.sources.len() && self.sources[i] == *source_state {
+                if self.weights[i].is_positive() {
+                    result.push((self.state_2_activity[self.targets[i]], &self.weights[i]));
+                }
+                i += 1;
+            }
+
+            result
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn edges(&self) -> impl Iterator<Item = (Activity, (Activity, &Fraction))> {
+        self.sources
+            .iter()
+            .map(|state| self.state_2_activity[state])
+            .zip(
+                self.targets
+                    .iter()
+                    .map(|state| self.state_2_activity[state])
+                    .zip(self.weights.iter()),
+            )
+            .filter(|(_, (_, weight))| weight.is_positive())
+    }
+
+    pub fn edges_mut(&mut self) -> impl Iterator<Item = (Activity, (Activity, &mut Fraction))> {
+        self.sources
+            .iter()
+            .map(|state| self.state_2_activity[state])
+            .zip(
+                self.targets
+                    .iter()
+                    .map(|state| self.state_2_activity[state])
+                    .zip(self.weights.iter_mut()),
+            )
+            .filter(|(_, (_, weight))| weight.is_positive())
+    }
+
+    /// Sets the weight of an edge to 0. Does not actually remove the edge.
+    pub fn remove_edge(&mut self, source: Activity, target: Activity) {
+        let source = self.add_or_get_state(source);
+        let target = self.add_or_get_state(target);
+        let (found, from) = self.binary_search(source, target);
+        if found {
+            //edge already present
+            self.weights[from] = Fraction::zero();
         }
     }
 
