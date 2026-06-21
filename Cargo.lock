@@ -61,9 +61,9 @@ checksum = "84d7ced0ae9557296835c32bf1b1e02b44c746701f898460fb000d7eaa84f00a"
 
 [[package]]
 name = "bitvec"
-version = "1.0.1"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bc2832c24239b0141d5674bb9174f9d68a8b5b3f2753311927c172ca46f7e9c"
+checksum = "ddcec3d12c579d40898fe0a9a358a803c23e9c52ca3c425707f81c9436211837"
 dependencies = [
  "funty",
  "radium",
@@ -314,9 +314,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "ebi_activity_key"
-version = "0.0.2"
+version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41eab2d4244b7796f898c473fa432cdd7741b18fb23f95663bd32eda50ae12b9"
+checksum = "6707d47b66cf177c4e2c11624c08fd2b08d6dd54f6593f784e8566133f3d16df"
 dependencies = [
  "intmap",
  "uuid",
@@ -324,13 +324,13 @@ dependencies = [
 
 [[package]]
 name = "ebi_arithmetic"
-version = "0.3.12"
-source = "git+https://github.com/BPM-Research-Group/Ebi_arithmetic.git#250f59c82bb36133425a543432f42f1d23758461"
+version = "0.3.13"
+source = "git+https://github.com/BPM-Research-Group/Ebi_arithmetic.git#af365bfefaf06487ae550b803c4c1dda8a468072"
 dependencies = [
  "anyhow",
  "fnv",
  "intmap",
- "itertools 0.14.0",
+ "itertools 0.15.0",
  "malachite",
  "prime_factorization",
  "rand 0.9.4",
@@ -340,26 +340,26 @@ dependencies = [
 
 [[package]]
 name = "ebi_bpmn"
-version = "0.0.48"
-source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#fb37ef3e15291d44fc2f0d43224d2ef07071a448"
+version = "0.0.49"
+source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#a8cf03d38a4dca53ea41e8f085b7bea22b3a35b2"
 dependencies = [
  "anyhow",
  "bitvec",
  "ebi_activity_key",
  "ebi_arithmetic",
  "ebi_derive",
- "itertools 0.14.0",
+ "itertools 0.15.0",
  "layout-rs",
- "quick-xml 0.39.4",
+ "quick-xml 0.40.1",
  "strum",
  "strum_macros",
 ]
 
 [[package]]
 name = "ebi_derive"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1277ad700e42976df7be0a59add349710a40ac6ed5634a569f9a21707fe5b0ee"
+checksum = "89802b0c8318deed3c749930845ac616379c32188f3f61cb5b53c72835894d6c"
 dependencies = [
  "darling",
  "quote",
@@ -369,7 +369,7 @@ dependencies = [
 
 [[package]]
 name = "ebi_objects"
-version = "0.3.186"
+version = "0.3.187"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -382,7 +382,7 @@ dependencies = [
  "flate2",
  "fnv",
  "intmap",
- "itertools 0.14.0",
+ "itertools 0.15.0",
  "layout-rs",
  "log",
  "pastey",
@@ -797,6 +797,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -887,15 +896,15 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.32"
+version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
+checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "macros_process_mining"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4864fe2ea22ec122ecee124e243bdb75e89733b04f2d3004ea32e78e3f56bcf6"
+checksum = "433587a571736dd80cc2768329fd2e7a38c8f43c1e97675f7d460450cd37918c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -904,9 +913,9 @@ dependencies = [
 
 [[package]]
 name = "malachite"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8de8195e0d0bccfa3e54997e8e7c6c67859b08512067801b5a63dd0b7a174e87"
+checksum = "bba00455c89cf785ef73a0dfc941ab3c21211963c86130c0bd48d7994b942707"
 dependencies = [
  "malachite-base",
  "malachite-float",
@@ -916,9 +925,9 @@ dependencies = [
 
 [[package]]
 name = "malachite-base"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8b6f86fdbb1eb9955946be91775239dfcb0acdb1a51bb07d5fc9b8c854f5ccd"
+checksum = "a4f44099731f17094b07825c88ccb5fbd1bfa1f82fafff7daa33e8b8652db16e"
 dependencies = [
  "getrandom 0.2.17",
  "hashbrown 0.16.1",
@@ -932,9 +941,9 @@ dependencies = [
 
 [[package]]
 name = "malachite-float"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47d5021773c1552820b10ce7410817fadc1dfcef907b4f9a29af5346d756fd28"
+checksum = "a23982acc6f68aa384504a44d112f42fc82207035272f23485220a861e2cf1af"
 dependencies = [
  "itertools 0.14.0",
  "malachite-base",
@@ -944,9 +953,9 @@ dependencies = [
 
 [[package]]
 name = "malachite-nz"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0197a2f5cfee19d59178e282985c6ca79a9233e26a2adcf40acb693896aa09f6"
+checksum = "a137660cdba20f136c8a223125f08088adb4e0b72fbb8466f08c43e31cc0427d"
 dependencies = [
  "itertools 0.14.0",
  "libm",
@@ -956,11 +965,12 @@ dependencies = [
 
 [[package]]
 name = "malachite-q"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be2add95162aede090c48f0ee51bea7d328847ce3180aa44588111f846cc116b"
+checksum = "5ffcbeed95e34c0fcc3864ccd146e129cbbf7de1513d3afbcfb47c7674c82d94"
 dependencies = [
  "itertools 0.14.0",
+ "libm",
  "malachite-base",
  "malachite-nz",
 ]
@@ -1241,9 +1251,9 @@ dependencies = [
 
 [[package]]
 name = "process_mining"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64c5f48d81738ff65d3ac392ba3741c943764e3c3a34f8f85f3836b851737eb8"
+checksum = "23872e775717007dce2a676843d34ab2d3aec23a93755a9819ce04a0e20f2e73"
 dependencies = [
  "chrono",
  "csv",
@@ -1281,16 +1291,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "331e97a1af0bf59823e6eadffe373d7b27f485be8748f71471c662c1f269b7fb"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.39.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdcc8dd4e2f670d309a5f0e83fe36dfdc05af317008fea29144da1a2ac858e5e"
-dependencies = [
- "memchr",
- "serde",
 ]
 
 [[package]]
@@ -1881,9 +1881,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.117"
+version = "2.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
+checksum = "1b9ae57f904213ebb649ce6895b8a66c66f0203b9319718f69a5612a065b1422"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2127,9 +2127,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.23.2"
+version = "1.23.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d258b83ceec21034727ecee8c382cfa6c3e133699b0742c64571814fb420c9f7"
+checksum = "144d6b123cef80b301b8f72a9e2ca4370ddec21950d0a103dd22c437006d2db7"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
