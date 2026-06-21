@@ -1,6 +1,7 @@
 use super::process_tree::{Node, Operator};
 use crate::{
-    Activity, ActivityKey, EbiObject, Exportable, Importable,
+    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
+    Infoable, TranslateActivityKey,
     ebi_objects::{
         labelled_petri_net::TransitionIndex,
         process_tree::{NodeState, TreeMarking},
@@ -10,8 +11,9 @@ use crate::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
-    tree_semantics,
+    tree, tree_semantics,
 };
+use ebi_activity_key::HasActivityKey;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
@@ -299,6 +301,12 @@ impl StochasticProcessTree {
     }
 }
 
+tree!(
+    StochasticProcessTree,
+    StochasticChildrenIterator,
+    StochasticParentsIterator
+);
+
 impl Display for StochasticProcessTree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
@@ -457,7 +465,8 @@ pub mod tests {
         HasActivityKey, StochasticProcessTree,
         ebi_objects::stochastic_process_tree::{
             can_execute, can_terminate, execute_transition, get_enabled_transitions,
-            get_initial_state, get_total_weight_of_enabled_transitions, get_transition_activity, is_final_state,
+            get_initial_state, get_total_weight_of_enabled_transitions, get_transition_activity,
+            is_final_state,
         },
     };
     use ebi_bpmn::ebi_arithmetic::Fraction;
@@ -1070,7 +1079,7 @@ pub mod tests {
         // let partial_trace = vec![p, a, c, b, a, c, q];
 
         let mut state = get_initial_state(&tree).unwrap();
-        
+
         assert_eq!(get_enabled_transitions(&tree, &state), vec![0]);
         assert!(execute_transition(&tree, &mut state, 0).is_ok());
 
@@ -1101,10 +1110,9 @@ pub mod tests {
         assert!(execute_transition(&tree, &mut state, 6).is_ok());
 
         assert!(is_final_state(&tree, &state));
-        
     }
 
-     #[test]
+    #[test]
     fn loop_multiple_redos() {
         let fin = fs::read_to_string("testfiles/loop(a,b,c).sptree").unwrap();
         let tree = fin.parse::<StochasticProcessTree>().unwrap();

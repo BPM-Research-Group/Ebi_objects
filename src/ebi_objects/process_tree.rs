@@ -305,6 +305,7 @@ impl ProcessTree {
     }
 }
 
+#[macro_export]
 macro_rules! tree {
     ($t:ident, $u:ident, $v:ident) => {
         impl $t {
@@ -562,11 +563,6 @@ macro_rules! tree {
 }
 
 tree!(ProcessTree, ChildrenIterator, ParentsIterator);
-tree!(
-    StochasticProcessTree,
-    StochasticChildrenIterator,
-    StochasticParentsIterator
-);
 
 impl Display for ProcessTree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -577,6 +573,13 @@ impl Display for ProcessTree {
         write!(f, "")
     }
 }
+
+impl PartialEq for ProcessTree {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_hash_string() == other.to_hash_string()
+    }
+}
+impl Eq for ProcessTree {}
 
 impl Importable for ProcessTree {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A process tree is a line-based structure. Lines starting with a \\# are ignored.
