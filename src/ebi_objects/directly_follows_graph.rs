@@ -195,6 +195,16 @@ impl DirectlyFollowsGraph {
         self.empty_traces_weight.is_positive()
     }
 
+    pub fn contains_edge(&self, source: Activity, target: Activity) -> bool {
+        if let Some(source_state) = self.activity_2_state.get(source) {
+            if let Some(target_state) = self.activity_2_state.get(target) {
+                let (found, _) = self.binary_search(*source_state, *target_state);
+                return found;
+            }
+        }
+        false
+    }
+
     pub fn get_sources(&self) -> impl Iterator<Item = Activity> {
         self.sources
             .iter()
