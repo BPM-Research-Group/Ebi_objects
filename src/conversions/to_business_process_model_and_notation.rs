@@ -77,8 +77,8 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                         (Card::Zero, None) => {
                             let inp = c.add_gateway(parent, GatewayType::Exclusive)?;
                             let out: (usize, ()) = c.add_gateway(parent, GatewayType::Parallel)?;
-                            c.add_sequence_flow(parent, inp, out)?;
-                            c.add_sequence_flow(parent, out, inp)?;
+                            c.add_sequence_flow(inp, out)?;
+                            c.add_sequence_flow(out, inp)?;
                             additional_start_elements.push(inp);
                             (inp, out)
                         }
@@ -86,9 +86,9 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                             let inp = c.add_gateway(parent, GatewayType::Exclusive)?;
                             let task = c.add_task(parent, activity)?;
                             let out = c.add_gateway(parent, GatewayType::Parallel)?;
-                            c.add_sequence_flow(parent, inp, task)?;
-                            c.add_sequence_flow(parent, task, out)?;
-                            c.add_sequence_flow(parent, out, inp)?;
+                            c.add_sequence_flow(inp, task)?;
+                            c.add_sequence_flow(task, out)?;
+                            c.add_sequence_flow(out, inp)?;
                             additional_start_elements.push(inp);
                             (inp, out)
                         }
@@ -107,7 +107,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                         (Card::Multiple, Some(activity)) => {
                             let inp = c.add_gateway(parent, GatewayType::Parallel)?;
                             let out = c.add_task(parent, activity)?;
-                            c.add_sequence_flow(parent, inp, out)?;
+                            c.add_sequence_flow(inp, out)?;
                             (inp, out)
                         }
                     };
@@ -124,7 +124,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                         ));
                     }
                     if cardinality > &0 {
-                        c.add_sequence_flow(parent, input_gateway, input_element)?;
+                        c.add_sequence_flow(input_gateway, input_element)?;
                     }
                 }
 
@@ -133,7 +133,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                     Card::Zero => {
                         //there no outgoing edges of this transition; add an end event
                         let end_event = c.add_end_event(parent, EndEventType::None)?;
-                        c.add_sequence_flow(parent, output_element, end_event)?;
+                        c.add_sequence_flow(output_element, end_event)?;
                     }
                     Card::One | Card::Multiple => {
                         //there are outgoing edges; connect them
@@ -149,7 +149,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                                 ));
                             }
                             if cardinality > &0 {
-                                c.add_sequence_flow(parent, output_element, output_gateway)?;
+                                c.add_sequence_flow(output_element, output_gateway)?;
                             }
                         }
                     }
@@ -168,7 +168,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                 } else {
                     //add an and gateway to start the process
                     let and_gateway = c.add_gateway(parent, GatewayType::Parallel)?;
-                    c.add_sequence_flow(parent, start_event, and_gateway)?;
+                    c.add_sequence_flow(start_event, and_gateway)?;
                     and_gateway
                 }
             };
@@ -181,11 +181,11 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                     ));
                 } else if cardinality > &0 {
                     let xor_gateway = place_2_xor_gateway[place];
-                    c.add_sequence_flow(parent, start_element, xor_gateway)?;
+                    c.add_sequence_flow(start_element, xor_gateway)?;
                 }
             }
             for additional_start_element in additional_start_elements {
-                c.add_sequence_flow(parent, start_element, additional_start_element)?;
+                c.add_sequence_flow(start_element, additional_start_element)?;
             }
 
             c.to_bpmn()
