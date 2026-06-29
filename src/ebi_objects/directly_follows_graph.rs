@@ -57,7 +57,41 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn edge_weight(&self, source: AutomatonState, target: AutomatonState) -> Option<&Fraction> {
+    pub fn activities(&self) -> impl Iterator<Item = Activity> {
+        self.activity_2_state.keys()
+    }
+
+    pub fn edges(&self) -> impl Iterator<Item = (Activity, (Activity, &Fraction))> {
+        self.sources
+            .iter()
+            .map(|state| self.state_2_activity[state])
+            .zip(
+                self.targets
+                    .iter()
+                    .map(|state| self.state_2_activity[state])
+                    .zip(self.weights.iter()),
+            )
+            .filter(|(_, (_, weight))| weight.is_positive())
+    }
+
+    pub fn edges_mut(&mut self) -> impl Iterator<Item = (Activity, (Activity, &mut Fraction))> {
+        self.sources
+            .iter()
+            .map(|state| self.state_2_activity[state])
+            .zip(
+                self.targets
+                    .iter()
+                    .map(|state| self.state_2_activity[state])
+                    .zip(self.weights.iter_mut()),
+            )
+            .filter(|(_, (_, weight))| weight.is_positive())
+    }
+
+    pub fn edge_weight_states(
+        &self,
+        source: AutomatonState,
+        target: AutomatonState,
+    ) -> Option<&Fraction> {
         let (found, from) = self.binary_search(source, target);
         if found {
             Some(&self.weights[from])
@@ -66,7 +100,7 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn edge_weight_activities(&self, source: Activity, target: Activity) -> Fraction {
+    pub fn edge_weight(&self, source: Activity, target: Activity) -> Fraction {
         if let (Some(source), Some(target)) = (
             self.activity_2_state.get(source),
             self.activity_2_state.get(target),
@@ -279,32 +313,6 @@ impl DirectlyFollowsGraph {
         } else {
             vec![]
         }
-    }
-
-    pub fn edges(&self) -> impl Iterator<Item = (Activity, (Activity, &Fraction))> {
-        self.sources
-            .iter()
-            .map(|state| self.state_2_activity[state])
-            .zip(
-                self.targets
-                    .iter()
-                    .map(|state| self.state_2_activity[state])
-                    .zip(self.weights.iter()),
-            )
-            .filter(|(_, (_, weight))| weight.is_positive())
-    }
-
-    pub fn edges_mut(&mut self) -> impl Iterator<Item = (Activity, (Activity, &mut Fraction))> {
-        self.sources
-            .iter()
-            .map(|state| self.state_2_activity[state])
-            .zip(
-                self.targets
-                    .iter()
-                    .map(|state| self.state_2_activity[state])
-                    .zip(self.weights.iter_mut()),
-            )
-            .filter(|(_, (_, weight))| weight.is_positive())
     }
 
     /// Sets the weight of an edge to 0. Does not actually remove the edge.
