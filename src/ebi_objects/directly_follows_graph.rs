@@ -297,7 +297,7 @@ impl DirectlyFollowsGraph {
         self.end_states.remove(node);
     }
 
-    pub fn outgoing_edges(&mut self, source: Activity) -> Vec<(Activity, &Fraction)> {
+    pub fn outgoing_edges(&self, source: Activity) -> Vec<(Activity, &Fraction)> {
         let mut result = vec![];
         if let Some(source_state) = self.activity_2_state.get(source) {
             //add edges
