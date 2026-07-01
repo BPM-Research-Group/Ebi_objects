@@ -17,6 +17,13 @@ impl Marking {
         }
     }
 
+    pub fn get(&self, place: usize) -> u64 {
+        match self.place2token.get(place) {
+            Some(x) => *x,
+            None => 0,
+        }
+    }
+
     pub fn get_place2token(&self) -> &Vec<u64> {
         &self.place2token
     }
