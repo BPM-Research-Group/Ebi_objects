@@ -95,7 +95,10 @@ impl LabelledPetriNet {
         self.place2output_transitions.get(place)
     }
 
-    pub fn get_outgoing_places(&self, transition: TransitionIndex) -> Option<&Vec<TransitionIndex>> {
+    pub fn get_outgoing_places(
+        &self,
+        transition: TransitionIndex,
+    ) -> Option<&Vec<TransitionIndex>> {
         self.transition2output_places.get(transition)
     }
 
@@ -184,6 +187,35 @@ impl LabelledPetriNet {
             self.transition2input_places[to_transition].push(from_place);
             self.transition2input_places_cardinality[to_transition].push(1);
         }
+        Ok(())
+    }
+
+    /// Remove a transition and all its arcs.
+    /// May shift the indices of transitions.
+    pub fn remove_transition(&mut self, transition: TransitionIndex) -> Result<()> {
+        if transition >= self.labels.len() {
+            return Err(anyhow!(
+                "Transition {} cannot be removed as it does not exist.",
+                transition
+            ));
+        }
+        self.labels.remove(transition);
+        self.place2output_transitions.iter_mut().for_each(|l| {
+            l.retain_mut(|x| {
+                if *x == transition {
+                    //remove transition
+                    false
+                } else {
+                    *x -= 1;
+                    true
+                }
+            })
+        });
+        self.transition2input_places.remove(transition);
+        self.transition2input_places_cardinality.remove(transition);
+        self.transition2output_places.remove(transition);
+        self.transition2output_places_cardinality.remove(transition);
+
         Ok(())
     }
 
