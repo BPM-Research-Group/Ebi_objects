@@ -25,7 +25,6 @@ pub struct StochasticLabelledPetriNet {
     pub activity_key: ActivityKey,
     pub initial_marking: Option<Marking>,
     pub labels: Vec<Option<Activity>>,
-    pub place2input_transitions: Vec<Vec<usize>>,
     pub place2output_transitions: Vec<Vec<usize>>,
     pub transition2input_places: Vec<Vec<usize>>,
     pub transition2output_places: Vec<Vec<usize>>,
@@ -40,7 +39,6 @@ impl StochasticLabelledPetriNet {
             activity_key: ActivityKey::new(),
             initial_marking: Some(Marking::new(0)),
             labels: vec![],
-            place2input_transitions: vec![],
             place2output_transitions: vec![],
             transition2input_places: vec![],
             transition2output_places: vec![],
@@ -55,7 +53,6 @@ impl StochasticLabelledPetriNet {
             activity_key: ActivityKey::new(),
             initial_marking: None,
             labels: vec![None],
-            place2input_transitions: vec![],
             place2output_transitions: vec![],
             transition2input_places: vec![vec![]],
             transition2output_places: vec![vec![]],
@@ -116,7 +113,6 @@ impl StochasticLabelledPetriNet {
 
     pub fn add_place(&mut self) -> usize {
         let place = self.get_number_of_places();
-        self.place2input_transitions.push(vec![]);
         self.place2output_transitions.push(vec![]);
         if let Some(initial_marking) = &mut self.initial_marking {
             initial_marking.add_place();
@@ -168,14 +164,6 @@ impl StochasticLabelledPetriNet {
         } else {
             self.transition2output_places[from_transition].push(to_place);
             self.transition2output_places_cardinality[from_transition].push(1);
-        }
-
-        let p2t = self
-            .place2input_transitions
-            .get_mut(to_place)
-            .and_if_not("Place not found")?;
-        if !p2t.contains(&from_transition) {
-            p2t.push(from_transition);
         }
 
         Ok(())
@@ -542,7 +530,6 @@ impl Importable for StochasticLabelledPetriNet {
                 place2token: initial_marking,
             }),
             labels,
-            place2input_transitions,
             place2output_transitions,
             transition2input_places,
             transition2output_places,
@@ -560,7 +547,6 @@ impl From<(LabelledPetriNet, Vec<Fraction>)> for StochasticLabelledPetriNet {
             activity_key: value.0.activity_key,
             initial_marking: value.0.initial_marking,
             labels: value.0.labels,
-            place2input_transitions: value.0.place2input_transitions,
             place2output_transitions: value.0.place2output_transitions,
             transition2input_places: value.0.transition2input_places,
             transition2output_places: value.0.transition2output_places,

@@ -40,7 +40,6 @@ pub struct LabelledPetriNet {
     pub activity_key: ActivityKey,
     pub initial_marking: Option<Marking>,
     pub labels: Vec<Option<Activity>>,
-    pub place2input_transitions: Vec<Vec<usize>>,
     pub place2output_transitions: Vec<Vec<usize>>,
     pub transition2input_places: Vec<Vec<usize>>,
     pub transition2output_places: Vec<Vec<usize>>,
@@ -54,7 +53,6 @@ impl LabelledPetriNet {
             activity_key: ActivityKey::new(),
             initial_marking: Some(Marking::new(0)),
             labels: vec![],
-            place2input_transitions: vec![],
             place2output_transitions: vec![],
             transition2input_places: vec![],
             transition2output_places: vec![],
@@ -68,12 +66,11 @@ impl LabelledPetriNet {
             activity_key: ActivityKey::new(),
             initial_marking: None,
             labels: vec![None],
+            place2output_transitions: vec![],
             transition2input_places: vec![vec![]],
             transition2output_places: vec![vec![]],
             transition2input_places_cardinality: vec![vec![]],
             transition2output_places_cardinality: vec![vec![]],
-            place2input_transitions: vec![],
-            place2output_transitions: vec![],
         };
     }
 
@@ -108,13 +105,36 @@ impl LabelledPetriNet {
         self.transition2output_places.get(transition)
     }
 
-    pub fn get_incoming_transitions(&self, place: usize) -> Option<&Vec<TransitionIndex>> {
-        self.place2input_transitions.get(place)
+    /// Returns the transitions that have an arc to the given place, and the cardinality of the arc leading to that transition.
+    pub fn get_incoming_transitions(
+        &self,
+        place: usize,
+    ) -> Option<impl Iterator<Item = (TransitionIndex, u64)>> {
+        if place >= self.place2output_transitions.len() {
+            return None;
+        }
+
+        Some(
+            self.transition2input_places
+                .iter()
+                .zip(self.transition2input_places_cardinality.iter())
+                .map(move |(places, cardinalities)| {
+                    places.iter().zip(cardinalities.iter()).filter_map(
+                        move |(place_2, cardinality)| {
+                            if *place_2 == place {
+                                Some((*place_2, *cardinality))
+                            } else {
+                                None
+                            }
+                        },
+                    )
+                })
+                .flatten(),
+        )
     }
 
     pub fn add_place(&mut self) -> usize {
         let place = self.get_number_of_places();
-        self.place2input_transitions.push(vec![]);
         self.place2output_transitions.push(vec![]);
         if let Some(initial_marking) = &mut self.initial_marking {
             initial_marking.add_place();
@@ -165,14 +185,6 @@ impl LabelledPetriNet {
         } else {
             self.transition2output_places[from_transition].push(to_place);
             self.transition2output_places_cardinality[from_transition].push(1);
-        }
-
-        let p2t = self
-            .place2input_transitions
-            .get_mut(to_place)
-            .and_if_not("Place not found")?;
-        if !p2t.contains(&from_transition) {
-            p2t.push(from_transition);
         }
 
         Ok(())
@@ -692,7 +704,6 @@ impl Importable for LabelledPetriNet {
                 place2token: initial_marking,
             }),
             labels,
-            place2input_transitions,
             place2output_transitions,
             transition2input_places,
             transition2output_places,
