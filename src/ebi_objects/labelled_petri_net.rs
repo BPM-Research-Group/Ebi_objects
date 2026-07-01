@@ -20,7 +20,10 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Ok, Result, anyhow};
+use ebi_bpmn::{
+    ebi_arithmetic::anyhow::{Context, Error, Ok, Result, anyhow},
+    if_not::IfNot,
+};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{
@@ -37,6 +40,7 @@ pub struct LabelledPetriNet {
     pub activity_key: ActivityKey,
     pub initial_marking: Option<Marking>,
     pub labels: Vec<Option<Activity>>,
+    pub place2input_transitions: Vec<Vec<usize>>,
     pub place2output_transitions: Vec<Vec<usize>>,
     pub transition2input_places: Vec<Vec<usize>>,
     pub transition2output_places: Vec<Vec<usize>>,
@@ -50,6 +54,7 @@ impl LabelledPetriNet {
             activity_key: ActivityKey::new(),
             initial_marking: Some(Marking::new(0)),
             labels: vec![],
+            place2input_transitions: vec![],
             place2output_transitions: vec![],
             transition2input_places: vec![],
             transition2output_places: vec![],
@@ -67,6 +72,7 @@ impl LabelledPetriNet {
             transition2output_places: vec![vec![]],
             transition2input_places_cardinality: vec![vec![]],
             transition2output_places_cardinality: vec![vec![]],
+            place2input_transitions: vec![],
             place2output_transitions: vec![],
         };
     }
@@ -102,8 +108,13 @@ impl LabelledPetriNet {
         self.transition2output_places.get(transition)
     }
 
+    pub fn get_incoming_transitions(&self, place: usize) -> Option<&Vec<TransitionIndex>> {
+        self.place2input_transitions.get(place)
+    }
+
     pub fn add_place(&mut self) -> usize {
         let place = self.get_number_of_places();
+        self.place2input_transitions.push(vec![]);
         self.place2output_transitions.push(vec![]);
         if let Some(initial_marking) = &mut self.initial_marking {
             initial_marking.add_place();
@@ -136,7 +147,9 @@ impl LabelledPetriNet {
                 from_transition,
                 self.transition2input_places.len()
             ));
-        } else if to_place >= self.get_number_of_places() {
+        }
+
+        if to_place >= self.get_number_of_places() {
             return Err(anyhow!(
                 "non-existing place {} referenced, while there are {}",
                 to_place,
@@ -153,6 +166,15 @@ impl LabelledPetriNet {
             self.transition2output_places[from_transition].push(to_place);
             self.transition2output_places_cardinality[from_transition].push(1);
         }
+
+        let p2t = self
+            .place2input_transitions
+            .get_mut(to_place)
+            .and_if_not("Place not found")?;
+        if !p2t.contains(&from_transition) {
+            p2t.push(from_transition);
+        }
+
         Ok(())
     }
 
@@ -168,7 +190,9 @@ impl LabelledPetriNet {
                 to_transition,
                 self.transition2input_places.len()
             ));
-        } else if from_place >= self.get_number_of_places() {
+        }
+
+        if from_place >= self.get_number_of_places() {
             return Err(anyhow!(
                 "non-existing place {} referenced, while there are {}",
                 from_place,
@@ -176,7 +200,13 @@ impl LabelledPetriNet {
             ));
         }
 
-        self.place2output_transitions[from_place].push(to_transition);
+        let p2t = self
+            .place2output_transitions
+            .get_mut(from_place)
+            .and_if_not("Place not found")?;
+        if !p2t.contains(&to_transition) {
+            p2t.push(to_transition);
+        }
 
         if let Some(pos) = self.transition2input_places[to_transition]
             .iter()
@@ -539,6 +569,7 @@ impl Importable for LabelledPetriNet {
                 .parse::<usize>()
                 .with_context(|| anyhow!("Failed to read number of places."))?
         };
+        let mut place2input_transitions = vec![vec![]; number_of_places];
         let mut place2output_transitions = vec![vec![]; number_of_places];
 
         //read initial marking
@@ -596,7 +627,9 @@ impl Importable for LabelledPetriNet {
                         ));
                     }
 
-                    place2output_transitions[place].push(transition);
+                    if !place2output_transitions[place].contains(&transition) {
+                        place2output_transitions[place].push(transition);
+                    }
 
                     if let Some(pos) = transition2input_places[transition]
                         .iter()
@@ -636,6 +669,10 @@ impl Importable for LabelledPetriNet {
                         ));
                     }
 
+                    if !place2input_transitions[place].contains(&transition) {
+                        place2input_transitions[place].push(transition);
+                    }
+
                     if let Some(pos) = transition2output_places[transition]
                         .iter()
                         .position(|p| *p == place)
@@ -655,6 +692,7 @@ impl Importable for LabelledPetriNet {
                 place2token: initial_marking,
             }),
             labels,
+            place2input_transitions,
             place2output_transitions,
             transition2input_places,
             transition2output_places,

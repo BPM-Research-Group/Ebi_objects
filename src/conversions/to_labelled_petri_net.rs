@@ -372,6 +372,7 @@ impl From<StochasticLabelledPetriNet> for LabelledPetriNet {
             activity_key: value.activity_key,
             initial_marking: value.initial_marking,
             labels: value.labels,
+            place2input_transitions: value.place2input_transitions,
             place2output_transitions: value.place2output_transitions,
             transition2input_places: value.transition2input_places,
             transition2output_places: value.transition2output_places,
