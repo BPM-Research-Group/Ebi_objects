@@ -191,7 +191,7 @@ impl LabelledPetriNet {
     }
 
     /// Remove a transition and all its arcs.
-    /// May shift the indices of transitions.
+    /// May shift the indices of the remaining transitions.
     pub fn remove_transition(&mut self, transition: TransitionIndex) -> Result<()> {
         if transition >= self.labels.len() {
             return Err(anyhow!(
@@ -215,6 +215,57 @@ impl LabelledPetriNet {
         self.transition2input_places_cardinality.remove(transition);
         self.transition2output_places.remove(transition);
         self.transition2output_places_cardinality.remove(transition);
+
+        Ok(())
+    }
+
+    /// Remove a place and all its arcs.
+    /// May shift the indices of the remaining places.
+    pub fn remove_place(&mut self, place: usize) -> Result<()> {
+        if place >= self.place2output_transitions.len() {
+            return Err(anyhow!(
+                "Cannot remove place {} as it does not exist.",
+                place
+            ));
+        }
+
+        if let Some(marking) = &mut self.initial_marking {
+            marking.place2token.remove(place);
+        }
+
+        self.place2output_transitions.remove(place);
+        {
+            let mut i = 0;
+            self.transition2input_places.iter_mut().for_each(|l| {
+                l.retain_mut(|x| {
+                    i += 1;
+                    if *x == place {
+                        //remove place
+                        self.transition2input_places_cardinality.remove(i - 1);
+                        false
+                    } else {
+                        *x -= 1;
+                        true
+                    }
+                })
+            });
+        }
+        {
+            let mut i = 0;
+            self.transition2output_places.iter_mut().for_each(|l| {
+                l.retain_mut(|x| {
+                    i += 1;
+                    if *x == place {
+                        //remove place
+                        self.transition2output_places_cardinality.remove(i - 1);
+                        false
+                    } else {
+                        *x -= 1;
+                        true
+                    }
+                })
+            });
+        }
 
         Ok(())
     }
