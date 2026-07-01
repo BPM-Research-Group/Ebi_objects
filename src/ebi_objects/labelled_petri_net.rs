@@ -91,6 +91,10 @@ impl LabelledPetriNet {
         self.labels[transition]
     }
 
+    pub fn get_outgoing_transitions(&self, place: usize) -> Option<&Vec<TransitionIndex>> {
+        self.place2output_transitions.get(place)
+    }
+
     pub fn add_place(&mut self) -> usize {
         let place = self.get_number_of_places();
         self.place2output_transitions.push(vec![]);
