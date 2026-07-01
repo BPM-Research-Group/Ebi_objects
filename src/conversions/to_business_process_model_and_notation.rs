@@ -76,7 +76,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                     match (ain, value.get_transition_label(transition)) {
                         (Card::Zero, None) => {
                             let inp = c.add_gateway(parent, GatewayType::Exclusive)?;
-                            let out: (usize, ()) = c.add_gateway(parent, GatewayType::Parallel)?;
+                            let out = c.add_gateway(parent, GatewayType::Parallel)?;
                             c.add_sequence_flow(inp, out)?;
                             c.add_sequence_flow(out, inp)?;
                             additional_start_elements.push(inp);
