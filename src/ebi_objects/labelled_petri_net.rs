@@ -94,8 +94,32 @@ impl LabelledPetriNet {
         self.labels[transition]
     }
 
-    pub fn get_outgoing_transitions(&self, place: usize) -> Option<&Vec<TransitionIndex>> {
-        self.place2output_transitions.get(place)
+    pub fn get_outgoing_transitions(
+        &self,
+        place: usize,
+    ) -> Option<impl Iterator<Item = (TransitionIndex, u64)>> {
+        if place >= self.place2output_transitions.len() {
+            return None;
+        }
+
+        Some(
+            self.transition2input_places
+                .iter()
+                .zip(self.transition2input_places_cardinality.iter())
+                .enumerate()
+                .map(move |(transition, (places, cardinalities))| {
+                    places.iter().zip(cardinalities.iter()).filter_map(
+                        move |(place_2, cardinality)| {
+                            if *place_2 == place {
+                                Some((transition, *cardinality))
+                            } else {
+                                None
+                            }
+                        },
+                    )
+                })
+                .flatten(),
+        )
     }
 
     pub fn get_outgoing_places(
