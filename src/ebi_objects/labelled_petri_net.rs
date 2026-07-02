@@ -247,8 +247,10 @@ impl LabelledPetriNet {
                 if *x == transition {
                     //remove transition
                     false
-                } else {
+                } else if *x > transition {
                     *x -= 1;
+                    true
+                } else {
                     true
                 }
             })
@@ -285,8 +287,10 @@ impl LabelledPetriNet {
                         //remove place
                         self.transition2input_places_cardinality.remove(i - 1);
                         false
-                    } else {
+                    } else if *x > place {
                         *x -= 1;
+                        true
+                    } else {
                         true
                     }
                 })
