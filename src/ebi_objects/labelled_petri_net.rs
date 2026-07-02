@@ -129,6 +129,13 @@ impl LabelledPetriNet {
         self.transition2output_places.get(transition)
     }
 
+    pub fn get_incoming_places(
+        &self,
+        transition: TransitionIndex,
+    ) -> Option<&Vec<TransitionIndex>> {
+        self.transition2input_places.get(transition)
+    }
+
     /// Returns the transitions that have an arc to the given place, and the cardinality of the arc leading to that transition.
     pub fn get_incoming_transitions(
         &self,
