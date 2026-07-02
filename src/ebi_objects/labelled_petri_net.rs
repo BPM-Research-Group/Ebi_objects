@@ -279,8 +279,8 @@ impl LabelledPetriNet {
 
         self.place2output_transitions.remove(place);
         {
-            let mut i = 0;
             self.transition2input_places.iter_mut().for_each(|l| {
+                let mut i = 0;
                 l.retain_mut(|x| {
                     i += 1;
                     if *x == place {
@@ -297,8 +297,8 @@ impl LabelledPetriNet {
             });
         }
         {
-            let mut i = 0;
             self.transition2output_places.iter_mut().for_each(|l| {
+                let mut i = 0;
                 l.retain_mut(|x| {
                     i += 1;
                     if *x == place {
