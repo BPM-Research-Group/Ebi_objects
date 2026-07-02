@@ -118,11 +118,12 @@ impl LabelledPetriNet {
             self.transition2output_places
                 .iter()
                 .zip(self.transition2output_places_cardinality.iter())
-                .map(move |(places, cardinalities)| {
+                .enumerate()
+                .map(move |(transition, (places, cardinalities))| {
                     places.iter().zip(cardinalities.iter()).filter_map(
                         move |(place_2, cardinality)| {
                             if *place_2 == place {
-                                Some((*place_2, *cardinality))
+                                Some((transition, *cardinality))
                             } else {
                                 None
                             }
