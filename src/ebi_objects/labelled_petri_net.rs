@@ -115,9 +115,9 @@ impl LabelledPetriNet {
         }
 
         Some(
-            self.transition2input_places
+            self.transition2output_places
                 .iter()
-                .zip(self.transition2input_places_cardinality.iter())
+                .zip(self.transition2output_places_cardinality.iter())
                 .map(move |(places, cardinalities)| {
                     places.iter().zip(cardinalities.iter()).filter_map(
                         move |(place_2, cardinality)| {
