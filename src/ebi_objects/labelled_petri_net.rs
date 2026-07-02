@@ -125,15 +125,49 @@ impl LabelledPetriNet {
     pub fn get_outgoing_places(
         &self,
         transition: TransitionIndex,
-    ) -> Option<&Vec<TransitionIndex>> {
-        self.transition2output_places.get(transition)
+    ) -> Option<impl Iterator<Item = (TransitionIndex, u64)>> {
+        if transition >= self.transition2input_places.len() {
+            return None;
+        }
+
+        Some(
+            self.transition2output_places
+                .get(transition)
+                .unwrap()
+                .iter()
+                .copied()
+                .zip(
+                    self.transition2output_places_cardinality
+                        .get(transition)
+                        .unwrap()
+                        .iter()
+                        .copied(),
+                ),
+        )
     }
 
     pub fn get_incoming_places(
         &self,
         transition: TransitionIndex,
-    ) -> Option<&Vec<TransitionIndex>> {
-        self.transition2input_places.get(transition)
+    ) -> Option<impl Iterator<Item = (TransitionIndex, u64)>> {
+        if transition >= self.transition2input_places.len() {
+            return None;
+        }
+
+        Some(
+            self.transition2input_places
+                .get(transition)
+                .unwrap()
+                .iter()
+                .copied()
+                .zip(
+                    self.transition2input_places_cardinality
+                        .get(transition)
+                        .unwrap()
+                        .iter()
+                        .copied(),
+                ),
+        )
     }
 
     /// Returns the transitions that have an arc to the given place, and the cardinality of the arc leading to that transition.
