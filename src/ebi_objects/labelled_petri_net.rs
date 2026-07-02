@@ -279,40 +279,46 @@ impl LabelledPetriNet {
 
         self.place2output_transitions.remove(place);
         {
-            self.transition2input_places.iter_mut().for_each(|l| {
-                let mut i = 0;
-                l.retain_mut(|x| {
-                    i += 1;
-                    if *x == place {
-                        //remove place
-                        self.transition2input_places_cardinality.remove(i - 1);
-                        false
-                    } else if *x > place {
-                        *x -= 1;
-                        true
-                    } else {
-                        true
-                    }
-                })
-            });
+            self.transition2input_places
+                .iter_mut()
+                .enumerate()
+                .for_each(|(transition, l)| {
+                    let mut i = 0;
+                    l.retain_mut(|x| {
+                        i += 1;
+                        if *x == place {
+                            //remove place
+                            self.transition2input_places_cardinality[transition].remove(i - 1);
+                            false
+                        } else if *x > place {
+                            *x -= 1;
+                            true
+                        } else {
+                            true
+                        }
+                    })
+                });
         }
         {
-            self.transition2output_places.iter_mut().for_each(|l| {
-                let mut i = 0;
-                l.retain_mut(|x| {
-                    i += 1;
-                    if *x == place {
-                        //remove place
-                        self.transition2output_places_cardinality.remove(i - 1);
-                        false
-                    } else if *x > place {
-                        *x -= 1;
-                        true
-                    } else {
-                        true
-                    }
-                })
-            });
+            self.transition2output_places
+                .iter_mut()
+                .enumerate()
+                .for_each(|(transition, l)| {
+                    let mut i = 0;
+                    l.retain_mut(|x| {
+                        i += 1;
+                        if *x == place {
+                            //remove place
+                            self.transition2output_places_cardinality[transition].remove(i - 1);
+                            false
+                        } else if *x > place {
+                            *x -= 1;
+                            true
+                        } else {
+                            true
+                        }
+                    })
+                });
         }
 
         Ok(())
