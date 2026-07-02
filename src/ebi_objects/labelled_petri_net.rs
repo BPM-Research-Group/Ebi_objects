@@ -94,6 +94,8 @@ impl LabelledPetriNet {
         self.labels[transition]
     }
 
+    /// Returns an iterator over (transition, cardinality) for each outgoing arc.
+    /// Expensive method.
     pub fn get_outgoing_transitions(
         &self,
         place: usize,
@@ -122,6 +124,8 @@ impl LabelledPetriNet {
         )
     }
 
+    /// Returns an iterator over (place, cardinality) for each outgoing arc.
+    /// Cheap method.
     pub fn get_outgoing_places(
         &self,
         transition: TransitionIndex,
@@ -146,6 +150,8 @@ impl LabelledPetriNet {
         )
     }
 
+    /// Returns an iterator over (place, cardinality) for each incoming arc.
+    /// Cheap method.
     pub fn get_incoming_places(
         &self,
         transition: TransitionIndex,
@@ -170,7 +176,8 @@ impl LabelledPetriNet {
         )
     }
 
-    /// Returns the transitions that have an arc to the given place, and the cardinality of the arc leading to that transition.
+    /// Returns an iterator over (transition, cardinality) for each incoming arc.
+    /// Expensive method.
     pub fn get_incoming_transitions(
         &self,
         place: usize,
