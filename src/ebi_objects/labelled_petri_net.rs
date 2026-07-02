@@ -305,8 +305,10 @@ impl LabelledPetriNet {
                         //remove place
                         self.transition2output_places_cardinality.remove(i - 1);
                         false
-                    } else {
+                    } else if *x > place {
                         *x -= 1;
+                        true
+                    } else {
                         true
                     }
                 })
