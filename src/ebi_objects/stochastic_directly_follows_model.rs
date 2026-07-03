@@ -668,6 +668,9 @@ impl StochasticAutomatonSemantics for StochasticDirectlyFollowsModel {
         if transition == self.sources.len() {
             //terminating transition
             self.end_node_weights.get(state.0)
+        } else if transition > self.sources.len() {
+            //start transition
+            self.start_node_weights.get(transition - self.sources.len() - 1)
         } else {
             self.weights.get(transition)
         }
