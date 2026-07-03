@@ -40,6 +40,7 @@ pub struct DirectlyFollowsGraph {
     pub weights: Vec<Fraction>,       //edge -> how often observed
     pub start_states: IntMap<AutomatonState, Fraction>, //state -> how often observed
     pub end_states: IntMap<AutomatonState, Fraction>, //state -> how often observed
+    zero: Fraction,
 }
 
 impl DirectlyFollowsGraph {
@@ -54,6 +55,7 @@ impl DirectlyFollowsGraph {
             weights: vec![],
             start_states: IntMap::new(),
             end_states: IntMap::new(),
+            zero: Fraction::zero(),
         }
     }
 
@@ -74,6 +76,7 @@ impl DirectlyFollowsGraph {
             .filter(|(_, (_, weight))| weight.is_positive())
     }
 
+    /// Iterates over all edges, while the weight can be changed. If the weight is set to 0, the edge is considered removed.
     pub fn edges_mut(&mut self) -> impl Iterator<Item = (Activity, (Activity, &mut Fraction))> {
         self.sources
             .iter()
@@ -160,25 +163,19 @@ impl DirectlyFollowsGraph {
         })
     }
 
-    pub fn start_activity_weight(&self, activity: Activity) -> Fraction {
+    pub fn start_activity_weight(&self, activity: Activity) -> &Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            self.start_states
-                .get(*node)
-                .cloned()
-                .unwrap_or_else(|| Fraction::zero())
+            self.start_states.get(*node).unwrap_or(&self.zero)
         } else {
-            Fraction::zero()
+            &self.zero
         }
     }
 
-    pub fn end_activity_weight(&self, activity: Activity) -> Fraction {
+    pub fn end_activity_weight(&self, activity: Activity) -> &Fraction {
         if let Some(node) = self.activity_2_state.get(activity) {
-            self.end_states
-                .get(*node)
-                .cloned()
-                .unwrap_or_else(|| Fraction::zero())
+            self.end_states.get(*node).unwrap_or(&self.zero)
         } else {
-            Fraction::zero()
+            &self.zero
         }
     }
 

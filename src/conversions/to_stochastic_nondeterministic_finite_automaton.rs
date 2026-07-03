@@ -358,8 +358,8 @@ mod tests {
 
         let a = dfg.activity_key_mut().process_activity("a");
         let b = dfg.activity_key_mut().process_activity("b");
-        assert_eq!(dfg.start_activity_weight(a), Fraction::from((2, 5)));
-        assert_eq!(dfg.start_activity_weight(b), Fraction::from((3, 5)));
+        assert_eq!(*dfg.start_activity_weight(a), Fraction::from((2, 5)));
+        assert_eq!(*dfg.start_activity_weight(b), Fraction::from((3, 5)));
 
         let snfa: StochasticNondeterministicFiniteAutomaton = dfg.into();
         assert_eq!(snfa.termination_probabilities.len(), 3);
