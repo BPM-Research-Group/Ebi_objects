@@ -297,6 +297,28 @@ impl DirectlyFollowsGraph {
         self.end_states.remove(node);
     }
 
+    /// Returns the incoming edges of an activity.
+    /// Expensive operation.
+    pub fn incoming_edges(&self, target: Activity) -> impl Iterator<Item = (Activity, &Fraction)> {
+        self.sources
+            .iter()
+            .zip(self.targets.iter().zip(self.weights.iter()))
+            .filter_map(move |(source_state, (target_state_2, weight))| {
+                if Some(&target) == self.state_2_activity.get(target_state_2.0)
+                    && weight.is_positive()
+                {
+                    Some((
+                        self.state_2_activity.get(source_state.0).copied().unwrap(),
+                        weight,
+                    ))
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Returns the outgoing edges of an activity.
+    /// Cheap operation.
     pub fn outgoing_edges(&self, source: Activity) -> Vec<(Activity, &Fraction)> {
         let mut result = vec![];
         if let Some(source_state) = self.activity_2_state.get(source) {
