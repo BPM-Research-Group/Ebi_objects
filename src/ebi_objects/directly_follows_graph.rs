@@ -103,19 +103,37 @@ impl DirectlyFollowsGraph {
         }
     }
 
-    pub fn edge_weight(&self, source: Activity, target: Activity) -> Fraction {
+    pub fn edge_weight(&self, source: Activity, target: Activity) -> &Fraction {
         if let (Some(source), Some(target)) = (
             self.activity_2_state.get(source),
             self.activity_2_state.get(target),
         ) {
             let (found, from) = self.binary_search(*source, *target);
             if found {
-                self.weights[from].clone()
+                &self.weights[from]
             } else {
-                Fraction::zero()
+                &self.zero
             }
         } else {
-            Fraction::zero()
+            &self.zero
+        }
+    }
+
+    /// Returns a mutable reference to the weight of the edge.
+    /// Setting this weight to zero has the same effect as removing it entirely.
+    pub fn edge_weight_mut(&mut self, source: Activity, target: Activity) -> Option<&mut Fraction> {
+        if let (Some(source), Some(target)) = (
+            self.activity_2_state.get(source),
+            self.activity_2_state.get(target),
+        ) {
+            let (found, from) = self.binary_search(*source, *target);
+            if found {
+                Some(&mut self.weights[from])
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 
