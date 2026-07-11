@@ -3,7 +3,9 @@ use crate::{
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
         directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
-        labelled_petri_net::LabelledPetriNet, lola_net::LolaNet, process_tree::ProcessTree,
+        labelled_petri_net::LabelledPetriNet, lola_net::LolaNet,
+        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
+        process_tree::ProcessTree,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,
@@ -38,3 +40,4 @@ via_lpn!(ProcessTree);
 via_lpn!(StochasticProcessTree);
 via_lpn!(StochasticDeterministicFiniteAutomaton);
 via_lpn!(StochasticNondeterministicFiniteAutomaton);
+via_lpn!(PartiallyOrderedWorkflowLanguage);

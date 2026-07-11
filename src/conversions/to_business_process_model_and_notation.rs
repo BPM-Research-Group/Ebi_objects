@@ -5,7 +5,10 @@ use crate::{
     PetriNetMarkupLanguage, ProcessTree, ProcessTreeMarkupLanguage,
     StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
-    ebi_objects::process_tree::{Node, Operator},
+    ebi_objects::{
+        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
+        process_tree::{Node, Operator},
+    },
 };
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
@@ -358,6 +361,8 @@ impl From<ProcessTreeMarkupLanguage> for BusinessProcessModelAndNotation {
         ProcessTree::from(value).into()
     }
 }
+
+impl From<PartiallyOrderedWorkflowLanguage> for BusinessProcessModelAndNotation {}
 
 #[cfg(test)]
 mod tests {

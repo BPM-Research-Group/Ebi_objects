@@ -7,6 +7,7 @@ use crate::{
         directly_follows_model::DirectlyFollowsModel,
         labelled_petri_net::LabelledPetriNet,
         lola_net::LolaNet,
+        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
         process_tree::{Node, Operator, ProcessTree},
         process_tree_markup_language::ProcessTreeMarkupLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -248,6 +249,8 @@ macro_rules! tree {
 
 tree!(ProcessTree);
 tree!(StochasticProcessTree);
+
+impl From<PartiallyOrderedWorkflowLanguage> for LabelledPetriNet {}
 
 impl From<ProcessTreeMarkupLanguage> for LabelledPetriNet {
     fn from(value: ProcessTreeMarkupLanguage) -> Self {

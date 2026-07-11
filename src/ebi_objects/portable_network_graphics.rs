@@ -70,6 +70,7 @@ impl Exportable for PortableNetworkGraphics {
                 Err(anyhow!("cannot export portable document format as PNG"))
             }
             EbiObject::PortableNetworkGraphics(object) => object.export(f),
+            EbiObject::PartiallyOrderedWorkflowLanguage(object) => object.to_png()?.export(f),
         }
     }
 

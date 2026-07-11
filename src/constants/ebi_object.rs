@@ -11,6 +11,7 @@ use crate::{
         finite_stochastic_language::FiniteStochasticLanguage,
         finite_stochastic_partially_ordered_language::FiniteStochasticPartiallyOrderedLanguage,
         labelled_petri_net::LabelledPetriNet, language_of_alignments::LanguageOfAlignments,
+        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
         process_tree::ProcessTree, scalable_vector_graphics::ScalableVectorGraphics,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
@@ -56,6 +57,7 @@ pub enum EbiObject {
     ScalableVectorGraphics(ScalableVectorGraphics),
     PortableNetworkGraphics(PortableNetworkGraphics),
     PortableDocumentFormat(PortableDocumentFormat),
+    PartiallyOrderedWorkflowLanguage(PartiallyOrderedWorkflowLanguage),
 }
 
 impl EbiObject {
@@ -105,6 +107,9 @@ impl EbiObject {
             EbiObject::ScalableVectorGraphics(_) => EbiObjectType::ScalableVectorGraphics,
             EbiObject::PortableDocumentFormat(_) => EbiObjectType::PortableDocumentFormat,
             EbiObject::PortableNetworkGraphics(_) => EbiObjectType::PortableNetworkGraphics,
+            EbiObject::PartiallyOrderedWorkflowLanguage(_) => {
+                EbiObjectType::PartiallyOrderedWorkflowLanguage
+            }
         }
     }
 }
@@ -140,6 +145,7 @@ impl Display for EbiObject {
             EbiObject::ScalableVectorGraphics(o) => write!(f, "{}", o),
             EbiObject::PortableDocumentFormat(o) => write!(f, "{}", o),
             EbiObject::PortableNetworkGraphics(o) => write!(f, "{}", o),
+            EbiObject::PartiallyOrderedWorkflowLanguage(o) => write!(f, "{}", o),
         }
     }
 }
@@ -175,6 +181,7 @@ impl Infoable for EbiObject {
             EbiObject::ScalableVectorGraphics(o) => o.info(f),
             EbiObject::PortableDocumentFormat(o) => o.info(f),
             EbiObject::PortableNetworkGraphics(o) => o.info(f),
+            EbiObject::PartiallyOrderedWorkflowLanguage(o) => o.info(f),
         }
     }
 }
@@ -211,6 +218,7 @@ impl TestActivityKey for EbiObject {
             EbiObject::ScalableVectorGraphics(o) => o.test_activity_key(),
             EbiObject::PortableNetworkGraphics(o) => o.test_activity_key(),
             EbiObject::PortableDocumentFormat(o) => o.test_activity_key(),
+            EbiObject::PartiallyOrderedWorkflowLanguage(o) => o.test_activity_key(),
         }
     }
 }

@@ -61,6 +61,7 @@ pub mod ebi_objects {
     pub mod labelled_petri_net;
     pub mod language_of_alignments;
     pub mod lola_net;
+    pub mod partially_ordered_workflow_language;
     pub mod petri_net_markup_language;
     pub mod portable_document_format;
     pub mod portable_network_graphics;
