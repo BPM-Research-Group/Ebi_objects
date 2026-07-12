@@ -293,6 +293,16 @@ pub fn read_list_from_object<'a>(
     )
 }
 
+pub fn read_object_from_object<'a>(
+    json: &'a Map<String, Value>,
+    field: &str,
+) -> Result<&'a Map<String, Value>> {
+    read_object(
+        json.get(field)
+            .ok_or_else(|| anyhow!("Field {} not found in object.", field))?,
+    )
+}
+
 pub fn read_object_or_null_from_object<'a>(
     json: &'a Map<String, Value>,
     field: &str,

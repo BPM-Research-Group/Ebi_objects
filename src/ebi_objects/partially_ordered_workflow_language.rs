@@ -1,8 +1,11 @@
 use crate::{
     EbiObject, Exportable, Graphable, Importable, Infoable, json,
-    traits::importable::{ImporterParameter, ImporterParameterValues},
+    traits::{
+        graphable,
+        importable::{ImporterParameter, ImporterParameterValues, from_string},
+    },
 };
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Error, Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{
@@ -10,6 +13,7 @@ use ebi_activity_key::{
 };
 use ebi_bpmn::ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
+use layout::{adt::dag::NodeHandle, core::base::Orientation, topo::layout::VisualGraph};
 use serde_json::{Map, Value, json};
 use std::{
     collections::{HashMap, HashSet},
@@ -18,7 +22,7 @@ use std::{
 
 pub const HEADER_FORMAT: &str = "format";
 pub const HEADER_FORMAT_VALUE: &str = "powl-json";
-pub const HEADER_FORMAT_VERSION: &str = "version";
+pub const HEADER_FORMAT_VERSION: &str = "format_version";
 pub const HEADER_FORMAT_VERSION_VALUE: &str = "1.0";
 
 #[derive(ActivityKey, Clone, Debug)]
@@ -33,7 +37,7 @@ impl PartiallyOrderedWorkflowLanguage {
         self.root_model.len_recursive()
     }
 
-    pub fn nodes(&self) -> ModelIterator {
+    pub fn nodes(&'_ self) -> ModelIterator<'_> {
         self.root_model.nodes()
     }
 }
@@ -59,9 +63,11 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         Self: Sized,
     {
         let json: Value = serde_json::from_reader(reader)?;
+        let json = json::read_object(&json)
+            .with_context(|| anyhow!("Expected the root element to be an object."))?;
 
         //verify format
-        if json::read_field_string(&json, HEADER_FORMAT)? == HEADER_FORMAT_VALUE {
+        if json::read_string_from_object(&json, HEADER_FORMAT)? != HEADER_FORMAT_VALUE {
             return Err(anyhow!(
                 "Expected string {} with value {}.",
                 HEADER_FORMAT,
@@ -70,7 +76,9 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         }
 
         //verify version
-        if json::read_field_string(&json, HEADER_FORMAT_VERSION)? == HEADER_FORMAT_VERSION_VALUE {
+        if json::read_string_from_object(&json, HEADER_FORMAT_VERSION)?
+            != HEADER_FORMAT_VERSION_VALUE
+        {
             return Err(anyhow!(
                 "Expected string {} with value {}.",
                 HEADER_FORMAT_VERSION,
@@ -79,7 +87,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         }
 
         //read root model
-        let json_root_model = json::read_field_object(&json, "model")
+        let json_root_model = json::read_object_from_object(&json, "model")
             .with_context(|| anyhow!("Could not read root model."))?;
 
         let mut activity_key = ActivityKey::new();
@@ -94,6 +102,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         })
     }
 }
+from_string!(PartiallyOrderedWorkflowLanguage);
 
 fn import_model(
     json_model: &Map<String, Value>,
@@ -561,12 +570,18 @@ impl Display for PartiallyOrderedWorkflowLanguage {
                 "model": self.root_model.to_json(&self.activity_key, &self.keys),
             }
         );
-        let x = serde_json::to_string(&json).unwrap();
+        let x = serde_json::to_string_pretty(&json).unwrap();
         write!(f, "{}", x)
     }
 }
 
-impl Graphable for PartiallyOrderedWorkflowLanguage {}
+impl Graphable for PartiallyOrderedWorkflowLanguage {
+    fn to_dot(&self) -> Result<VisualGraph> {
+        let mut graph = VisualGraph::new(Orientation::LeftToRight);
+        self.root_model.to_dot(self.activity_key(), &mut graph);
+        Ok(graph)
+    }
+}
 
 impl Exportable for PartiallyOrderedWorkflowLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
@@ -650,7 +665,7 @@ impl Model {
         }
     }
 
-    pub fn nodes(&self) -> ModelIterator {
+    pub fn nodes(&'_ self) -> ModelIterator<'_> {
         self.into()
     }
 
@@ -802,6 +817,126 @@ impl Model {
 
         Value::Object(result)
     }
+
+    pub fn to_dot(
+        &self,
+        activity_key: &ActivityKey,
+        graph: &mut VisualGraph,
+    ) -> (NodeHandle, NodeHandle) {
+        match self {
+            Model::Activity { activity: None, .. } => {
+                let t = graphable::create_silent_transition(graph, "");
+                (t, t)
+            }
+            Model::Activity {
+                activity: Some(activity),
+                skippable,
+                repeatable,
+                ..
+            } => {
+                let cardinality = match (skippable, repeatable) {
+                    (true, true) => "*",
+                    (true, false) => "?",
+                    (false, true) => "+",
+                    (false, false) => "",
+                };
+                let t = graphable::create_transition(
+                    graph,
+                    activity_key.get_activity_label(&activity),
+                    cardinality,
+                );
+                (t, t)
+            }
+            Model::PartialOrder { nodes, edges, .. } => {
+                //children
+                let index_2_handles = nodes
+                    .iter()
+                    .map(|node| {
+                        let (entry, exit) = node.to_dot(activity_key, graph);
+                        let pre_entry = graphable::create_gateway(graph, "+");
+                        let post_exit = graphable::create_gateway(graph, "+");
+                        graphable::create_edge(graph, &pre_entry, &entry, "");
+                        graphable::create_edge(graph, &exit, &post_exit, "");
+                        (pre_entry, post_exit)
+                    })
+                    .collect::<Vec<_>>();
+
+                let mut is_start = vec![true; nodes.len()];
+                let mut is_end = vec![true; nodes.len()];
+
+                //edges
+                for (source_index, target_index) in edges {
+                    let source = index_2_handles[*source_index].1;
+                    let target = index_2_handles[*target_index].0;
+                    graphable::create_edge(graph, &source, &target, "");
+
+                    is_start[*target_index] = false;
+                    is_end[*source_index] = false;
+                }
+
+                //start edges
+                let start = graphable::create_gateway(graph, "+");
+                for (target_index, x) in is_start.into_iter().enumerate() {
+                    if x {
+                        let target = index_2_handles[target_index].0;
+                        graphable::create_edge(graph, &start, &target, "");
+                    }
+                }
+
+                let end = graphable::create_gateway(graph, "+");
+                for (source_index, x) in is_end.into_iter().enumerate() {
+                    if x {
+                        let source = index_2_handles[source_index].1;
+                        graphable::create_edge(graph, &source, &end, "");
+                    }
+                }
+
+                (start, end)
+            }
+            Model::ChoiceGraph {
+                nodes,
+                edges,
+                start_nodes,
+                end_nodes,
+                ..
+            } => {
+                //children
+                let index_2_handles = nodes
+                    .iter()
+                    .map(|node| {
+                        let (entry, exit) = node.to_dot(activity_key, graph);
+                        let pre_entry = graphable::create_gateway(graph, "x");
+                        let post_exit = graphable::create_gateway(graph, "x");
+                        graphable::create_edge(graph, &pre_entry, &entry, "");
+                        graphable::create_edge(graph, &exit, &post_exit, "");
+                        (pre_entry, post_exit)
+                    })
+                    .collect::<Vec<_>>();
+
+                //edges
+                for (source_index, target_index) in edges {
+                    let source = index_2_handles[*source_index].1;
+                    let target = index_2_handles[*target_index].0;
+                    graphable::create_edge(graph, &source, &target, "");
+                }
+
+                //start edges
+                let start = graphable::create_gateway(graph, "x");
+                for target_index in start_nodes {
+                    let target = index_2_handles[*target_index].0;
+                    graphable::create_edge(graph, &start, &target, "");
+                }
+
+                let end = graphable::create_gateway(graph, "x");
+                for source_index in end_nodes {
+                    let source = index_2_handles[*source_index].1;
+                    graphable::create_edge(graph, &source, &end, "");
+                }
+
+                (start, end)
+            }
+        }
+    }
 }
 
 fn write_common(
@@ -884,17 +1019,13 @@ fn get_mut<'a>(model: &'a mut Model, left: &mut usize) -> Option<&'a mut Model> 
     None
 }
 
-struct ModelIterator<'a> {
-    model: &'a Model,
+pub struct ModelIterator<'a> {
     stack: Vec<&'a Model>,
 }
 
 impl<'a> From<&'a Model> for ModelIterator<'a> {
     fn from(value: &'a Model) -> Self {
-        Self {
-            model: value,
-            stack: vec![value],
-        }
+        Self { stack: vec![value] }
     }
 }
 
@@ -927,5 +1058,37 @@ impl Default for Keys {
             resource_key: ActivityKey::new(),
             role_key: ActivityKey::new(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ebi_objects::{
+        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
+        scalable_vector_graphics::ToSVG,
+    };
+    use std::fs;
+
+    #[test]
+    fn import() {
+        let fin = fs::read_to_string("testfiles/sepsis.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        let fin2 = powl.to_string();
+        let powl2 = fin2.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        let fin3 = powl2.to_string();
+        let _powl3 = fin3.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        assert_eq!(fin2, fin3);
+    }
+
+    #[test]
+    fn graphable() {
+        let fin = fs::read_to_string("testfiles/request_handling.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+        let svg = powl.to_svg().unwrap();
+
+        println!("{}", svg);
     }
 }

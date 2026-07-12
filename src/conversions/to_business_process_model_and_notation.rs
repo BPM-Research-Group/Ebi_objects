@@ -362,7 +362,11 @@ impl From<ProcessTreeMarkupLanguage> for BusinessProcessModelAndNotation {
     }
 }
 
-impl From<PartiallyOrderedWorkflowLanguage> for BusinessProcessModelAndNotation {}
+impl From<PartiallyOrderedWorkflowLanguage> for BusinessProcessModelAndNotation {
+    fn from(value: PartiallyOrderedWorkflowLanguage) -> Self {
+        todo!()
+    }
+}
 
 #[cfg(test)]
 mod tests {

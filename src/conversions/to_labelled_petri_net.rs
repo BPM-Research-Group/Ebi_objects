@@ -250,7 +250,12 @@ macro_rules! tree {
 tree!(ProcessTree);
 tree!(StochasticProcessTree);
 
-impl From<PartiallyOrderedWorkflowLanguage> for LabelledPetriNet {}
+impl From<PartiallyOrderedWorkflowLanguage> for LabelledPetriNet {
+
+fn from(value: PartiallyOrderedWorkflowLanguage) -> Self {
+        todo!()
+    }
+}
 
 impl From<ProcessTreeMarkupLanguage> for LabelledPetriNet {
     fn from(value: ProcessTreeMarkupLanguage) -> Self {
