@@ -5,10 +5,12 @@ use crate::{
 use anyhow::{Context, Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_activity_key::{Activity, ActivityKey, ActivityKeyTranslator, TranslateActivityKey};
+use ebi_activity_key::{
+    Activity, ActivityKey, ActivityKeyTranslator, HasActivityKey, TranslateActivityKey,
+};
 use ebi_bpmn::ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -23,9 +25,17 @@ pub const HEADER_FORMAT_VERSION_VALUE: &str = "1.0";
 pub struct PartiallyOrderedWorkflowLanguage {
     pub activity_key: ActivityKey,
     pub root_model: Model,
-    pub lifecycle_key: ActivityKey,
-    pub resource_key: ActivityKey,
-    pub role_key: ActivityKey,
+    pub keys: Keys,
+}
+
+impl PartiallyOrderedWorkflowLanguage {
+    pub fn number_of_nodes(&self) -> usize {
+        self.root_model.len_recursive()
+    }
+
+    pub fn nodes(&self) -> ModelIterator {
+        self.root_model.nodes()
+    }
 }
 
 impl Importable for PartiallyOrderedWorkflowLanguage {
@@ -73,25 +83,14 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
             .with_context(|| anyhow!("Could not read root model."))?;
 
         let mut activity_key = ActivityKey::new();
-        let mut lifecycle_key = ActivityKey::new();
-        let mut resource_key = ActivityKey::new();
-        let mut role_key = ActivityKey::new();
-        let root_model = import_model(
-            json_root_model,
-            &mut activity_key,
-            &mut lifecycle_key,
-            &mut resource_key,
-            &mut role_key,
-            true,
-        )
-        .with_context(|| anyhow!("Reading root model."))?;
+        let mut keys = Keys::default();
+        let root_model = import_model(json_root_model, &mut activity_key, &mut keys, true)
+            .with_context(|| anyhow!("Reading root model."))?;
 
         Ok(Self {
             activity_key,
             root_model,
-            lifecycle_key,
-            resource_key,
-            role_key,
+            keys,
         })
     }
 }
@@ -99,9 +98,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
 fn import_model(
     json_model: &Map<String, Value>,
     activity_key: &mut ActivityKey,
-    lifecycle_key: &mut ActivityKey,
-    resource_key: &mut ActivityKey,
-    role_key: &mut ActivityKey,
+    keys: &mut Keys,
     is_root: bool,
 ) -> Result<Model> {
     //read id
@@ -132,9 +129,7 @@ fn import_model(
             id.clone(),
             skippable,
             repeatable,
-            lifecycle_key,
-            resource_key,
-            role_key,
+            keys,
         )
         .with_context(|| anyhow!("Reading activity model with id `{:?}`", id)),
         "partial_order" => import_partial_order(
@@ -143,9 +138,7 @@ fn import_model(
             id.clone(),
             skippable,
             repeatable,
-            lifecycle_key,
-            resource_key,
-            role_key,
+            keys,
         )
         .with_context(|| anyhow!("Reading partial order model with id `{:?}`", id)),
         "choice_graph" => import_choice_graph(
@@ -154,9 +147,7 @@ fn import_model(
             id.clone(),
             skippable,
             repeatable,
-            lifecycle_key,
-            resource_key,
-            role_key,
+            keys,
         )
         .with_context(|| anyhow!("Reading choice graph model with id `{:?}`", id)),
         x => return Err(anyhow!("Type {} is not recognised as a model type.", x)),
@@ -169,9 +160,7 @@ fn import_activity(
     id: Option<String>,
     skippable: bool,
     repeatable: bool,
-    lifecycle_key: &mut ActivityKey,
-    resource_key: &mut ActivityKey,
-    role_key: &mut ActivityKey,
+    keys: &mut Keys,
 ) -> Result<Model> {
     //read the attributes
     let (name, description, resource, role, cost, lifecycle) = if let Some(json_attributes) =
@@ -185,18 +174,18 @@ fn import_activity(
 
         //read resource
         let resource = json::read_string_or_null_from_object(json_attributes, "resource")?
-            .map(|x| resource_key.process_activity(&x));
+            .map(|x| keys.resource_key.process_activity(&x));
 
         //read role
         let role = json::read_string_or_null_from_object(json_attributes, "role")?
-            .map(|x| role_key.process_activity(&x));
+            .map(|x| keys.role_key.process_activity(&x));
 
         //read cost
         let cost = json::read_fraction_or_null_from_object(json_attributes, "cost")?;
 
         //read lifecycle
         let lifecycle = json::read_string_or_null_from_object(json_attributes, "lifecycle")?
-            .map(|x| lifecycle_key.process_activity(&x));
+            .map(|x| keys.lifecycle_key.process_activity(&x));
 
         (name, description, resource, role, cost, lifecycle)
     } else {
@@ -236,23 +225,15 @@ fn import_partial_order(
     id: Option<String>,
     skippable: bool,
     repeatable: bool,
-    lifecycle_key: &mut ActivityKey,
-    resource_key: &mut ActivityKey,
-    role_key: &mut ActivityKey,
+    keys: &mut Keys,
 ) -> Result<Model> {
     //read basic attributes
     let (name, description) = read_attributes(json_model)
         .with_context(|| anyhow!("Reading attributes of node {:?}.", id))?;
 
     //read nodes
-    let (nodes, id_2_index) = read_nodes(
-        json_model,
-        activity_key,
-        lifecycle_key,
-        resource_key,
-        role_key,
-    )
-    .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
+    let (nodes, id_2_index) = read_nodes(json_model, activity_key, keys)
+        .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
 
     //read edges
     let mut edges = HashSet::new();
@@ -320,23 +301,15 @@ fn import_choice_graph(
     id: Option<String>,
     skippable: bool,
     repeatable: bool,
-    lifecycle_key: &mut ActivityKey,
-    resource_key: &mut ActivityKey,
-    role_key: &mut ActivityKey,
+    keys: &mut Keys,
 ) -> Result<Model> {
     //read basic attributes
     let (name, description) = read_attributes(json_model)
         .with_context(|| anyhow!("Reading attributes of node {:?}.", id))?;
 
     //read nodes
-    let (nodes, id_2_index) = read_nodes(
-        json_model,
-        activity_key,
-        lifecycle_key,
-        resource_key,
-        role_key,
-    )
-    .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
+    let (nodes, id_2_index) = read_nodes(json_model, activity_key, keys)
+        .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
 
     //check for reserved ids
     if id_2_index.contains_key("@start") {
@@ -488,9 +461,7 @@ fn read_attributes(json_model: &Map<String, Value>) -> Result<(Option<String>, O
 fn read_nodes(
     json_model: &Map<String, Value>,
     activity_key: &mut ActivityKey,
-    lifecycle_key: &mut ActivityKey,
-    resource_key: &mut ActivityKey,
-    role_key: &mut ActivityKey,
+    keys: &mut Keys,
 ) -> Result<(Vec<Model>, HashMap<String, usize>)> {
     let mut id_2_index = HashMap::new();
     let mut nodes = vec![];
@@ -504,15 +475,8 @@ fn read_nodes(
             .with_context(|| anyhow!("For node {}, expected an object.", node_index))?;
 
         //recurse
-        let node = import_model(
-            json_node,
-            activity_key,
-            lifecycle_key,
-            resource_key,
-            role_key,
-            false,
-        )
-        .with_context(|| anyhow!("Reading node {}.", node_index))?;
+        let node = import_model(json_node, activity_key, keys, false)
+            .with_context(|| anyhow!("Reading node {}.", node_index))?;
 
         let child_id = node
             .id()
@@ -557,16 +521,69 @@ impl TranslateActivityKey for PartiallyOrderedWorkflowLanguage {
     }
 }
 
-impl Infoable for PartiallyOrderedWorkflowLanguage {}
+impl Infoable for PartiallyOrderedWorkflowLanguage {
+    fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
+        writeln!(f, "Number of nodes\t\t{}", self.number_of_nodes())?;
+        writeln!(
+            f,
+            "Number of activities\t\t{}",
+            self.activity_key().get_number_of_activities()
+        )?;
+
+        writeln!(f, "")?;
+        self.activity_key().info(f)?;
+
+        Ok(writeln!(f, "")?)
+    }
+}
 
 #[cfg(any(test, feature = "testactivities"))]
-impl TestActivityKey for PartiallyOrderedWorkflowLanguage {}
+impl TestActivityKey for PartiallyOrderedWorkflowLanguage {
+    fn test_activity_key(&self) {
+        self.nodes().for_each(|node| {
+            if let Model::Activity {
+                activity: Some(activity),
+                ..
+            } = node
+            {
+                self.activity_key().assert_activity_is_of_key(&activity);
+            }
+        });
+    }
+}
 
-impl Display for PartiallyOrderedWorkflowLanguage {}
+impl Display for PartiallyOrderedWorkflowLanguage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let json = serde_json::json!(
+            {
+                HEADER_FORMAT: HEADER_FORMAT_VALUE,
+                HEADER_FORMAT_VERSION: HEADER_FORMAT_VERSION_VALUE,
+                "model": self.root_model.to_json(&self.activity_key, &self.keys),
+            }
+        );
+        let x = serde_json::to_string(&json).unwrap();
+        write!(f, "{}", x)
+    }
+}
 
 impl Graphable for PartiallyOrderedWorkflowLanguage {}
 
-impl Exportable for PartiallyOrderedWorkflowLanguage {}
+impl Exportable for PartiallyOrderedWorkflowLanguage {
+    fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
+        match object {
+            EbiObject::PartiallyOrderedWorkflowLanguage(powl) => powl.export(f),
+            _ => Err(anyhow!(
+                "Cannot export {} {} as a partially ordered workflow language.",
+                object.get_type().get_article(),
+                object.get_type()
+            )),
+        }
+    }
+
+    fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
+        Ok(write!(f, "{}", self)?)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum Model {
@@ -632,6 +649,217 @@ impl Model {
             }
         }
     }
+
+    pub fn nodes(&self) -> ModelIterator {
+        self.into()
+    }
+
+    pub fn to_json(&self, activity_key: &ActivityKey, keys: &Keys) -> Value {
+        let mut result = Map::new();
+        match self {
+            Model::Activity {
+                id,
+                activity,
+                resource,
+                role,
+                cost,
+                lifecycle,
+                skippable,
+                repeatable,
+                name,
+                description,
+            } => {
+                result.insert("type".to_string(), json!("activity"));
+
+                write_common(&mut result, id, skippable, repeatable);
+
+                result.insert(
+                    "label".to_string(),
+                    if let Some(activity) = activity {
+                        json!(activity_key.deprocess_activity(activity))
+                    } else {
+                        Value::Null
+                    },
+                );
+
+                {
+                    let mut attributes = Map::new();
+
+                    if let Some(name) = name {
+                        attributes.insert("name".to_string(), json!(name));
+                    }
+
+                    if let Some(description) = description {
+                        attributes.insert("description".to_string(), json!(description));
+                    }
+
+                    if let Some(cost) = cost {
+                        attributes.insert("cost".to_string(), Value::String(cost.to_string()));
+                    }
+
+                    if let Some(lifecycle) = lifecycle {
+                        attributes.insert(
+                            "lifecycle".to_string(),
+                            json!(&keys.lifecycle_key.deprocess_activity(lifecycle)),
+                        );
+                    }
+
+                    if let Some(resource) = resource {
+                        attributes.insert(
+                            "resource".to_string(),
+                            json!(&keys.resource_key.deprocess_activity(resource)),
+                        );
+                    }
+
+                    if let Some(role) = role {
+                        attributes.insert(
+                            "role".to_string(),
+                            json!(&keys.role_key.deprocess_activity(role)),
+                        );
+                    }
+
+                    if !attributes.is_empty() {
+                        result.insert("attributes".to_string(), Value::Object(attributes));
+                    }
+                }
+            }
+            Model::PartialOrder {
+                id,
+                nodes,
+                edges,
+                skippable,
+                repeatable,
+                name,
+                description,
+            } => {
+                result.insert("type".to_string(), json!("partial_order"));
+
+                write_common(&mut result, id, skippable, repeatable);
+
+                write_attributes(&mut result, name, description);
+
+                write_nodes(&mut result, nodes, activity_key, keys);
+
+                result.insert(
+                    "edges".to_string(),
+                    json!(
+                        edges
+                            .iter()
+                            .map(|(source_index, target_index)| json!({
+                                "source": json!(nodes[*source_index].id()),
+                                "target": json!(nodes[*target_index].id())
+                            }))
+                            .collect::<Vec<_>>()
+                    ),
+                );
+            }
+            Model::ChoiceGraph {
+                id,
+                nodes,
+                edges,
+                start_nodes,
+                end_nodes,
+                skippable,
+                repeatable,
+                name,
+                description,
+            } => {
+                result.insert("type".to_string(), json!("choice_graph"));
+
+                write_common(&mut result, id, skippable, repeatable);
+
+                write_attributes(&mut result, name, description);
+
+                write_nodes(&mut result, nodes, activity_key, keys);
+
+                //edges
+                let mut json_edges = edges
+                    .iter()
+                    .map(|(source_index, target_index)| {
+                        json!({
+                            "source": json!(nodes[*source_index].id()),
+                            "target": json!(nodes[*target_index].id())
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                //start edges
+                json_edges.extend(start_nodes.iter().map(|target_index| {
+                    json!({
+                        "source": "@start",
+                        "target": json!(nodes[*target_index].id())
+                    })
+                }));
+                //end edges
+                json_edges.extend(end_nodes.iter().map(|target_index| {
+                    json!({
+                        "source": json!(nodes[*target_index].id()),
+                        "target": "@end"
+                    })
+                }));
+                result.insert("edges".to_string(), json!(json_edges));
+            }
+        };
+
+        Value::Object(result)
+    }
+}
+
+fn write_common(
+    result: &mut Map<String, Value>,
+    id: &Option<String>,
+    skippable: &bool,
+    repeatable: &bool,
+) {
+    if let Some(id) = id {
+        result.insert("id".to_string(), Value::String(id.to_string()));
+    }
+
+    if *skippable {
+        result.insert("skippable".to_string(), Value::Bool(*skippable));
+    }
+
+    if *repeatable {
+        result.insert("repeatable".to_string(), Value::Bool(*repeatable));
+    }
+}
+
+fn write_attributes(
+    result: &mut Map<String, Value>,
+    name: &Option<String>,
+    description: &Option<String>,
+) {
+    {
+        let mut attributes = Map::new();
+
+        if let Some(name) = name {
+            attributes.insert("name".to_string(), json!(name));
+        }
+
+        if let Some(description) = description {
+            attributes.insert("description".to_string(), json!(description));
+        }
+
+        if !attributes.is_empty() {
+            result.insert("attributes".to_string(), Value::Object(attributes));
+        }
+    }
+}
+
+fn write_nodes(
+    result: &mut Map<String, Value>,
+    nodes: &Vec<Model>,
+    activity_key: &ActivityKey,
+    keys: &Keys,
+) {
+    result.insert(
+        "nodes".to_string(),
+        json!(
+            nodes
+                .iter()
+                .map(|node| node.to_json(activity_key, keys))
+                .collect::<Vec<_>>()
+        ),
+    );
 }
 
 fn get_mut<'a>(model: &'a mut Model, left: &mut usize) -> Option<&'a mut Model> {
@@ -654,4 +882,50 @@ fn get_mut<'a>(model: &'a mut Model, left: &mut usize) -> Option<&'a mut Model> 
     }
 
     None
+}
+
+struct ModelIterator<'a> {
+    model: &'a Model,
+    stack: Vec<&'a Model>,
+}
+
+impl<'a> From<&'a Model> for ModelIterator<'a> {
+    fn from(value: &'a Model) -> Self {
+        Self {
+            model: value,
+            stack: vec![value],
+        }
+    }
+}
+
+impl<'a> Iterator for ModelIterator<'a> {
+    type Item = &'a Model;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.stack.pop()?;
+        match next {
+            Model::Activity { .. } => {}
+            Model::PartialOrder { nodes, .. } | Model::ChoiceGraph { nodes, .. } => {
+                self.stack.extend(nodes);
+            }
+        };
+        Some(next)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Keys {
+    lifecycle_key: ActivityKey,
+    resource_key: ActivityKey,
+    role_key: ActivityKey,
+}
+
+impl Default for Keys {
+    fn default() -> Self {
+        Self {
+            lifecycle_key: ActivityKey::new(),
+            resource_key: ActivityKey::new(),
+            role_key: ActivityKey::new(),
+        }
+    }
 }
