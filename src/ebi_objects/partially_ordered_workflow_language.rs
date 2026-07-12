@@ -1087,8 +1087,6 @@ mod tests {
     fn graphable() {
         let fin = fs::read_to_string("testfiles/request_handling.powl").unwrap();
         let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
-        let svg = powl.to_svg().unwrap();
-
-        println!("{}", svg);
+        let _svg = powl.to_svg().unwrap();
     }
 }
