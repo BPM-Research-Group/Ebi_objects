@@ -11,6 +11,7 @@ use crate::{
     Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 #[cfg(any(test, feature = "testactivities"))]
@@ -84,6 +85,10 @@ impl Exportable for PetriNetMarkupLanguage {
             }
             EbiObject::StochasticProcessTree(tree) => {
                 <StochasticProcessTree as TryInto<LabelledPetriNet>>::try_into(tree)?.export(f)
+            }
+            EbiObject::PartiallyOrderedWorkflowLanguage(powl) => {
+                <PartiallyOrderedWorkflowLanguage as TryInto<LabelledPetriNet>>::try_into(powl)?
+                    .export(f)
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
                 <StochasticDeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(

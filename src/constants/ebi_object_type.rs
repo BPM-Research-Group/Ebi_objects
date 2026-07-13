@@ -59,6 +59,8 @@ pub enum EbiObjectType {
     PortableNetworkGraphics,
     #[strum(serialize = "portable document format")]
     PortableDocumentFormat,
+    #[strum(serialize = "partially ordered workflow language")]
+    PartiallyOrderedWorkflowLanguage,
 }
 
 impl EbiObjectType {
@@ -92,6 +94,7 @@ impl EbiObjectType {
             EbiObjectType::ScalableVectorGraphics => "a",
             EbiObjectType::PortableDocumentFormat => "a",
             EbiObjectType::PortableNetworkGraphics => "a",
+            EbiObjectType::PartiallyOrderedWorkflowLanguage => "a",
         }
     }
 }

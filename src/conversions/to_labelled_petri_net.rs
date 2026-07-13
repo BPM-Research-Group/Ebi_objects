@@ -7,6 +7,7 @@ use crate::{
         directly_follows_model::DirectlyFollowsModel,
         labelled_petri_net::LabelledPetriNet,
         lola_net::LolaNet,
+        partially_ordered_workflow_language::{Model, PartiallyOrderedWorkflowLanguage},
         process_tree::{Node, Operator, ProcessTree},
         process_tree_markup_language::ProcessTreeMarkupLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -16,6 +17,7 @@ use crate::{
     },
     marking::Marking,
 };
+use ebi_activity_key::Activity;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use std::collections::HashMap;
 
@@ -248,6 +250,271 @@ macro_rules! tree {
 
 tree!(ProcessTree);
 tree!(StochasticProcessTree);
+
+impl From<PartiallyOrderedWorkflowLanguage> for LabelledPetriNet {
+    fn from(value: PartiallyOrderedWorkflowLanguage) -> Self {
+        log::info!("convert partially ordered workflow language to LPN");
+        let mut result = Self::new_with_activity_key(value.activity_key.clone());
+        let source = result.add_place();
+        let sink = result.add_place();
+
+        result
+            .get_initial_marking_mut()
+            .as_mut()
+            .unwrap()
+            .increase(source, 1)
+            .unwrap();
+
+        powl_model_multiplicity(&value.root_model, &mut result, source, sink);
+        result
+    }
+}
+
+fn powl_model_multiplicity(
+    model: &Model,
+    result: &mut LabelledPetriNet,
+    source: usize,
+    sink: usize,
+) {
+    //first, handle skippable and repeatable
+    match model {
+        Model::Activity {
+            skippable,
+            repeatable,
+            ..
+        }
+        | Model::PartialOrder {
+            skippable,
+            repeatable,
+            ..
+        }
+        | Model::ChoiceGraph {
+            skippable,
+            repeatable,
+            ..
+        } => {
+            let (new_source, new_sink) = match (skippable, repeatable) {
+                (true, true) => {
+                    //zero or more times
+                    let middle_place = result.add_place();
+
+                    let entry = result.add_transition(None);
+                    result.add_place_transition_arc(source, entry, 1).unwrap();
+                    result
+                        .add_transition_place_arc(entry, middle_place, 1)
+                        .unwrap();
+
+                    let exit = result.add_transition(None);
+                    result
+                        .add_place_transition_arc(middle_place, exit, 1)
+                        .unwrap();
+                    result.add_transition_place_arc(exit, sink, 1).unwrap();
+
+                    (middle_place, middle_place)
+                }
+                (true, false) => {
+                    //zero or one time
+                    let silent = result.add_transition(None);
+                    result.add_place_transition_arc(source, silent, 1).unwrap();
+                    result.add_transition_place_arc(silent, sink, 1).unwrap();
+
+                    (source, sink)
+                }
+                (false, true) => {
+                    //one or more times
+                    let new_source = result.add_place();
+                    let new_sink = result.add_place();
+
+                    let entry = result.add_transition(None);
+                    result.add_place_transition_arc(source, entry, 1).unwrap();
+                    result
+                        .add_transition_place_arc(entry, new_source, 1)
+                        .unwrap();
+
+                    let exit = result.add_transition(None);
+                    result.add_place_transition_arc(new_sink, exit, 1).unwrap();
+                    result.add_transition_place_arc(exit, sink, 1).unwrap();
+
+                    let redo = result.add_transition(None);
+                    result.add_place_transition_arc(new_sink, redo, 1).unwrap();
+                    result
+                        .add_transition_place_arc(redo, new_source, 1)
+                        .unwrap();
+
+                    (new_source, new_sink)
+                }
+                (false, false) => {
+                    //once
+                    (source, sink)
+                }
+            };
+
+            powl_model_2_lpn(model, result, new_source, new_sink);
+        }
+    }
+}
+
+fn powl_model_2_lpn(model: &Model, result: &mut LabelledPetriNet, source: usize, sink: usize) {
+    match model {
+        Model::Activity { activity, .. } => powl_activity_2_lpn(activity, result, source, sink),
+        Model::PartialOrder { nodes, edges, .. } => {
+            powl_partial_order_2_lpn(nodes, edges, result, source, sink)
+        }
+        Model::ChoiceGraph {
+            nodes,
+            edges,
+            start_nodes,
+            end_nodes,
+            ..
+        } => powl_choice_graph_2_lpn(nodes, edges, start_nodes, end_nodes, result, source, sink),
+    }
+}
+
+fn powl_activity_2_lpn(
+    activity: &Option<Activity>,
+    result: &mut LabelledPetriNet,
+    source: usize,
+    sink: usize,
+) {
+    let transition = result.add_transition(*activity);
+    result
+        .add_place_transition_arc(source, transition, 1)
+        .unwrap();
+    result
+        .add_transition_place_arc(transition, sink, 1)
+        .unwrap();
+}
+
+fn powl_partial_order_2_lpn(
+    nodes: &[Model],
+    edges: &[(usize, usize)],
+    result: &mut LabelledPetriNet,
+    source: usize,
+    sink: usize,
+) {
+    //children
+    let index_2_handles = nodes
+        .iter()
+        .map(|node| {
+            let child_source = result.add_place();
+            let child_sink = result.add_place();
+
+            powl_model_multiplicity(node, result, child_source, child_sink);
+
+            let child_entry = result.add_transition(None);
+            result
+                .add_transition_place_arc(child_entry, child_source, 1)
+                .unwrap();
+
+            let child_exit = result.add_transition(None);
+            result
+                .add_place_transition_arc(child_sink, child_exit, 1)
+                .unwrap();
+
+            (child_entry, child_exit)
+        })
+        .collect::<Vec<_>>();
+
+    let mut is_start = vec![true; nodes.len()];
+    let mut is_end = vec![true; nodes.len()];
+
+    //edges
+    for (source_index, target_index) in edges {
+        let entry = index_2_handles[*source_index].1;
+        let exit = index_2_handles[*target_index].0;
+
+        let place = result.add_place();
+
+        result.add_transition_place_arc(entry, place, 1).unwrap();
+        result.add_place_transition_arc(place, exit, 1).unwrap();
+
+        is_start[*target_index] = false;
+        is_end[*source_index] = false;
+    }
+
+    //start
+    let entry = result.add_transition(None);
+    result.add_place_transition_arc(source, entry, 1).unwrap();
+    for (target_index, x) in is_start.into_iter().enumerate() {
+        if x {
+            let target = index_2_handles[target_index].0;
+            let place = result.add_place();
+            result.add_transition_place_arc(entry, place, 1).unwrap();
+            result.add_place_transition_arc(place, target, 1).unwrap();
+        }
+    }
+
+    let exit = result.add_transition(None);
+    result.add_transition_place_arc(exit, sink, 1).unwrap();
+    for (source_index, x) in is_end.into_iter().enumerate() {
+        if x {
+            let source = index_2_handles[source_index].1;
+            let place = result.add_place();
+            result.add_transition_place_arc(source, place, 1).unwrap();
+            result.add_place_transition_arc(place, exit, 1).unwrap();
+        }
+    }
+}
+
+fn powl_choice_graph_2_lpn(
+    nodes: &[Model],
+    edges: &[(usize, usize)],
+    start_nodes: &[usize],
+    end_nodes: &[usize],
+    result: &mut LabelledPetriNet,
+    source: usize,
+    sink: usize,
+) {
+    //children
+    let index_2_handles = nodes
+        .iter()
+        .map(|node| {
+            let child_source = result.add_place();
+            let child_sink = result.add_place();
+
+            powl_model_multiplicity(node, result, child_source, child_sink);
+
+            (child_source, child_sink)
+        })
+        .collect::<Vec<_>>();
+
+    //edges
+    for (source_index, target_index) in edges {
+        let source = index_2_handles[*source_index].1;
+        let target = index_2_handles[*target_index].0;
+        let transition = result.add_transition(None);
+        result
+            .add_place_transition_arc(source, transition, 1)
+            .unwrap();
+        result
+            .add_transition_place_arc(transition, target, 1)
+            .unwrap();
+    }
+
+    //start edges
+    for target_index in start_nodes {
+        let transition = result.add_transition(None);
+        let target = index_2_handles[*target_index].0;
+        result
+            .add_place_transition_arc(source, transition, 1)
+            .unwrap();
+        result
+            .add_transition_place_arc(transition, target, 1)
+            .unwrap();
+    }
+
+    //end edges
+    for source_index in end_nodes {
+        let transition = result.add_transition(None);
+        let source = index_2_handles[*source_index].1;
+        result
+            .add_place_transition_arc(source, transition, 1)
+            .unwrap();
+        result
+            .add_transition_place_arc(transition, sink, 1)
+            .unwrap();
+    }
+}
 
 impl From<ProcessTreeMarkupLanguage> for LabelledPetriNet {
     fn from(value: ProcessTreeMarkupLanguage) -> Self {
@@ -599,15 +866,15 @@ impl From<DirectlyFollowsGraph> for LabelledPetriNet {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use crate::{
         StochasticDeterministicFiniteAutomaton,
         ebi_objects::{
             deterministic_finite_automaton::DeterministicFiniteAutomaton,
             labelled_petri_net::LabelledPetriNet,
+            partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
         },
     };
+    use std::fs;
 
     #[test]
     fn dfa_to_lpn() {
@@ -628,5 +895,53 @@ mod tests {
             .parse::<StochasticDeterministicFiniteAutomaton>()
             .unwrap();
         let _lpn: LabelledPetriNet = sdfa.into();
+    }
+
+    #[test]
+    fn powl_2_lpn_request_handling() {
+        let fin = fs::read_to_string("testfiles/request_handling.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _lpn = LabelledPetriNet::from(powl);
+
+        // fs::write("lpn.svg", lpn.to_svg().unwrap().to_string()).unwrap();
+    }
+
+    #[test]
+    fn powl_2_lpn_a() {
+        let fin = fs::read_to_string("testfiles/a.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _lpn = LabelledPetriNet::from(powl);
+
+        // fs::write("lpn.svg", lpn.to_svg().unwrap().to_string()).unwrap();
+    }
+
+    #[test]
+    fn powl_2_lpn_and_a_b() {
+        let fin = fs::read_to_string("testfiles/and_a_b.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _lpn = LabelledPetriNet::from(powl);
+
+        // fs::write("lpn.svg", lpn.to_svg().unwrap().to_string()).unwrap();
+    }
+
+    #[test]
+    fn powl_2_lpn_or_a_b() {
+        let fin = fs::read_to_string("testfiles/or_a_b.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _lpn = LabelledPetriNet::from(powl);
+
+        // fs::write("lpn.svg", lpn.to_svg().unwrap().to_string()).unwrap();
     }
 }

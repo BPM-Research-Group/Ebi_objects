@@ -11,6 +11,7 @@ use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, Exportable, Graphable, HasActivityKey,
     Importable, Infoable, StochasticNondeterministicFiniteAutomaton, TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
     line_reader::LineReader,
     marking::Marking,
     traits::{
@@ -51,6 +52,19 @@ impl LabelledPetriNet {
     pub fn new() -> Self {
         Self {
             activity_key: ActivityKey::new(),
+            initial_marking: Some(Marking::new(0)),
+            labels: vec![],
+            place2output_transitions: vec![],
+            transition2input_places: vec![],
+            transition2output_places: vec![],
+            transition2input_places_cardinality: vec![],
+            transition2output_places_cardinality: vec![],
+        }
+    }
+
+    pub fn new_with_activity_key(activity_key: ActivityKey) -> Self {
+        Self {
+            activity_key,
             initial_marking: Some(Marking::new(0)),
             labels: vec![],
             place2output_transitions: vec![],
@@ -460,6 +474,9 @@ impl Exportable for LabelledPetriNet {
             }
             EbiObject::StochasticProcessTree(tree) => {
                 <StochasticProcessTree as Into<LabelledPetriNet>>::into(tree).export(f)
+            }
+            EbiObject::PartiallyOrderedWorkflowLanguage(powl) => {
+                <PartiallyOrderedWorkflowLanguage as Into<LabelledPetriNet>>::into(powl).export(f)
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
                 <StochasticDeterministicFiniteAutomaton as Into<LabelledPetriNet>>::into(sdfa)

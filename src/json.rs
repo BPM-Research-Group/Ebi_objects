@@ -146,6 +146,39 @@ pub fn read_field_time_or_null<'a>(
     }
 }
 
+pub fn read_bool(json: &Value) -> Result<bool> {
+    match &json {
+        Value::Null => Err(anyhow!("field not found")),
+        Value::Bool(b) => Ok(*b),
+        Value::Number(_) => Err(anyhow!("field is a number, where boolean expected")),
+        Value::String(_) => Err(anyhow!("field is a literal, where number expected")),
+        Value::Array(_) => Err(anyhow!("field is a list, where number expected")),
+        Value::Object(_) => Err(anyhow!("field is an object, where number expected")),
+    }
+}
+
+pub fn read_bool_or_null(json: &Value) -> Result<Option<bool>> {
+    match &json {
+        Value::Null => Ok(None),
+        Value::Bool(b) => Ok(Some(*b)),
+        Value::Number(_) => Err(anyhow!("field is a number, where boolean expected")),
+        Value::String(_) => Err(anyhow!("field is a literal, where number expected")),
+        Value::Array(_) => Err(anyhow!("field is a list, where number expected")),
+        Value::Object(_) => Err(anyhow!("field is an object, where number expected")),
+    }
+}
+
+pub fn read_object_or_null(json: &Value) -> Result<Option<&Map<String, Value>>> {
+    match &json {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where object expected")),
+        Value::Number(_) => return Err(anyhow!("field is a number, where object expected")),
+        Value::String(_) => return Err(anyhow!("field is a literal, where object expected")),
+        Value::Array(_) => return Err(anyhow!("field is an array, where object expected")),
+        Value::Object(obj) => Ok(Some(obj)),
+    }
+}
+
 pub fn read_index(json: &Value) -> Result<usize> {
     match &json {
         Value::Null => return Err(anyhow!("field not found")),
@@ -168,6 +201,17 @@ pub fn read_string(json: &Value) -> Result<&String> {
         Value::Bool(_) => return Err(anyhow!("field is a boolean, where literal expected")),
         Value::Number(_) => return Err(anyhow!("field is a number, where literal expected")),
         Value::String(s) => return Ok(s),
+        Value::Array(_) => return Err(anyhow!("field is a list, where literal expected")),
+        Value::Object(_) => return Err(anyhow!("field is an object, where literal expected")),
+    }
+}
+
+pub fn read_string_or_null(json: &Value) -> Result<Option<String>> {
+    match &json {
+        Value::Null => return Ok(None),
+        Value::Bool(_) => return Err(anyhow!("field is a boolean, where literal expected")),
+        Value::Number(n) => return Ok(Some(n.to_string())),
+        Value::String(s) => return Ok(Some(s.to_string())),
         Value::Array(_) => return Err(anyhow!("field is a list, where literal expected")),
         Value::Object(_) => return Err(anyhow!("field is an object, where literal expected")),
     }
@@ -203,5 +247,90 @@ pub fn read_fraction_or_null(json: &Value) -> Result<Option<Fraction>> {
         Value::String(s) => return Ok(Some(s.parse::<Fraction>()?)),
         Value::Array(_) => return Err(anyhow!("field is a list, where fraction expected")),
         Value::Object(_) => return Err(anyhow!("field is an object, where fraction expected")),
+    }
+}
+
+pub fn read_object(json: &Value) -> Result<&Map<String, Value>> {
+    match &json {
+        Value::Null => Err(anyhow!("not an object")),
+        Value::Bool(_) => Err(anyhow!("field is a boolean, where object expected")),
+        Value::Number(_) => Err(anyhow!("field is a number, where object expected")),
+        Value::String(_) => Err(anyhow!("field is a string, where object expected")),
+        Value::Array(_) => Err(anyhow!("field is a list, where object expected")),
+        Value::Object(obj) => Ok(obj),
+    }
+}
+
+pub fn read_bool_or_null_from_object(
+    json: &Map<String, Value>,
+    field: &str,
+) -> Result<Option<bool>> {
+    if let Some(j) = json.get(field) {
+        read_bool_or_null(j)
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn read_fraction_or_null_from_object(
+    json: &Map<String, Value>,
+    field: &str,
+) -> Result<Option<Fraction>> {
+    if let Some(j) = json.get(field) {
+        read_fraction_or_null(j)
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn read_list_from_object<'a>(
+    json: &'a Map<String, Value>,
+    field: &str,
+) -> Result<&'a Vec<Value>> {
+    read_list(
+        json.get(field)
+            .ok_or_else(|| anyhow!("Field {} not found in object.", field))?,
+    )
+}
+
+pub fn read_object_from_object<'a>(
+    json: &'a Map<String, Value>,
+    field: &str,
+) -> Result<&'a Map<String, Value>> {
+    read_object(
+        json.get(field)
+            .ok_or_else(|| anyhow!("Field {} not found in object.", field))?,
+    )
+}
+
+pub fn read_object_or_null_from_object<'a>(
+    json: &'a Map<String, Value>,
+    field: &str,
+) -> Result<Option<&'a Map<String, Value>>> {
+    if let Some(j) = json.get(field) {
+        read_object_or_null(j)
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn read_string_from_object<'a>(
+    json: &'a Map<String, Value>,
+    field: &str,
+) -> Result<&'a String> {
+    read_string(
+        json.get(field)
+            .ok_or_else(|| anyhow!("Field {} not found in object.", field))?,
+    )
+}
+
+pub fn read_string_or_null_from_object(
+    json: &Map<String, Value>,
+    field: &str,
+) -> Result<Option<String>> {
+    if let Some(j) = json.get(field) {
+        read_string_or_null(j)
+    } else {
+        Ok(None)
     }
 }

@@ -11,6 +11,7 @@ use crate::{
     Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
     TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 #[cfg(any(test, feature = "testactivities"))]
@@ -117,6 +118,9 @@ impl Exportable for LolaNet {
             EbiObject::ProcessTree(tree) => <ProcessTree as Into<LolaNet>>::into(tree).export(f),
             EbiObject::StochasticProcessTree(tree) => {
                 <StochasticProcessTree as Into<LolaNet>>::into(tree).export(f)
+            }
+            EbiObject::PartiallyOrderedWorkflowLanguage(powl) => {
+                <PartiallyOrderedWorkflowLanguage as Into<LolaNet>>::into(powl).export(f)
             }
 
             EbiObject::BusinessProcessModelAndNotation(_) => {

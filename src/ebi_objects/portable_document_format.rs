@@ -71,6 +71,7 @@ impl Exportable for PortableDocumentFormat {
             EbiObject::PortableNetworkGraphics(_) => {
                 Err(anyhow!("cannot export portable network graphics as PDF"))
             }
+            EbiObject::PartiallyOrderedWorkflowLanguage(object) => object.to_pdf()?.export(f),
         }
     }
 

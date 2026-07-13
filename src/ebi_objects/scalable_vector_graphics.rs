@@ -58,6 +58,7 @@ impl Exportable for ScalableVectorGraphics {
                 Err(anyhow!("cannot export language of alignments as SVG"))
             }
             EbiObject::ProcessTree(object) => object.to_svg()?.export(f),
+            EbiObject::PartiallyOrderedWorkflowLanguage(object) => object.to_svg()?.export(f),
             EbiObject::StochasticDeterministicFiniteAutomaton(object) => object.to_svg()?.export(f),
             EbiObject::StochasticNondeterministicFiniteAutomaton(object) => {
                 object.to_svg()?.export(f)
