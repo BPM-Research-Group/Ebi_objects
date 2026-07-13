@@ -817,8 +817,8 @@ pub enum NodeState {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct TreeMarking {
-    pub(crate) terminated: bool,
-    pub(crate) states: Vec<NodeState>,
+    pub terminated: bool,
+    pub states: Vec<NodeState>,
 }
 
 impl TreeMarking {
