@@ -812,6 +812,7 @@ impl FromStr for Operator {
 pub enum NodeState {
     Enabled,
     Started,
+    Executed,
     Closed,
 }
 

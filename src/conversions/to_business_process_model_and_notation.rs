@@ -617,8 +617,7 @@ fn powl_choice_graph_2_bpmn(
 #[cfg(test)]
 mod tests {
     use crate::{
-        ProcessTree, StochasticLabelledPetriNet,
-        ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
+        ProcessTree, StochasticLabelledPetriNet, ebi_objects::{partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage, scalable_vector_graphics::ToSVG},
     };
     use ebi_bpmn::BusinessProcessModelAndNotation;
     use std::fs;
@@ -666,6 +665,18 @@ mod tests {
     #[test]
     fn powl_2_bpmn_or_a_b() {
         let fin = fs::read_to_string("testfiles/or_a_b.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _bpmn = BusinessProcessModelAndNotation::from(powl);
+
+        // fs::write("lpn.svg", bpmn.to_svg().unwrap().to_string()).unwrap();
+    }
+
+    #[test]
+    fn powl_2_bpmn_skippable_repeatable() {
+        let fin = fs::read_to_string("testfiles/skippable_repeatable.powl").unwrap();
         let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
 
         // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
