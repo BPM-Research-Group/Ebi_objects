@@ -822,6 +822,13 @@ pub struct TreeMarking {
 }
 
 impl TreeMarking {
+    pub fn new(size: usize) -> Self {
+        Self {
+            terminated: false,
+            states: vec![NodeState::Closed; size],
+        }
+    }
+
     pub fn get(&self, index: usize) -> Option<&NodeState> {
         self.states.get(index)
     }
