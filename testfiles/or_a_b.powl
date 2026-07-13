@@ -7,7 +7,7 @@
 	  {
 		    "id": "a",
 		    "type": "activity",
-		    "repeatable": true,
+		    "repeatable": false,
 		    "skippable": false,
 		    "label": "a"
 	  },
@@ -15,7 +15,7 @@
 		    "id": "b",
 		    "type": "activity",
 		    "repeatable": false,
-		    "skippable": true,
+		    "skippable": false,
 		    "label": "b"
 	  }
   	],

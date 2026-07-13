@@ -44,7 +44,10 @@ impl PartiallyOrderedWorkflowLanguage {
 
 impl Importable for PartiallyOrderedWorkflowLanguage {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str =
-        &"A partially ordered workflow language is a JSON structure.";
+        &"A partially ordered workflow language is a JSON structure.
+        
+        For instance:
+        \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/or_a_b.powl}";
 
     const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
 

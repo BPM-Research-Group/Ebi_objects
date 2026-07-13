@@ -6,10 +6,11 @@ use crate::{
     StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::{
-        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
+        partially_ordered_workflow_language::{Model, PartiallyOrderedWorkflowLanguage},
         process_tree::{Node, Operator},
     },
 };
+use ebi_activity_key::Activity;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
     BPMNCreator, BusinessProcessModelAndNotation, Container, EndEventType, GatewayType,
@@ -364,13 +365,245 @@ impl From<ProcessTreeMarkupLanguage> for BusinessProcessModelAndNotation {
 
 impl From<PartiallyOrderedWorkflowLanguage> for BusinessProcessModelAndNotation {
     fn from(value: PartiallyOrderedWorkflowLanguage) -> Self {
-        todo!()
+        log::info!("convert partially ordered workflow language to LPN");
+        let mut result = BPMNCreator::new_with_activity_key(value.activity_key.clone());
+        let process = result.add_process(None);
+
+        let source = result.add_start_event_unchecked(process, StartEventType::None);
+        let sink = result.add_end_event_unchecked(process, EndEventType::None);
+
+        powl_model_multiplicity(&value.root_model, &mut result, process, source, sink);
+        result.to_bpmn_unchecked()
+    }
+}
+
+fn powl_model_multiplicity(
+    model: &Model,
+    result: &mut BPMNCreator,
+    process: Container,
+    source: GlobalIndex,
+    sink: GlobalIndex,
+) {
+    //first, handle skippable and repeatable
+    match model {
+        Model::Activity {
+            skippable,
+            repeatable,
+            ..
+        }
+        | Model::PartialOrder {
+            skippable,
+            repeatable,
+            ..
+        }
+        | Model::ChoiceGraph {
+            skippable,
+            repeatable,
+            ..
+        } => {
+            let (new_source, new_sink) = match (skippable, repeatable) {
+                (true, true) => {
+                    //zero or more times
+                    let new_sink: GlobalIndex =
+                        result.add_gateway_unchecked(process, GatewayType::Exclusive);
+                    let new_source = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+
+                    result.add_sequence_flow_unchecked(process, source, new_sink);
+                    result.add_sequence_flow_unchecked(process, new_source, sink);
+                    result.add_sequence_flow_unchecked(process, new_sink, new_source);
+
+                    (new_source, new_sink)
+                }
+                (true, false) => {
+                    //zero or one times
+                    let new_source = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+                    let new_sink = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+
+                    result.add_sequence_flow_unchecked(process, source, new_source);
+                    result.add_sequence_flow_unchecked(process, new_sink, sink);
+                    result.add_sequence_flow_unchecked(process, new_source, new_sink);
+
+                    (new_source, new_sink)
+                }
+                (false, true) => {
+                    //one or more times
+                    let new_source = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+                    let new_sink = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+
+                    result.add_sequence_flow_unchecked(process, source, new_source);
+                    result.add_sequence_flow_unchecked(process, new_sink, sink);
+                    result.add_sequence_flow_unchecked(process, new_sink, new_source);
+
+                    (new_source, new_sink)
+                }
+                (false, false) => {
+                    //once
+                    (source, sink)
+                }
+            };
+
+            powl_model_2_bpmn(model, result, process, new_source, new_sink);
+        }
+    }
+}
+
+fn powl_model_2_bpmn(
+    model: &Model,
+    result: &mut BPMNCreator,
+    process: Container,
+    source: GlobalIndex,
+    sink: GlobalIndex,
+) {
+    match model {
+        Model::Activity { activity, .. } => {
+            powl_activity_2_bpmn(activity, result, process, source, sink)
+        }
+        Model::PartialOrder { nodes, edges, .. } => {
+            powl_partial_order_2_bpmn(nodes, edges, result, process, source, sink)
+        }
+        Model::ChoiceGraph {
+            nodes,
+            edges,
+            start_nodes,
+            end_nodes,
+            ..
+        } => powl_choice_graph_2_bpmn(
+            nodes,
+            edges,
+            start_nodes,
+            end_nodes,
+            result,
+            process,
+            source,
+            sink,
+        ),
+    }
+}
+
+fn powl_activity_2_bpmn(
+    activity: &Option<Activity>,
+    result: &mut BPMNCreator,
+    process: Container,
+    source: GlobalIndex,
+    sink: GlobalIndex,
+) {
+    if let Some(activity) = activity {
+        //task
+        let task = result.add_task_unchecked(process, *activity);
+        result.add_sequence_flow_unchecked(process, source, task);
+        result.add_sequence_flow_unchecked(process, task, sink);
+    } else {
+        //silent
+        result.add_sequence_flow_unchecked(process, source, sink);
+    }
+}
+
+fn powl_partial_order_2_bpmn(
+    nodes: &[Model],
+    edges: &[(usize, usize)],
+    result: &mut BPMNCreator,
+    process: Container,
+    source: GlobalIndex,
+    sink: GlobalIndex,
+) {
+    //children
+    let index_2_handles = nodes
+        .iter()
+        .map(|node| {
+            let child_source = result.add_gateway_unchecked(process, GatewayType::Parallel);
+            let child_sink = result.add_gateway_unchecked(process, GatewayType::Parallel);
+
+            powl_model_multiplicity(node, result, process, child_source, child_sink);
+
+            (child_source, child_sink)
+        })
+        .collect::<Vec<_>>();
+
+    let mut is_start = vec![true; nodes.len()];
+    let mut is_end = vec![true; nodes.len()];
+
+    //edges
+    for (source_index, target_index) in edges {
+        let entry = index_2_handles[*source_index].1;
+        let exit = index_2_handles[*target_index].0;
+
+        result.add_sequence_flow_unchecked(process, entry, exit);
+
+        is_start[*target_index] = false;
+        is_end[*source_index] = false;
+    }
+
+    //start
+    let entry = result.add_gateway_unchecked(process, GatewayType::Parallel);
+    result.add_sequence_flow_unchecked(process, source, entry);
+    for (target_index, x) in is_start.into_iter().enumerate() {
+        if x {
+            let target = index_2_handles[target_index].0;
+            result.add_sequence_flow_unchecked(process, entry, target);
+        }
+    }
+
+    let exit = result.add_gateway_unchecked(process, GatewayType::Parallel);
+    result.add_sequence_flow_unchecked(process, exit, sink);
+    for (source_index, x) in is_end.into_iter().enumerate() {
+        if x {
+            let source = index_2_handles[source_index].1;
+            result.add_sequence_flow_unchecked(process, source, exit);
+        }
+    }
+}
+
+fn powl_choice_graph_2_bpmn(
+    nodes: &[Model],
+    edges: &[(usize, usize)],
+    start_nodes: &[usize],
+    end_nodes: &[usize],
+    result: &mut BPMNCreator,
+    process: Container,
+    source: GlobalIndex,
+    sink: GlobalIndex,
+) {
+    //children
+    let index_2_handles = nodes
+        .iter()
+        .map(|node| {
+            let child_source = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+            let child_sink = result.add_gateway_unchecked(process, GatewayType::Exclusive);
+
+            powl_model_multiplicity(node, result, process, child_source, child_sink);
+
+            (child_source, child_sink)
+        })
+        .collect::<Vec<_>>();
+
+    //edges
+    for (source_index, target_index) in edges {
+        let source = index_2_handles[*source_index].1;
+        let target = index_2_handles[*target_index].0;
+        result.add_sequence_flow_unchecked(process, source, target);
+    }
+
+    //start edges
+    for target_index in start_nodes {
+        let target = index_2_handles[*target_index].0;
+        result.add_sequence_flow_unchecked(process, source, target);
+    }
+
+    //end edges
+    for source_index in end_nodes {
+        let source = index_2_handles[*source_index].1;
+        result.add_sequence_flow_unchecked(process, source, sink);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ProcessTree, StochasticLabelledPetriNet};
+    use crate::{
+        ProcessTree, StochasticLabelledPetriNet,
+        ebi_objects::
+            partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage
+        ,
+    };
     use ebi_bpmn::BusinessProcessModelAndNotation;
     use std::fs;
 
@@ -388,5 +621,41 @@ mod tests {
         let slpn = fin.parse::<ProcessTree>().unwrap();
 
         let _bpmn = BusinessProcessModelAndNotation::from(slpn);
+    }
+
+    #[test]
+    fn powl_2_bpmn_a() {
+        let fin = fs::read_to_string("testfiles/a.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _bpmn = BusinessProcessModelAndNotation::from(powl);
+
+        // fs::write("lpn.svg", bpmn.to_svg().unwrap().to_string()).unwrap();
+    }
+
+    #[test]
+    fn powl_2_bpmn_and_a_b() {
+        let fin = fs::read_to_string("testfiles/and_a_b.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _bpmn = BusinessProcessModelAndNotation::from(powl);
+
+        // fs::write("lpn.svg", bpmn.to_svg().unwrap().to_string()).unwrap();
+    }
+
+    #[test]
+    fn powl_2_bpmn_or_a_b() {
+        let fin = fs::read_to_string("testfiles/or_a_b.powl").unwrap();
+        let powl = fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
+
+        // fs::write("powl.svg", powl.to_svg().unwrap().to_string()).unwrap();
+
+        let _bpmn = BusinessProcessModelAndNotation::from(powl);
+
+        // fs::write("lpn.svg", bpmn.to_svg().unwrap().to_string()).unwrap();
     }
 }

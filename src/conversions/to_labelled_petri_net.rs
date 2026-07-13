@@ -352,39 +352,37 @@ fn powl_model_multiplicity(
             powl_model_2_lpn(model, result, new_source, new_sink);
         }
     }
+}
 
-    fn powl_model_2_lpn(model: &Model, result: &mut LabelledPetriNet, source: usize, sink: usize) {
-        match model {
-            Model::Activity { activity, .. } => powl_activity_2_lpn(activity, result, source, sink),
-            Model::PartialOrder { nodes, edges, .. } => {
-                powl_partial_order_2_lpn(nodes, edges, result, source, sink)
-            }
-            Model::ChoiceGraph {
-                nodes,
-                edges,
-                start_nodes,
-                end_nodes,
-                ..
-            } => {
-                powl_choice_graph_2_lpn(nodes, edges, start_nodes, end_nodes, result, source, sink)
-            }
+fn powl_model_2_lpn(model: &Model, result: &mut LabelledPetriNet, source: usize, sink: usize) {
+    match model {
+        Model::Activity { activity, .. } => powl_activity_2_lpn(activity, result, source, sink),
+        Model::PartialOrder { nodes, edges, .. } => {
+            powl_partial_order_2_lpn(nodes, edges, result, source, sink)
         }
+        Model::ChoiceGraph {
+            nodes,
+            edges,
+            start_nodes,
+            end_nodes,
+            ..
+        } => powl_choice_graph_2_lpn(nodes, edges, start_nodes, end_nodes, result, source, sink),
     }
+}
 
-    fn powl_activity_2_lpn(
-        activity: &Option<Activity>,
-        result: &mut LabelledPetriNet,
-        source: usize,
-        sink: usize,
-    ) {
-        let transition = result.add_transition(*activity);
-        result
-            .add_place_transition_arc(source, transition, 1)
-            .unwrap();
-        result
-            .add_transition_place_arc(transition, sink, 1)
-            .unwrap();
-    }
+fn powl_activity_2_lpn(
+    activity: &Option<Activity>,
+    result: &mut LabelledPetriNet,
+    source: usize,
+    sink: usize,
+) {
+    let transition = result.add_transition(*activity);
+    result
+        .add_place_transition_arc(source, transition, 1)
+        .unwrap();
+    result
+        .add_transition_place_arc(transition, sink, 1)
+        .unwrap();
 }
 
 fn powl_partial_order_2_lpn(
