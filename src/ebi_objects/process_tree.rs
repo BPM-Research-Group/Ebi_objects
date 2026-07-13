@@ -366,7 +366,7 @@ macro_rules! tree {
              * @param parent
              * @param grandChild
              * @return The number of the child within parent that contains grandChild.
-             *         If grandChild is not a child of parent, will return -1.
+             *         If grandChild is not a child of parent, will return None.
              */
             pub fn get_child_rank_with(&self, parent: usize, grand_child: usize) -> Option<usize> {
                 let mut child_rank = 0;

@@ -7,7 +7,7 @@ use crate::{
         directly_follows_model::DirectlyFollowsModel,
         labelled_petri_net::LabelledPetriNet,
         lola_net::LolaNet,
-        partially_ordered_workflow_language::{Model, PartiallyOrderedWorkflowLanguage},
+        partially_ordered_workflow_language::{PartiallyOrderedWorkflowLanguage, PowlNode},
         process_tree::{Node, Operator, ProcessTree},
         process_tree_markup_language::ProcessTreeMarkupLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -254,6 +254,10 @@ tree!(StochasticProcessTree);
 impl From<PartiallyOrderedWorkflowLanguage> for LabelledPetriNet {
     fn from(value: PartiallyOrderedWorkflowLanguage) -> Self {
         log::info!("convert partially ordered workflow language to LPN");
+        if value.tree.is_empty() {
+            return Self::new_empty_language();
+        }
+
         let mut result = Self::new_with_activity_key(value.activity_key.clone());
         let source = result.add_place();
         let sink = result.add_place();
@@ -265,30 +269,31 @@ impl From<PartiallyOrderedWorkflowLanguage> for LabelledPetriNet {
             .increase(source, 1)
             .unwrap();
 
-        powl_model_multiplicity(&value.root_model, &mut result, source, sink);
+        powl_node_multiplicity(&value, &mut result, 0, source, sink);
         result
     }
 }
 
-fn powl_model_multiplicity(
-    model: &Model,
+fn powl_node_multiplicity(
+    powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut LabelledPetriNet,
+    node_index: usize,
     source: usize,
     sink: usize,
 ) {
     //first, handle skippable and repeatable
-    match model {
-        Model::Activity {
+    match powl.tree[node_index] {
+        PowlNode::Activity {
             skippable,
             repeatable,
             ..
         }
-        | Model::PartialOrder {
+        | PowlNode::PartialOrder {
             skippable,
             repeatable,
             ..
         }
-        | Model::ChoiceGraph {
+        | PowlNode::ChoiceGraph {
             skippable,
             repeatable,
             ..
@@ -349,24 +354,48 @@ fn powl_model_multiplicity(
                 }
             };
 
-            powl_model_2_lpn(model, result, new_source, new_sink);
+            powl_node_2_lpn(powl, result, node_index, new_source, new_sink);
         }
     }
 }
 
-fn powl_model_2_lpn(model: &Model, result: &mut LabelledPetriNet, source: usize, sink: usize) {
-    match model {
-        Model::Activity { activity, .. } => powl_activity_2_lpn(activity, result, source, sink),
-        Model::PartialOrder { nodes, edges, .. } => {
-            powl_partial_order_2_lpn(nodes, edges, result, source, sink)
-        }
-        Model::ChoiceGraph {
-            nodes,
+fn powl_node_2_lpn(
+    powl: &PartiallyOrderedWorkflowLanguage,
+    result: &mut LabelledPetriNet,
+    node_index: usize,
+    source: usize,
+    sink: usize,
+) {
+    match &powl.tree[node_index] {
+        PowlNode::Activity { activity, .. } => powl_activity_2_lpn(activity, result, source, sink),
+        PowlNode::PartialOrder {
+            edges,
+            number_of_children,
+            ..
+        } => powl_partial_order_2_lpn(
+            powl,
+            result,
+            node_index,
+            edges,
+            *number_of_children,
+            source,
+            sink,
+        ),
+        PowlNode::ChoiceGraph {
+            edges,
+            start_children: start_nodes,
+            end_children: end_nodes,
+            ..
+        } => powl_choice_graph_2_lpn(
+            powl,
+            result,
+            node_index,
             edges,
             start_nodes,
             end_nodes,
-            ..
-        } => powl_choice_graph_2_lpn(nodes, edges, start_nodes, end_nodes, result, source, sink),
+            source,
+            sink,
+        ),
     }
 }
 
@@ -386,20 +415,22 @@ fn powl_activity_2_lpn(
 }
 
 fn powl_partial_order_2_lpn(
-    nodes: &[Model],
-    edges: &[(usize, usize)],
+    powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut LabelledPetriNet,
+    node_index: usize,
+    edges: &[(usize, usize)],
+    number_of_children: usize,
     source: usize,
     sink: usize,
 ) {
     //children
-    let index_2_handles = nodes
-        .iter()
-        .map(|node| {
+    let index_2_handles = powl
+        .get_children(node_index)
+        .map(|child_index| {
             let child_source = result.add_place();
             let child_sink = result.add_place();
 
-            powl_model_multiplicity(node, result, child_source, child_sink);
+            powl_node_multiplicity(powl, result, child_index, child_source, child_sink);
 
             let child_entry = result.add_transition(None);
             result
@@ -415,8 +446,8 @@ fn powl_partial_order_2_lpn(
         })
         .collect::<Vec<_>>();
 
-    let mut is_start = vec![true; nodes.len()];
-    let mut is_end = vec![true; nodes.len()];
+    let mut is_start = vec![true; number_of_children];
+    let mut is_end = vec![true; number_of_children];
 
     //edges
     for (source_index, target_index) in edges {
@@ -457,22 +488,23 @@ fn powl_partial_order_2_lpn(
 }
 
 fn powl_choice_graph_2_lpn(
-    nodes: &[Model],
+    powl: &PartiallyOrderedWorkflowLanguage,
+    result: &mut LabelledPetriNet,
+    node_index: usize,
     edges: &[(usize, usize)],
     start_nodes: &[usize],
     end_nodes: &[usize],
-    result: &mut LabelledPetriNet,
     source: usize,
     sink: usize,
 ) {
     //children
-    let index_2_handles = nodes
-        .iter()
-        .map(|node| {
+    let index_2_handles = powl
+        .get_children(node_index)
+        .map(|child_index| {
             let child_source = result.add_place();
             let child_sink = result.add_place();
 
-            powl_model_multiplicity(node, result, child_source, child_sink);
+            powl_node_multiplicity(powl, result, child_index, child_source, child_sink);
 
             (child_source, child_sink)
         })

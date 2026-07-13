@@ -28,17 +28,81 @@ pub const HEADER_FORMAT_VERSION_VALUE: &str = "1.0";
 #[derive(ActivityKey, Clone, Debug)]
 pub struct PartiallyOrderedWorkflowLanguage {
     pub activity_key: ActivityKey,
-    pub root_model: Model,
+    pub tree: Vec<PowlNode>,
     pub keys: Keys,
 }
 
 impl PartiallyOrderedWorkflowLanguage {
     pub fn number_of_nodes(&self) -> usize {
-        self.root_model.len_recursive()
+        self.tree.len()
     }
 
-    pub fn nodes(&'_ self) -> ModelIterator<'_> {
-        self.root_model.nodes()
+    pub fn nodes(&'_ self) -> impl Iterator<Item = &PowlNode> {
+        self.tree.iter()
+    }
+
+    pub fn nodes_mut(&mut self) -> std::slice::IterMut<'_, PowlNode> {
+        self.tree.iter_mut()
+    }
+
+    /**
+     * Find the next node of this node: the next sibling, and if that is not available, the next sibling up the tree.
+     * May return a non-existing node if there is no sibling.
+     */
+    pub fn traverse(&self, node: usize) -> usize {
+        match self.tree[node] {
+            PowlNode::Activity { .. } => node + 1,
+            PowlNode::PartialOrder {
+                number_of_children, ..
+            }
+            | PowlNode::ChoiceGraph {
+                number_of_children, ..
+            } => {
+                let mut n = node + 1;
+                for _ in 0..number_of_children {
+                    n = self.traverse(n);
+                }
+                n
+            }
+        }
+    }
+
+    pub fn get_number_of_children(&self, parent: usize) -> Option<usize> {
+        match self.tree.get(parent)? {
+            PowlNode::Activity { .. } => Some(0),
+            PowlNode::PartialOrder {
+                number_of_children, ..
+            }
+            | PowlNode::ChoiceGraph {
+                number_of_children, ..
+            } => Some(*number_of_children),
+        }
+    }
+
+    pub fn get_children(&self, node: usize) -> PowlChildrenIterator<'_> {
+        PowlChildrenIterator::new(self, node)
+    }
+
+    pub fn get_child(&self, parent: usize, child_rank: usize) -> usize {
+        let mut i = parent + 1;
+        for _ in 0..child_rank {
+            i = self.traverse(i);
+        }
+        return i;
+    }
+
+    pub fn to_json(&self) -> Value {
+        serde_json::json!(
+            {
+                HEADER_FORMAT: HEADER_FORMAT_VALUE,
+                HEADER_FORMAT_VERSION: HEADER_FORMAT_VERSION_VALUE,
+                "model": if let Some(root) = self.tree.get(0) {
+                    root.to_json(self, 0)
+                } else {
+                    Value::Null
+                }
+            }
+        )
     }
 }
 
@@ -95,24 +159,24 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
 
         let mut activity_key = ActivityKey::new();
         let mut keys = Keys::default();
-        let root_model = import_model(json_root_model, &mut activity_key, &mut keys, true)
+        let nodes = import_node(json_root_model, &mut activity_key, &mut keys, true)
             .with_context(|| anyhow!("Reading root model."))?;
 
         Ok(Self {
             activity_key,
-            root_model,
+            tree: nodes,
             keys,
         })
     }
 }
 from_string!(PartiallyOrderedWorkflowLanguage);
 
-fn import_model(
+fn import_node(
     json_model: &Map<String, Value>,
     activity_key: &mut ActivityKey,
     keys: &mut Keys,
     is_root: bool,
-) -> Result<Model> {
+) -> Result<Vec<PowlNode>> {
     //read id
     let id = if !is_root {
         let id = json::read_string_from_object(json_model, "id").with_context(|| {
@@ -173,7 +237,7 @@ fn import_activity(
     skippable: bool,
     repeatable: bool,
     keys: &mut Keys,
-) -> Result<Model> {
+) -> Result<Vec<PowlNode>> {
     //read the attributes
     let (name, description, resource, role, cost, lifecycle) = if let Some(json_attributes) =
         json::read_object_or_null_from_object(json_model, "attributes")?
@@ -217,7 +281,7 @@ fn import_activity(
         None
     };
 
-    Ok(Model::Activity {
+    Ok(vec![PowlNode::Activity {
         id,
         activity,
         skippable,
@@ -228,7 +292,7 @@ fn import_activity(
         resource,
         cost,
         lifecycle,
-    })
+    }])
 }
 
 fn import_partial_order(
@@ -238,14 +302,14 @@ fn import_partial_order(
     skippable: bool,
     repeatable: bool,
     keys: &mut Keys,
-) -> Result<Model> {
+) -> Result<Vec<PowlNode>> {
     //read basic attributes
     let (name, description) = read_attributes(json_model)
         .with_context(|| anyhow!("Reading attributes of node {:?}.", id))?;
 
-    //read nodes
-    let (nodes, id_2_index) = read_nodes(json_model, activity_key, keys)
-        .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
+    //read children
+    let (mut children, id_2_index) = read_nodes(json_model, activity_key, keys)
+        .with_context(|| anyhow!("Reading children of node {:?}.", id))?;
 
     //read edges
     let mut edges = HashSet::new();
@@ -284,8 +348,8 @@ fn import_partial_order(
         if !edges.insert((source, target)) {
             return Err(anyhow!(
                 "Edge from `{:?}` to `{:?}` is duplicate.",
-                nodes[source].id(),
-                nodes[target].id()
+                children[source].id(),
+                children[target].id()
             ));
         }
     }
@@ -296,15 +360,19 @@ fn import_partial_order(
 
     //TODO: detect transitive duplication
 
-    Ok(Model::PartialOrder {
-        id,
-        nodes,
-        edges,
-        skippable,
-        repeatable,
-        name,
-        description,
-    })
+    children.insert(
+        0,
+        PowlNode::PartialOrder {
+            id,
+            number_of_children: id_2_index.len(),
+            edges,
+            skippable,
+            repeatable,
+            name,
+            description,
+        },
+    );
+    Ok(children)
 }
 
 fn import_choice_graph(
@@ -314,13 +382,13 @@ fn import_choice_graph(
     skippable: bool,
     repeatable: bool,
     keys: &mut Keys,
-) -> Result<Model> {
+) -> Result<Vec<PowlNode>> {
     //read basic attributes
     let (name, description) = read_attributes(json_model)
         .with_context(|| anyhow!("Reading attributes of node {:?}.", id))?;
 
-    //read nodes
-    let (nodes, id_2_index) = read_nodes(json_model, activity_key, keys)
+    //read children
+    let (mut children, id_2_index) = read_nodes(json_model, activity_key, keys)
         .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
 
     //check for reserved ids
@@ -391,7 +459,7 @@ fn import_choice_graph(
                 if !start_nodes.insert(target) {
                     return Err(anyhow!(
                         "Start edge to `{:?}` is duplicate in node {:?}.",
-                        nodes[target].id(),
+                        children[target].id(),
                         id
                     ));
                 }
@@ -403,7 +471,7 @@ fn import_choice_graph(
                 if !end_nodes.insert(source) {
                     return Err(anyhow!(
                         "End edge from `{:?}` is duplicate in node {:?}.",
-                        nodes[source].id(),
+                        children[source].id(),
                         id
                     ));
                 }
@@ -424,8 +492,8 @@ fn import_choice_graph(
                 if !edges.insert((source, target)) {
                     return Err(anyhow!(
                         "Edge from `{:?}` to `{:?}` is duplicate in node {:?}.",
-                        nodes[source].id(),
-                        nodes[target].id(),
+                        children[source].id(),
+                        children[target].id(),
                         id
                     ));
                 }
@@ -441,17 +509,21 @@ fn import_choice_graph(
 
     //check connectivity
 
-    Ok(Model::ChoiceGraph {
-        id,
-        nodes,
-        edges,
-        start_nodes,
-        end_nodes,
-        skippable,
-        repeatable,
-        name,
-        description,
-    })
+    children.insert(
+        0,
+        PowlNode::ChoiceGraph {
+            id,
+            number_of_children: id_2_index.len(),
+            edges,
+            start_children: start_nodes,
+            end_children: end_nodes,
+            skippable,
+            repeatable,
+            name,
+            description,
+        },
+    );
+    Ok(children)
 }
 
 fn read_attributes(json_model: &Map<String, Value>) -> Result<(Option<String>, Option<String>)> {
@@ -474,7 +546,7 @@ fn read_nodes(
     json_model: &Map<String, Value>,
     activity_key: &mut ActivityKey,
     keys: &mut Keys,
-) -> Result<(Vec<Model>, HashMap<String, usize>)> {
+) -> Result<(Vec<PowlNode>, HashMap<String, usize>)> {
     let mut id_2_index = HashMap::new();
     let mut nodes = vec![];
     for (node_index, json_node) in json::read_list_from_object(json_model, "nodes")
@@ -487,10 +559,10 @@ fn read_nodes(
             .with_context(|| anyhow!("For node {}, expected an object.", node_index))?;
 
         //recurse
-        let node = import_model(json_node, activity_key, keys, false)
+        let child: Vec<PowlNode> = import_node(json_node, activity_key, keys, false)
             .with_context(|| anyhow!("Reading node {}.", node_index))?;
 
-        let child_id = node
+        let child_id = child[0]
             .id()
             .ok_or_else(|| anyhow!("Non-root model {} has no id.", node_index))?
             .clone();
@@ -504,7 +576,7 @@ fn read_nodes(
             ));
         }
 
-        nodes.push(node);
+        nodes.extend(child);
     }
 
     if nodes.len() < 2 {
@@ -518,17 +590,15 @@ impl TranslateActivityKey for PartiallyOrderedWorkflowLanguage {
     fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
-        (0..self.root_model.len_recursive()).for_each(|i| {
-            if let Some(model) = self.root_model.get_mut(i) {
-                if let Model::Activity {
-                    activity: Some(activity),
-                    ..
-                } = model
-                {
-                    *activity = translator.translate_activity(&activity);
-                }
+        for node in self.nodes_mut() {
+            if let PowlNode::Activity {
+                activity: Some(activity),
+                ..
+            } = node
+            {
+                *activity = translator.translate_activity(&activity);
             }
-        });
+        }
         self.activity_key = to_activity_key.clone();
     }
 }
@@ -553,7 +623,7 @@ impl Infoable for PartiallyOrderedWorkflowLanguage {
 impl TestActivityKey for PartiallyOrderedWorkflowLanguage {
     fn test_activity_key(&self) {
         self.nodes().for_each(|node| {
-            if let Model::Activity {
+            if let PowlNode::Activity {
                 activity: Some(activity),
                 ..
             } = node
@@ -566,14 +636,7 @@ impl TestActivityKey for PartiallyOrderedWorkflowLanguage {
 
 impl Display for PartiallyOrderedWorkflowLanguage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let json = serde_json::json!(
-            {
-                HEADER_FORMAT: HEADER_FORMAT_VALUE,
-                HEADER_FORMAT_VERSION: HEADER_FORMAT_VERSION_VALUE,
-                "model": self.root_model.to_json(&self.activity_key, &self.keys),
-            }
-        );
-        let x = serde_json::to_string_pretty(&json).unwrap();
+        let x = serde_json::to_string_pretty(&self.to_json()).unwrap();
         write!(f, "{}", x)
     }
 }
@@ -581,7 +644,9 @@ impl Display for PartiallyOrderedWorkflowLanguage {
 impl Graphable for PartiallyOrderedWorkflowLanguage {
     fn to_dot(&self) -> Result<VisualGraph> {
         let mut graph = VisualGraph::new(Orientation::LeftToRight);
-        self.root_model.to_dot(self.activity_key(), &mut graph);
+        if let Some(root) = self.tree.get(0) {
+            root.to_dot(self, &mut graph, 0);
+        }
         Ok(graph)
     }
 }
@@ -604,7 +669,7 @@ impl Exportable for PartiallyOrderedWorkflowLanguage {
 }
 
 #[derive(Clone, Debug)]
-pub enum Model {
+pub enum PowlNode {
     Activity {
         id: Option<String>,
         activity: Option<Activity>,
@@ -619,8 +684,9 @@ pub enum Model {
     },
     PartialOrder {
         id: Option<String>,
-        nodes: Vec<Model>,
+        number_of_children: usize,
         /// Invariant: sorted by source (first key), then target (second key).
+        /// Note: local indices.
         edges: Vec<(usize, usize)>,
         skippable: bool,
         repeatable: bool,
@@ -629,13 +695,16 @@ pub enum Model {
     },
     ChoiceGraph {
         id: Option<String>,
-        nodes: Vec<Model>,
+        number_of_children: usize,
         /// Invariant: sorted by source (first key), then target (second key).
+        /// Note: local indices.
         edges: Vec<(usize, usize)>,
         /// Invariant: sorted
-        start_nodes: Vec<usize>,
+        /// Note: local indices.
+        start_children: Vec<usize>,
         /// Invariant: sorted
-        end_nodes: Vec<usize>,
+        /// Note: local indices.
+        end_children: Vec<usize>,
         skippable: bool,
         repeatable: bool,
         name: Option<String>,
@@ -643,39 +712,19 @@ pub enum Model {
     },
 }
 
-impl Model {
+impl PowlNode {
     pub fn id(&self) -> Option<&String> {
         match self {
-            Model::Activity { id, .. }
-            | Model::PartialOrder { id, .. }
-            | Model::ChoiceGraph { id, .. } => id.as_ref(),
+            PowlNode::Activity { id, .. }
+            | PowlNode::PartialOrder { id, .. }
+            | PowlNode::ChoiceGraph { id, .. } => id.as_ref(),
         }
     }
 
-    /// Gets a mutable reference to the node with the given recursive index, or None if it does not exist.
-    pub fn get_mut(&mut self, recursive_index: usize) -> Option<&mut Self> {
-        let mut n = recursive_index;
-        get_mut(self, &mut n)
-    }
-
-    /// Returns the number of nodes recursively.
-    pub fn len_recursive(&self) -> usize {
-        match self {
-            Self::Activity { .. } => 1,
-            Self::PartialOrder { nodes, .. } | Self::ChoiceGraph { nodes, .. } => {
-                1 + nodes.iter().map(|node| node.len_recursive()).sum::<usize>()
-            }
-        }
-    }
-
-    pub fn nodes(&'_ self) -> ModelIterator<'_> {
-        self.into()
-    }
-
-    pub fn to_json(&self, activity_key: &ActivityKey, keys: &Keys) -> Value {
+    pub fn to_json(&self, powl: &PartiallyOrderedWorkflowLanguage, node_index: usize) -> Value {
         let mut result = Map::new();
         match self {
-            Model::Activity {
+            PowlNode::Activity {
                 id,
                 activity,
                 resource,
@@ -694,7 +743,7 @@ impl Model {
                 result.insert(
                     "label".to_string(),
                     if let Some(activity) = activity {
-                        json!(activity_key.deprocess_activity(activity))
+                        json!(powl.activity_key.deprocess_activity(activity))
                     } else {
                         Value::Null
                     },
@@ -718,21 +767,21 @@ impl Model {
                     if let Some(lifecycle) = lifecycle {
                         attributes.insert(
                             "lifecycle".to_string(),
-                            json!(&keys.lifecycle_key.deprocess_activity(lifecycle)),
+                            json!(&powl.keys.lifecycle_key.deprocess_activity(lifecycle)),
                         );
                     }
 
                     if let Some(resource) = resource {
                         attributes.insert(
                             "resource".to_string(),
-                            json!(&keys.resource_key.deprocess_activity(resource)),
+                            json!(&powl.keys.resource_key.deprocess_activity(resource)),
                         );
                     }
 
                     if let Some(role) = role {
                         attributes.insert(
                             "role".to_string(),
-                            json!(&keys.role_key.deprocess_activity(role)),
+                            json!(&powl.keys.role_key.deprocess_activity(role)),
                         );
                     }
 
@@ -741,9 +790,9 @@ impl Model {
                     }
                 }
             }
-            Model::PartialOrder {
+            PowlNode::PartialOrder {
                 id,
-                nodes,
+                number_of_children: _,
                 edges,
                 skippable,
                 repeatable,
@@ -756,27 +805,33 @@ impl Model {
 
                 write_attributes(&mut result, name, description);
 
-                write_nodes(&mut result, nodes, activity_key, keys);
+                write_children(&mut result, powl, node_index);
 
                 result.insert(
                     "edges".to_string(),
                     json!(
                         edges
                             .iter()
-                            .map(|(source_index, target_index)| json!({
-                                "source": json!(nodes[*source_index].id()),
-                                "target": json!(nodes[*target_index].id())
-                            }))
+                            .map(|(source_local_index, target_local_index)| {
+                                let source =
+                                    &powl.tree[powl.get_child(node_index, *source_local_index)];
+                                let target =
+                                    &powl.tree[powl.get_child(node_index, *target_local_index)];
+                                json!({
+                                    "source": json!(source.id()),
+                                    "target": json!(target.id())
+                                })
+                            })
                             .collect::<Vec<_>>()
                     ),
                 );
             }
-            Model::ChoiceGraph {
+            PowlNode::ChoiceGraph {
                 id,
-                nodes,
+                number_of_children: _,
                 edges,
-                start_nodes,
-                end_nodes,
+                start_children,
+                end_children,
                 skippable,
                 repeatable,
                 name,
@@ -788,29 +843,33 @@ impl Model {
 
                 write_attributes(&mut result, name, description);
 
-                write_nodes(&mut result, nodes, activity_key, keys);
+                write_children(&mut result, powl, node_index);
 
                 //edges
                 let mut json_edges = edges
                     .iter()
-                    .map(|(source_index, target_index)| {
+                    .map(|(source_local_index, target_local_index)| {
+                        let source = &powl.tree[powl.get_child(node_index, *source_local_index)];
+                        let target = &powl.tree[powl.get_child(node_index, *target_local_index)];
                         json!({
-                            "source": json!(nodes[*source_index].id()),
-                            "target": json!(nodes[*target_index].id())
+                            "source": json!(source.id()),
+                            "target": json!(target.id())
                         })
                     })
                     .collect::<Vec<_>>();
                 //start edges
-                json_edges.extend(start_nodes.iter().map(|target_index| {
+                json_edges.extend(start_children.iter().map(|target_local_index| {
+                    let target = &powl.tree[powl.get_child(node_index, *target_local_index)];
                     json!({
                         "source": "@start",
-                        "target": json!(nodes[*target_index].id())
+                        "target": json!(target.id())
                     })
                 }));
                 //end edges
-                json_edges.extend(end_nodes.iter().map(|target_index| {
+                json_edges.extend(end_children.iter().map(|source_local_index| {
+                    let source = &powl.tree[powl.get_child(node_index, *source_local_index)];
                     json!({
-                        "source": json!(nodes[*target_index].id()),
+                        "source": json!(source.id()),
                         "target": "@end"
                     })
                 }));
@@ -823,15 +882,16 @@ impl Model {
 
     pub fn to_dot(
         &self,
-        activity_key: &ActivityKey,
+        powl: &PartiallyOrderedWorkflowLanguage,
         graph: &mut VisualGraph,
+        node_index: usize,
     ) -> (NodeHandle, NodeHandle) {
         match self {
-            Model::Activity { activity: None, .. } => {
+            PowlNode::Activity { activity: None, .. } => {
                 let t = graphable::create_silent_transition(graph, "");
                 (t, t)
             }
-            Model::Activity {
+            PowlNode::Activity {
                 activity: Some(activity),
                 skippable,
                 repeatable,
@@ -845,27 +905,32 @@ impl Model {
                 };
                 let t = graphable::create_transition(
                     graph,
-                    activity_key.get_activity_label(&activity),
+                    powl.activity_key.get_activity_label(&activity),
                     cardinality,
                 );
                 (t, t)
             }
-            Model::PartialOrder { nodes, edges, .. } => {
+            PowlNode::PartialOrder {
+                number_of_children,
+                edges,
+                ..
+            } => {
                 //children
-                let index_2_handles = nodes
-                    .iter()
-                    .map(|node| {
-                        let (entry, exit) = node.to_dot(activity_key, graph);
+                let index_2_handles = powl
+                    .get_children(node_index)
+                    .map(|child_index| {
+                        let child = &powl.tree[child_index];
+                        let (child_entry, child_exit) = child.to_dot(powl, graph, child_index);
                         let pre_entry = graphable::create_gateway(graph, "+");
                         let post_exit = graphable::create_gateway(graph, "+");
-                        graphable::create_edge(graph, &pre_entry, &entry, "");
-                        graphable::create_edge(graph, &exit, &post_exit, "");
+                        graphable::create_edge(graph, &pre_entry, &child_entry, "");
+                        graphable::create_edge(graph, &child_exit, &post_exit, "");
                         (pre_entry, post_exit)
                     })
                     .collect::<Vec<_>>();
 
-                let mut is_start = vec![true; nodes.len()];
-                let mut is_end = vec![true; nodes.len()];
+                let mut is_start = vec![true; *number_of_children];
+                let mut is_end = vec![true; *number_of_children];
 
                 //edges
                 for (source_index, target_index) in edges {
@@ -896,22 +961,22 @@ impl Model {
 
                 (start, end)
             }
-            Model::ChoiceGraph {
-                nodes,
+            PowlNode::ChoiceGraph {
                 edges,
-                start_nodes,
-                end_nodes,
+                start_children,
+                end_children,
                 ..
             } => {
                 //children
-                let index_2_handles = nodes
-                    .iter()
-                    .map(|node| {
-                        let (entry, exit) = node.to_dot(activity_key, graph);
+                let index_2_handles = powl
+                    .get_children(node_index)
+                    .map(|child_index| {
+                        let child = &powl.tree[child_index];
+                        let (child_entry, child_exit) = child.to_dot(powl, graph, child_index);
                         let pre_entry = graphable::create_gateway(graph, "x");
                         let post_exit = graphable::create_gateway(graph, "x");
-                        graphable::create_edge(graph, &pre_entry, &entry, "");
-                        graphable::create_edge(graph, &exit, &post_exit, "");
+                        graphable::create_edge(graph, &pre_entry, &child_entry, "");
+                        graphable::create_edge(graph, &child_exit, &post_exit, "");
                         (pre_entry, post_exit)
                     })
                     .collect::<Vec<_>>();
@@ -925,13 +990,13 @@ impl Model {
 
                 //start edges
                 let start = graphable::create_gateway(graph, "x");
-                for target_index in start_nodes {
+                for target_index in start_children {
                     let target = index_2_handles[*target_index].0;
                     graphable::create_edge(graph, &start, &target, "");
                 }
 
                 let end = graphable::create_gateway(graph, "x");
-                for source_index in end_nodes {
+                for source_index in end_children {
                     let source = index_2_handles[*source_index].1;
                     graphable::create_edge(graph, &source, &end, "");
                 }
@@ -983,67 +1048,53 @@ fn write_attributes(
     }
 }
 
-fn write_nodes(
+fn write_children(
     result: &mut Map<String, Value>,
-    nodes: &Vec<Model>,
-    activity_key: &ActivityKey,
-    keys: &Keys,
+    powl: &PartiallyOrderedWorkflowLanguage,
+    node_index: usize,
 ) {
     result.insert(
         "nodes".to_string(),
         json!(
-            nodes
-                .iter()
-                .map(|node| node.to_json(activity_key, keys))
+            powl.get_children(node_index)
+                .map(|child_index| powl.tree[child_index].to_json(powl, child_index))
                 .collect::<Vec<_>>()
         ),
     );
 }
 
-fn get_mut<'a>(model: &'a mut Model, left: &mut usize) -> Option<&'a mut Model> {
-    if *left == 0 {
-        return Some(model);
-    }
+pub struct PowlChildrenIterator<'a> {
+    //children iterator
+    powl: &'a PartiallyOrderedWorkflowLanguage,
+    node: usize,
+    now: Option<usize>,
+    next: usize,
+    count: usize,
+}
 
-    //skip over self
-    *left -= 1;
-
-    match model {
-        Model::Activity { .. } => return None,
-        Model::PartialOrder { nodes, .. } | Model::ChoiceGraph { nodes, .. } => {
-            for child in nodes.iter_mut() {
-                if let Some(x) = get_mut(child, left) {
-                    return Some(x);
-                }
-            }
+impl<'a> PowlChildrenIterator<'a> {
+    fn new(powl: &'a PartiallyOrderedWorkflowLanguage, node: usize) -> Self {
+        Self {
+            powl,
+            node: node,
+            now: None,
+            next: node + 1,
+            count: 0,
         }
     }
-
-    None
 }
 
-pub struct ModelIterator<'a> {
-    stack: Vec<&'a Model>,
-}
-
-impl<'a> From<&'a Model> for ModelIterator<'a> {
-    fn from(value: &'a Model) -> Self {
-        Self { stack: vec![value] }
-    }
-}
-
-impl<'a> Iterator for ModelIterator<'a> {
-    type Item = &'a Model;
+impl<'a> Iterator for PowlChildrenIterator<'a> {
+    type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.stack.pop()?;
-        match next {
-            Model::Activity { .. } => {}
-            Model::PartialOrder { nodes, .. } | Model::ChoiceGraph { nodes, .. } => {
-                self.stack.extend(nodes);
-            }
-        };
-        Some(next)
+        if self.count >= self.powl.get_number_of_children(self.node)? {
+            return None;
+        }
+        self.count += 1;
+        self.now = Some(self.next);
+        self.next = self.powl.traverse(self.now.unwrap());
+        Some(self.now.unwrap())
     }
 }
 

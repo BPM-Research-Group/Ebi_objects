@@ -6,7 +6,7 @@ use crate::{
     StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::{
-        partially_ordered_workflow_language::{Model, PartiallyOrderedWorkflowLanguage},
+        partially_ordered_workflow_language::{PartiallyOrderedWorkflowLanguage, PowlNode},
         process_tree::{Node, Operator},
     },
 };
@@ -367,36 +367,39 @@ impl From<PartiallyOrderedWorkflowLanguage> for BusinessProcessModelAndNotation 
     fn from(value: PartiallyOrderedWorkflowLanguage) -> Self {
         log::info!("convert partially ordered workflow language to LPN");
         let mut result = BPMNCreator::new_with_activity_key(value.activity_key.clone());
-        let process = result.add_process(None);
+        if !value.tree.is_empty() {
+            let process = result.add_process(None);
 
-        let source = result.add_start_event_unchecked(process, StartEventType::None);
-        let sink = result.add_end_event_unchecked(process, EndEventType::None);
+            let source = result.add_start_event_unchecked(process, StartEventType::None);
+            let sink = result.add_end_event_unchecked(process, EndEventType::None);
 
-        powl_model_multiplicity(&value.root_model, &mut result, process, source, sink);
+            powl_node_multiplicity(&value, &mut result, 0, process, source, sink);
+        }
         result.to_bpmn_unchecked()
     }
 }
 
-fn powl_model_multiplicity(
-    model: &Model,
+fn powl_node_multiplicity(
+    powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut BPMNCreator,
+    node_index: usize,
     process: Container,
     source: GlobalIndex,
     sink: GlobalIndex,
 ) {
     //first, handle skippable and repeatable
-    match model {
-        Model::Activity {
+    match powl.tree[node_index] {
+        PowlNode::Activity {
             skippable,
             repeatable,
             ..
         }
-        | Model::PartialOrder {
+        | PowlNode::PartialOrder {
             skippable,
             repeatable,
             ..
         }
-        | Model::ChoiceGraph {
+        | PowlNode::ChoiceGraph {
             skippable,
             repeatable,
             ..
@@ -442,37 +445,49 @@ fn powl_model_multiplicity(
                 }
             };
 
-            powl_model_2_bpmn(model, result, process, new_source, new_sink);
+            powl_node_2_bpmn(powl, result, node_index, process, new_source, new_sink);
         }
     }
 }
 
-fn powl_model_2_bpmn(
-    model: &Model,
+fn powl_node_2_bpmn(
+    powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut BPMNCreator,
+    node_index: usize,
     process: Container,
     source: GlobalIndex,
     sink: GlobalIndex,
 ) {
-    match model {
-        Model::Activity { activity, .. } => {
+    match &powl.tree[node_index] {
+        PowlNode::Activity { activity, .. } => {
             powl_activity_2_bpmn(activity, result, process, source, sink)
         }
-        Model::PartialOrder { nodes, edges, .. } => {
-            powl_partial_order_2_bpmn(nodes, edges, result, process, source, sink)
-        }
-        Model::ChoiceGraph {
-            nodes,
+        PowlNode::PartialOrder {
             edges,
-            start_nodes,
-            end_nodes,
+            number_of_children,
+            ..
+        } => powl_partial_order_2_bpmn(
+            powl,
+            result,
+            node_index,
+            edges,
+            *number_of_children,
+            process,
+            source,
+            sink,
+        ),
+        PowlNode::ChoiceGraph {
+            edges,
+            start_children: start_nodes,
+            end_children: end_nodes,
             ..
         } => powl_choice_graph_2_bpmn(
-            nodes,
-            edges,
-            start_nodes,
-            end_nodes,
+            powl,
             result,
+            node_index,
+            &edges,
+            &start_nodes,
+            &end_nodes,
             process,
             source,
             sink,
@@ -499,28 +514,30 @@ fn powl_activity_2_bpmn(
 }
 
 fn powl_partial_order_2_bpmn(
-    nodes: &[Model],
-    edges: &[(usize, usize)],
+    powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut BPMNCreator,
+    node_index: usize,
+    edges: &[(usize, usize)],
+    number_of_children: usize,
     process: Container,
     source: GlobalIndex,
     sink: GlobalIndex,
 ) {
     //children
-    let index_2_handles = nodes
-        .iter()
-        .map(|node| {
+    let index_2_handles = powl
+        .get_children(node_index)
+        .map(|child_index| {
             let child_source = result.add_gateway_unchecked(process, GatewayType::Parallel);
             let child_sink = result.add_gateway_unchecked(process, GatewayType::Parallel);
 
-            powl_model_multiplicity(node, result, process, child_source, child_sink);
+            powl_node_multiplicity(powl, result, child_index, process, child_source, child_sink);
 
             (child_source, child_sink)
         })
         .collect::<Vec<_>>();
 
-    let mut is_start = vec![true; nodes.len()];
-    let mut is_end = vec![true; nodes.len()];
+    let mut is_start = vec![true; number_of_children];
+    let mut is_end = vec![true; number_of_children];
 
     //edges
     for (source_index, target_index) in edges {
@@ -554,23 +571,24 @@ fn powl_partial_order_2_bpmn(
 }
 
 fn powl_choice_graph_2_bpmn(
-    nodes: &[Model],
+    powl: &PartiallyOrderedWorkflowLanguage,
+    result: &mut BPMNCreator,
+    node_index: usize,
     edges: &[(usize, usize)],
     start_nodes: &[usize],
     end_nodes: &[usize],
-    result: &mut BPMNCreator,
     process: Container,
     source: GlobalIndex,
     sink: GlobalIndex,
 ) {
     //children
-    let index_2_handles = nodes
-        .iter()
-        .map(|node| {
+    let index_2_handles = powl
+        .get_children(node_index)
+        .map(|child_index| {
             let child_source = result.add_gateway_unchecked(process, GatewayType::Exclusive);
             let child_sink = result.add_gateway_unchecked(process, GatewayType::Exclusive);
 
-            powl_model_multiplicity(node, result, process, child_source, child_sink);
+            powl_node_multiplicity(powl, result, child_index, process, child_source, child_sink);
 
             (child_source, child_sink)
         })
@@ -600,9 +618,7 @@ fn powl_choice_graph_2_bpmn(
 mod tests {
     use crate::{
         ProcessTree, StochasticLabelledPetriNet,
-        ebi_objects::
-            partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage
-        ,
+        ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
     };
     use ebi_bpmn::BusinessProcessModelAndNotation;
     use std::fs;
