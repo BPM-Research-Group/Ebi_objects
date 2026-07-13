@@ -808,7 +808,7 @@ impl FromStr for Operator {
 // however we use them to create a state space in several conversions.
 // As such, its bases functions are here.
 
-#[derive(Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, EnumIs)]
+#[derive(Copy, Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, EnumIs)]
 pub enum NodeState {
     Enabled,
     Started,
