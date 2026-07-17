@@ -617,7 +617,8 @@ fn powl_choice_graph_2_bpmn(
 #[cfg(test)]
 mod tests {
     use crate::{
-        ProcessTree, StochasticLabelledPetriNet, ebi_objects::{partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage, scalable_vector_graphics::ToSVG},
+        ProcessTree, StochasticLabelledPetriNet,
+        ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
     };
     use ebi_bpmn::BusinessProcessModelAndNotation;
     use std::fs;

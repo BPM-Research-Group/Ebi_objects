@@ -130,7 +130,7 @@ impl PartiallyOrderedWorkflowLanguage {
         return self.traverse(parent) > child;
     }
 
-    ///
+    /// Create a json representation.
     pub fn to_json(&self) -> Value {
         serde_json::json!(
             {
@@ -143,6 +143,22 @@ impl PartiallyOrderedWorkflowLanguage {
                 }
             }
         )
+    }
+
+    /// Returns whether the given node can only produce the empty trace.
+    /// Returns `true` if the node does not exist.
+    pub fn only_empty_trace(&self, node: usize) -> bool {
+        for child in (node + 1)..self.traverse(node) {
+            match self.tree[child] {
+                PowlNode::Activity { activity, .. } => {
+                    if activity.is_some() {
+                        return false;
+                    }
+                }
+                _ => {}
+            }
+        }
+        return true;
     }
 }
 
