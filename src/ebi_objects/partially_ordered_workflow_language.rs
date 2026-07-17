@@ -19,6 +19,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
 };
+use strum_macros::EnumIs;
 
 pub const HEADER_FORMAT: &str = "format";
 pub const HEADER_FORMAT_VALUE: &str = "powl-json";
@@ -91,7 +92,7 @@ impl PartiallyOrderedWorkflowLanguage {
         return i;
     }
 
-    /// Returns the parent of node, and the child rank of `node`. 
+    /// Returns the parent of node, and the child rank of `node`.
     /// Notice that this is an expensive operation; avoid if possible.
     pub fn get_parent(&self, node: usize) -> Option<(usize, usize)> {
         if node == 0 {
@@ -129,7 +130,7 @@ impl PartiallyOrderedWorkflowLanguage {
         return self.traverse(parent) > child;
     }
 
-    /// 
+    ///
     pub fn to_json(&self) -> Value {
         serde_json::json!(
             {
@@ -707,7 +708,7 @@ impl Exportable for PartiallyOrderedWorkflowLanguage {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, EnumIs)]
 pub enum PowlNode {
     Activity {
         id: Option<String>,
