@@ -91,13 +91,8 @@ impl PartiallyOrderedWorkflowLanguage {
         return i;
     }
 
-    /**
-     * Returns the parent of node. Notice that
-     * this is an expensive operation; avoid if possible.
-     *
-     * @param node
-     * @return The parent of node, and the rank of the child
-     */
+    /// Returns the parent of node, and the child rank of `node`. 
+    /// Notice that this is an expensive operation; avoid if possible.
     pub fn get_parent(&self, node: usize) -> Option<(usize, usize)> {
         if node == 0 {
             return None;
@@ -113,13 +108,8 @@ impl PartiallyOrderedWorkflowLanguage {
         Some((potential_parent, child_rank))
     }
 
-    /**
-     *
-     * @param parent
-     * @param grandChild
-     * @return The number of the child within parent that contains grandChild.
-     *         If grandChild is not a child of parent, will return None.
-     */
+    /// Return the rank of the child within parent that contains grandChild.
+    /// If grandChild is not a child of parent, will return None.
     pub fn get_child_rank_with(&self, parent: usize, grand_child: usize) -> Option<usize> {
         let mut child_rank = 0;
         for child in self.get_children(parent) {
@@ -131,12 +121,7 @@ impl PartiallyOrderedWorkflowLanguage {
         None
     }
 
-    /**
-     *
-     * @param parent
-     * @param child
-     * @return Whether the child is a direct or indirect child of parent.
-     */
+    /// Return whether the child is a direct or indirect child of parent.
     pub fn is_parent_of(&self, parent: usize, child: usize) -> bool {
         if parent > child {
             return false;
@@ -144,6 +129,7 @@ impl PartiallyOrderedWorkflowLanguage {
         return self.traverse(parent) > child;
     }
 
+    /// 
     pub fn to_json(&self) -> Value {
         serde_json::json!(
             {
