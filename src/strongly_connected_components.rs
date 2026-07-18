@@ -1,13 +1,40 @@
+use crate::{AutomatonSemantics, AutomatonState};
+
 pub trait StronglyConnectedComponents {
-    fn strongly_connected_components(&self, number_of_nodes: usize) -> Vec<Vec<usize>>;
+    fn strongly_connected_components(&self) -> Vec<Vec<usize>>;
 }
 
-impl<E> StronglyConnectedComponents for E
+impl<A> StronglyConnectedComponents for A
 where
-    E: Edges,
+    A: AutomatonSemantics,
 {
-    fn strongly_connected_components(&self, number_of_nodes: usize) -> Vec<Vec<usize>> {
-        strongly_connected_components(self, number_of_nodes)
+    fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
+        strongly_connected_components(self, self.number_of_states())
+    }
+}
+
+pub trait Node: Copy + Ord {
+    fn to_id(&self) -> usize;
+    fn from_id(id: usize) -> Self;
+}
+
+impl Node for AutomatonState {
+    fn to_id(&self) -> usize {
+        self.0
+    }
+
+    fn from_id(id: usize) -> Self {
+        Self(id)
+    }
+}
+
+impl Node for usize {
+    fn to_id(&self) -> usize {
+        *self
+    }
+
+    fn from_id(id: usize) -> Self {
+        id
     }
 }
 
@@ -15,11 +42,6 @@ pub trait Edges {
     type Node: Node;
 
     fn outgoing_edges_of(&self, source: Self::Node) -> impl Iterator<Item = Self::Node>;
-}
-
-pub trait Node: Copy + Ord {
-    fn to_id(&self) -> usize;
-    fn from_id(id: usize) -> Self;
 }
 
 impl<N> Edges for Vec<(N, N)>
@@ -50,13 +72,16 @@ where
     }
 }
 
-impl Node for usize {
-    fn to_id(&self) -> usize {
-        *self
-    }
+impl<A> Edges for A
+where
+    A: AutomatonSemantics,
+{
+    type Node = AutomatonState;
 
-    fn from_id(id: usize) -> Self {
-        id
+    fn outgoing_edges_of(&self, source: Self::Node) -> impl Iterator<Item = Self::Node> {
+        self.outgoing_transitions(source)
+            .into_iter()
+            .map(|transition| self.transition_2_target(transition).unwrap())
     }
 }
 
