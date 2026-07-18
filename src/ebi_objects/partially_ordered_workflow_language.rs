@@ -418,7 +418,7 @@ fn import_partial_order(
     edges.sort();
 
     //detect cycles
-    if strongly_connected_components(&edges, children.len())
+    if strongly_connected_components(&edges, children.len()).0
         .iter()
         .any(|scc| scc.len() >= 2)
     {

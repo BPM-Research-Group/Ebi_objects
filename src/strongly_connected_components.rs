@@ -1,20 +1,24 @@
 use crate::{AutomatonSemantics, AutomatonState};
 
 pub trait StronglyConnectedComponents {
-    fn strongly_connected_components(&self) -> Vec<Vec<usize>>;
+    /// Returns a list of components (which are lists of nodes), and a map node -> scc.
+    fn strongly_connected_components(&self) -> (Vec<Vec<usize>>, Vec<usize>);
 }
 
 impl<A> StronglyConnectedComponents for A
 where
     A: AutomatonSemantics,
 {
-    fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
+    fn strongly_connected_components(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
         strongly_connected_components(self, self.number_of_states())
     }
 }
 
-impl <E> StronglyConnectedComponents for (&E, &usize) where E: Edges {
-    fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
+impl<E> StronglyConnectedComponents for (&E, &usize)
+where
+    E: Edges,
+{
+    fn strongly_connected_components(&self) -> (Vec<Vec<usize>>, Vec<usize>) {
         strongly_connected_components(self.0, *self.1)
     }
 }
@@ -94,7 +98,11 @@ where
 /// Computes the strongly connected components using Tarjan's algorithm.
 /// Derived from the `strongly_connected_components` crate, adapted to not require building two hashmaps.
 /// If `edges` is a vector, it must be sorted.
-pub fn strongly_connected_components<N, E>(edges: &E, number_of_nodes: usize) -> Vec<Vec<usize>>
+/// Returns a list of components (which are lists of nodes), and a map node -> scc.
+pub fn strongly_connected_components<N, E>(
+    edges: &E,
+    number_of_nodes: usize,
+) -> (Vec<Vec<usize>>, Vec<usize>)
 where
     N: Node,
     E: Edges<Node = N>,
@@ -115,7 +123,16 @@ where
     while let Some(top_element) = dfs_stack.pop() {
         process_dfs_stack(edges, &mut state, &mut dfs_stack, top_element);
     }
-    state.sccs
+
+    //create lookup for sccs
+    let mut node_2_scc = vec![0; number_of_nodes];
+    for (i, scc) in state.sccs.iter().enumerate() {
+        for node in scc {
+            node_2_scc[*node] = i;
+        }
+    }
+
+    (state.sccs, node_2_scc)
 }
 
 fn process_dfs_stack<E, N>(
