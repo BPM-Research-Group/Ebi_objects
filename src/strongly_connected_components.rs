@@ -13,6 +13,12 @@ where
     }
 }
 
+impl <E> StronglyConnectedComponents for (E, usize) where E: Edges {
+    fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
+        strongly_connected_components(&self.0, self.1)
+    }
+}
+
 pub trait Node: Copy + Ord {
     fn to_id(&self) -> usize;
     fn from_id(id: usize) -> Self;
