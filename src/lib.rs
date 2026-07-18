@@ -104,6 +104,7 @@ pub mod traits {
 pub mod json;
 pub mod line_reader;
 pub mod marking;
+pub mod strongly_connected_components;
 pub mod tests;
 
 pub use crate::attribute_key::attribute::Attribute;

@@ -1,5 +1,6 @@
 use crate::{
     EbiObject, Exportable, Graphable, Importable, Infoable, json,
+    strongly_connected_components::strongly_connected_components,
     traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -146,8 +147,12 @@ impl PartiallyOrderedWorkflowLanguage {
     }
 
     /// Returns whether the given node can only produce the empty trace.
-    /// Returns `true` if the node does not exist.
+    /// Returns `false` if the node does not exist.
     pub fn only_empty_trace(&self, node: usize) -> bool {
+        if node >= self.tree.len() {
+            return false;
+        }
+
         for child in (node + 1)..self.traverse(node) {
             match self.tree[child] {
                 PowlNode::Activity { activity, .. } => {
@@ -412,7 +417,14 @@ fn import_partial_order(
     let mut edges = edges.into_iter().collect::<Vec<_>>();
     edges.sort();
 
-    //TODO: detect cycles
+    //detect cycles
+    if strongly_connected_components(&edges, children.len())
+        .iter()
+        .any(|scc| scc.len() >= 2)
+    {
+        //cycle detected
+        return Err(anyhow!("A partial order node cannot contain cycles."));
+    }
 
     //TODO: detect transitive duplication
 
@@ -1191,6 +1203,12 @@ mod tests {
         let _powl3 = fin3.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
 
         assert_eq!(fin2, fin3);
+    }
+
+    #[test]
+    fn import_partial_order_cycle() {
+        let fin = fs::read_to_string("testfiles/and_a_b_invalid.powl").unwrap();
+        assert!(fin.parse::<PartiallyOrderedWorkflowLanguage>().is_err());
     }
 
     #[test]

@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -387,7 +393,7 @@ dependencies = [
  "log",
  "pastey",
  "process_mining",
- "quick-xml 0.40.1",
+ "quick-xml 0.41.0",
  "rayon",
  "resvg 0.47.0",
  "serde",
@@ -659,6 +665,11 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+dependencies = [
+ "allocator-api2",
+ "equivalent",
+ "foldhash 0.2.0",
+]
 
 [[package]]
 name = "heck"
@@ -887,9 +898,9 @@ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "macros_process_mining"
-version = "0.5.6"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "433587a571736dd80cc2768329fd2e7a38c8f43c1e97675f7d460450cd37918c"
+checksum = "1f7e1aeb1ff280efbd58af4a543dd3f63984696234466ae4608aa2a6a72257dc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1225,19 +1236,21 @@ dependencies = [
 
 [[package]]
 name = "process_mining"
-version = "0.5.6"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23872e775717007dce2a676843d34ab2d3aec23a93755a9819ce04a0e20f2e73"
+checksum = "dde42f23380f850d09b32bcdde81b25158b52a317551539c3f4157b05aaf4224"
 dependencies = [
  "chrono",
  "csv",
  "flate2",
+ "hashbrown 0.17.1",
  "itertools 0.14.0",
  "macros_process_mining",
  "ordered-float",
  "petgraph",
  "quick-xml 0.37.5",
  "rayon",
+ "rustc-hash",
  "schemars 1.2.1",
  "serde",
  "serde_json",
@@ -1265,16 +1278,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "331e97a1af0bf59823e6eadffe373d7b27f485be8748f71471c662c1f269b7fb"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.40.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2474bd2e5029e7ccb6abb2ba48cf2383a333851dedf495901544281590c7da7f"
-dependencies = [
- "memchr",
- "serde",
 ]
 
 [[package]]
@@ -2098,9 +2101,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.23.5"
+version = "1.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea5fab0d6c3c01ae70085a09cb03d4c7a1d6314e2b3e075392783396d724ca0a"
+checksum = "bf3923a6f5c4c6382e0b653c4117f48d631ea17f38ed86e2a828e6f7412f5239"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
