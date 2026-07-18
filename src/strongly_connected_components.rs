@@ -1,3 +1,16 @@
+pub trait StronglyConnectedComponents {
+    fn strongly_connected_components(&self, number_of_nodes: usize) -> Vec<Vec<usize>>;
+}
+
+impl<E> StronglyConnectedComponents for E
+where
+    E: Edges,
+{
+    fn strongly_connected_components(&self, number_of_nodes: usize) -> Vec<Vec<usize>> {
+        strongly_connected_components(self, number_of_nodes)
+    }
+}
+
 pub trait Edges {
     type Node: Node;
 
@@ -48,8 +61,8 @@ impl Node for usize {
 }
 
 /// Computes the strongly connected components using Tarjan's algorithm.
-/// Derived from the `strongly_connected_components` trait, adapted to not require building two hashmaps.
-/// `edges` must be sorted.
+/// Derived from the `strongly_connected_components` crate, adapted to not require building two hashmaps.
+/// If `edges` is a vector, it must be sorted.
 pub fn strongly_connected_components<N, E>(edges: &E, number_of_nodes: usize) -> Vec<Vec<usize>>
 where
     N: Node,
