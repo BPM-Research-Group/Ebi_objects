@@ -1,4 +1,4 @@
-use crate::ebi_objects::labelled_petri_net::TransitionIndex;
+use crate::{ebi_objects::labelled_petri_net::TransitionIndex, strongly_connected_components};
 use ebi_activity_key::Activity;
 use intmap::IntKey;
 use std::{
@@ -117,6 +117,16 @@ impl<T> IndexMut<AutomatonState> for Vec<T> {
 impl<T> IndexMut<&AutomatonState> for Vec<T> {
     fn index_mut(&mut self, index: &AutomatonState) -> &mut T {
         &mut self[index.0]
+    }
+}
+
+impl strongly_connected_components::Node for AutomatonState {
+    fn to_id(&self) -> usize {
+        self.0
+    }
+
+    fn from_id(id: usize) -> Self {
+        Self(id)
     }
 }
 
