@@ -13,9 +13,9 @@ where
     }
 }
 
-impl <E> StronglyConnectedComponents for (E, usize) where E: Edges {
+impl <E> StronglyConnectedComponents for (&E, &usize) where E: Edges {
     fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
-        strongly_connected_components(&self.0, self.1)
+        strongly_connected_components(self.0, *self.1)
     }
 }
 
