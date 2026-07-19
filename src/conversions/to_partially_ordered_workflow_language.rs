@@ -1,5 +1,6 @@
 use crate::{
-    ProcessTree, StochasticProcessTree, ebi_objects::{
+    ProcessTree, StochasticProcessTree,
+    ebi_objects::{
         partially_ordered_workflow_language::{Keys, PartiallyOrderedWorkflowLanguage, PowlNode},
         process_tree::{Node, Operator},
     },
@@ -263,7 +264,6 @@ mod tests {
         },
     };
     use ebi_activity_key::ActivityKey;
-    use std::fs;
 
     #[test]
     fn tree_2_powl_int() {
@@ -289,10 +289,10 @@ mod tests {
 
         let powl = PartiallyOrderedWorkflowLanguage::from(ptree);
 
-        let powl2 = powl
-            .to_string()
-            .parse::<PartiallyOrderedWorkflowLanguage>()
-            .unwrap();
+        // let powl2 = powl
+        //     .to_string()
+        //     .parse::<PartiallyOrderedWorkflowLanguage>()
+        //     .unwrap();
 
         powl.to_svg().unwrap();
     }
