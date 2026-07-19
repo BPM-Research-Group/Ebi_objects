@@ -798,6 +798,8 @@ impl Exportable for PartiallyOrderedWorkflowLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
         match object {
             EbiObject::PartiallyOrderedWorkflowLanguage(powl) => powl.export(f),
+            EbiObject::ProcessTree(tree) => Self::from(tree).export(f),
+            EbiObject::StochasticProcessTree(tree) => Self::from(tree).export(f),
             _ => Err(anyhow!(
                 "Cannot export {} {} as a partially ordered workflow language.",
                 object.get_type().get_article(),
