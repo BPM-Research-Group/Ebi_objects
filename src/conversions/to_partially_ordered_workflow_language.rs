@@ -24,6 +24,10 @@ impl From<ProcessTree> for PartiallyOrderedWorkflowLanguage {
 }
 
 fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
+    if tree.tree.is_empty() {
+        return vec![];
+    }
+    
     match tree.tree[node] {
         Node::Tau => vec![PowlNode::Activity {
             id: Some(format!("node {}", node)),
@@ -295,5 +299,13 @@ mod tests {
         //     .unwrap();
 
         powl.to_svg().unwrap();
+    }
+
+    #[test]
+    fn ptree_2_powl_empty() {
+        let activity_key = ActivityKey::new();
+        let tree = vec![];
+        let ptree = ProcessTree::from((activity_key, tree));
+        let _powl = PartiallyOrderedWorkflowLanguage::from(ptree);
     }
 }
