@@ -30,6 +30,7 @@ pub mod conversions {
     pub mod to_labelled_petri_net;
     pub mod to_language_of_alignments;
     pub mod to_lola_net;
+    pub mod to_partially_ordered_workflow_language;
     pub mod to_petri_net_markup_language;
     pub mod to_process_tree;
     pub mod to_stochastic_deterministic_finite_automaton;
@@ -148,6 +149,7 @@ pub use ebi_objects::finite_stochastic_partially_ordered_language::FiniteStochas
 pub use ebi_objects::labelled_petri_net::LabelledPetriNet;
 pub use ebi_objects::language_of_alignments::LanguageOfAlignments;
 pub use ebi_objects::lola_net::LolaNet;
+pub use ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage;
 pub use ebi_objects::petri_net_markup_language::PetriNetMarkupLanguage;
 pub use ebi_objects::portable_document_format::PortableDocumentFormat;
 pub use ebi_objects::portable_network_graphics::PortableNetworkGraphics;

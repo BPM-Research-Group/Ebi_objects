@@ -691,7 +691,7 @@ fn read_nodes(
     keys: &mut Keys,
 ) -> Result<(Vec<PowlNode>, HashMap<String, usize>)> {
     let mut id_2_index = HashMap::new();
-    let mut nodes = vec![];
+    let mut nodes: Vec<PowlNode> = vec![];
     for (node_index, json_node) in json::read_list_from_object(json_model, "nodes")
         .with_context(|| anyhow!("Reading `nodes` as a list."))?
         .into_iter()
@@ -715,7 +715,7 @@ fn read_nodes(
             //id seen twice
             return Err(anyhow!(
                 "The id `{}` was seen twice in the same model.",
-                old_id
+                nodes[old_id].id().unwrap()
             ));
         }
 
@@ -877,6 +877,26 @@ impl PowlNode {
             PowlNode::Activity { id, .. }
             | PowlNode::PartialOrder { id, .. }
             | PowlNode::ChoiceGraph { id, .. } => id.as_ref(),
+        }
+    }
+
+    /// Sets the id of the Powl node.
+    /// It is the responsibility of the caller to ensure that there is no sibling with the same id.
+    pub fn set_id(&mut self, id: String) {
+        let i = id;
+        match self {
+            PowlNode::Activity { id, .. }
+            | PowlNode::ChoiceGraph { id, .. }
+            | PowlNode::PartialOrder { id, .. } => *id = Some(i),
+        }
+    }
+
+    pub fn set_skippable(&mut self, skippable: bool) {
+        let s = skippable;
+        match self {
+            PowlNode::Activity { skippable, .. }
+            | PowlNode::ChoiceGraph { skippable, .. }
+            | PowlNode::PartialOrder { skippable, .. } => *skippable = s,
         }
     }
 
@@ -1299,7 +1319,6 @@ mod tests {
     #[test]
     fn import_partial_order_cycle() {
         let fin = fs::read_to_string("testfiles/and_a_b_invalid.powl").unwrap();
-        fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
         assert!(fin.parse::<PartiallyOrderedWorkflowLanguage>().is_err());
     }
 
