@@ -197,7 +197,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         //verify format
         if json::read_string_from_object(&json, HEADER_FORMAT)? != HEADER_FORMAT_VALUE {
             return Err(anyhow!(
-                "Expected string {} with value {}.",
+                "Expected field `{}` with string value `{}`.",
                 HEADER_FORMAT,
                 HEADER_FORMAT_VALUE
             ));
@@ -208,7 +208,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
             != HEADER_FORMAT_VERSION_VALUE
         {
             return Err(anyhow!(
-                "Expected string {} with value {}.",
+                "Expected field `{}` with string value `{}`.",
                 HEADER_FORMAT_VERSION,
                 HEADER_FORMAT_VERSION_VALUE
             ));
@@ -257,7 +257,12 @@ fn import_node(
 
     //read type
     match json::read_string_from_object(json_model, "type")
-        .with_context(|| anyhow!("Could not read type of model."))?
+        .with_context(|| {
+            anyhow!(
+                "{} should have a string field `type`.",
+                id_to_capitalised_string(&id)
+            )
+        })?
         .as_str()
     {
         "activity" => import_activity(
@@ -268,7 +273,12 @@ fn import_node(
             repeatable,
             keys,
         )
-        .with_context(|| anyhow!("Reading activity model with id `{:?}`", id)),
+        .with_context(|| {
+            anyhow!(
+                "{} is read as an activity model.",
+                id_to_capitalised_string(&id)
+            )
+        }),
         "partial_order" => import_partial_order(
             json_model,
             activity_key,
@@ -277,7 +287,12 @@ fn import_node(
             repeatable,
             keys,
         )
-        .with_context(|| anyhow!("Reading partial order model with id `{:?}`", id)),
+        .with_context(|| {
+            anyhow!(
+                "{} is read as a partial order model.",
+                id_to_capitalised_string(&id)
+            )
+        }),
         "choice_graph" => import_choice_graph(
             json_model,
             activity_key,
@@ -286,8 +301,19 @@ fn import_node(
             repeatable,
             keys,
         )
-        .with_context(|| anyhow!("Reading choice graph model with id `{:?}`", id)),
-        x => return Err(anyhow!("Type {} is not recognised as a model type.", x)),
+        .with_context(|| {
+            anyhow!(
+                "{} is read as a choice graph model.",
+                id_to_capitalised_string(&id)
+            )
+        }),
+        x => {
+            return Err(anyhow!(
+                "{} has a type `{}`, but expected `activity`, `partial_order` or `choice_graph`.",
+                id_to_capitalised_string(&id),
+                x
+            ));
+        }
     }
 }
 
@@ -333,8 +359,8 @@ fn import_activity(
     let activity = if let Some(label) = json::read_string_or_null_from_object(json_model, "label")
         .with_context(|| {
         anyhow!(
-            "Could not read the label of the activity. Name is `{:?}`.",
-            name
+            "{} has a field `label`, which should be absent or of type string.",
+            id_to_capitalised_string(&id)
         )
     })? {
         Some(activity_key.process_activity(&label))
@@ -366,49 +392,67 @@ fn import_partial_order(
 ) -> Result<Vec<PowlNode>> {
     //read basic attributes
     let (name, description) = read_attributes(json_model)
-        .with_context(|| anyhow!("Reading attributes of node {:?}.", id))?;
+        .with_context(|| anyhow!("Reading attributes of {}.", id_to_string(&id)))?;
 
     //read children
     let (mut children, id_2_index) = read_nodes(json_model, activity_key, keys)
-        .with_context(|| anyhow!("Reading children of node {:?}.", id))?;
+        .with_context(|| anyhow!("Reading children of node {}.", id_to_string(&id)))?;
 
     //read edges
     let mut edges = HashSet::new();
     for (edge_index, json_edge) in json::read_list_from_object(json_model, "edges")
-        .with_context(|| anyhow!("Field `edges` missing."))?
+        .with_context(|| {
+            anyhow!(
+                "Could not read the field `edges` of {}, which should be a list.",
+                id_to_string(&id)
+            )
+        })?
         .into_iter()
         .enumerate()
     {
         //transform to object
-        let json_edge = json::read_object(json_edge)
-            .with_context(|| anyhow!("Edge {} should be an object.", edge_index))?;
+        let json_edge = json::read_object(json_edge).with_context(|| {
+            anyhow!(
+                "Edge {} of {} should be an object.",
+                edge_index,
+                id_to_string(&id)
+            )
+        })?;
 
         //read source
         let source_id = json::read_string_from_object(json_edge, "source")
             .with_context(|| anyhow!("Expected `source` on edge {}.", edge_index))?;
         let source = *id_2_index.get(source_id).ok_or_else(|| {
             anyhow!(
-                "Non-existing source `{}` of edge `{}` found.",
+                "Non-existing source `{}` of edge `{}` of {} found.",
                 source_id,
-                edge_index
+                edge_index,
+                id_to_string(&id)
             )
         })?;
 
         //read target
-        let target_id = json::read_string_from_object(json_edge, "target")
-            .with_context(|| anyhow!("Expected `target` on edge {}.", edge_index))?;
+        let target_id = json::read_string_from_object(json_edge, "target").with_context(|| {
+            anyhow!(
+                "Could not read string field `target` on edge {} of {}.",
+                edge_index,
+                id_to_string(&id)
+            )
+        })?;
         let target = *id_2_index.get(target_id).ok_or_else(|| {
             anyhow!(
-                "Non-existing target `{}` of edge `{}` found.",
+                "The target `{}` of edge `{}` is not the id of a child model of {}.",
                 target_id,
-                edge_index
+                edge_index,
+                id_to_string(&id)
             )
         })?;
 
         //insert the edge and check that it's not inserted twice
         if !edges.insert((source, target)) {
             return Err(anyhow!(
-                "Edge from `{:?}` to `{:?}` is duplicate.",
+                "{} has a duplicate edge from `{:?}` to `{:?}`.",
+                id_to_capitalised_string(&id),
                 children[source].id(),
                 children[target].id()
             ));
@@ -418,12 +462,17 @@ fn import_partial_order(
     edges.sort();
 
     //detect cycles
-    if strongly_connected_components(&edges, children.len()).0
+    if let Some(scc) = strongly_connected_components(&edges, children.len())
+        .0
         .iter()
-        .any(|scc| scc.len() >= 2)
+        .find(|scc| scc.len() >= 2)
     {
         //cycle detected
-        return Err(anyhow!("A partial order node cannot contain cycles."));
+        return Err(anyhow!(
+            "{} is a partial order and contains a cycle of its children {:?}.",
+            id_to_capitalised_string(&id),
+            scc
+        ));
     }
 
     //TODO: detect transitive duplication
@@ -453,23 +502,23 @@ fn import_choice_graph(
 ) -> Result<Vec<PowlNode>> {
     //read basic attributes
     let (name, description) = read_attributes(json_model)
-        .with_context(|| anyhow!("Reading attributes of node {:?}.", id))?;
+        .with_context(|| anyhow!("Reading attributes of {}.", id_to_string(&id)))?;
 
     //read children
     let (mut children, id_2_index) = read_nodes(json_model, activity_key, keys)
-        .with_context(|| anyhow!("Reading nodes of node {:?}.", id))?;
+        .with_context(|| anyhow!("Reading nodes of {}.", id_to_string(&id)))?;
 
     //check for reserved ids
     if id_2_index.contains_key("@start") {
         return Err(anyhow!(
-            "The id `@start` is reserved but is used for a sub-model of node {:?}.",
-            id
+            "The id `@start` is reserved but is used for a sub-model of {}.",
+            id_to_string(&id)
         ));
     }
     if id_2_index.contains_key("@end") {
         return Err(anyhow!(
-            "The id `@end` is reserved but is used for a sub-model of node {:?}.",
-            id
+            "The id `@end` is reserved but is used for a sub-model of {}.",
+            id_to_string(&id)
         ));
     }
 
@@ -478,47 +527,74 @@ fn import_choice_graph(
     let mut start_nodes = HashSet::new();
     let mut end_nodes = HashSet::new();
     for (edge_index, json_edge) in json::read_list_from_object(json_model, "edges")
-        .with_context(|| anyhow!("Field `edges` missing."))?
+        .with_context(|| {
+            anyhow!(
+                "{} must have a list field `edges`.",
+                id_to_capitalised_string(&id)
+            )
+        })?
         .into_iter()
         .enumerate()
     {
         //transform to object
-        let json_edge = json::read_object(json_edge)
-            .with_context(|| anyhow!("Edge {} should be an object.", edge_index))?;
+        let json_edge = json::read_object(json_edge).with_context(|| {
+            anyhow!(
+                "Edge {} of {} should be an object.",
+                edge_index,
+                id_to_string(&id)
+            )
+        })?;
 
         //read source
-        let source_id = json::read_string_from_object(json_edge, "source")
-            .with_context(|| anyhow!("Expected `source` on edge {}.", edge_index))?;
+        let source_id = json::read_string_from_object(json_edge, "source").with_context(|| {
+            anyhow!(
+                "Edge {} of {} should have a string field `source`.",
+                edge_index,
+                id_to_string(&id)
+            )
+        })?;
         let source = if source_id == "@start" {
             None
         } else {
             Some(*id_2_index.get(source_id).ok_or_else(|| {
                 anyhow!(
-                    "Non-existing source `{}` of edge `{}` found.",
+                    "Edge {} of {} has a source `{}` which was not found as a child of {}.",
+                    edge_index,
+                    id_to_string(&id),
                     source_id,
-                    edge_index
+                    id_to_string(&id)
                 )
             })?)
         };
 
         //read target
-        let target_id = json::read_string_from_object(json_edge, "target")
-            .with_context(|| anyhow!("Expected `target` on edge {}.", edge_index))?;
+        let target_id = json::read_string_from_object(json_edge, "target").with_context(|| {
+            anyhow!(
+                "Edge {} of {} should have a string field `target`.",
+                edge_index,
+                id_to_string(&id)
+            )
+        })?;
         let target = if target_id == "@end" {
             None
         } else {
             Some(*id_2_index.get(target_id).ok_or_else(|| {
                 anyhow!(
-                    "Non-existing target `{}` of edge `{}` found.",
+                    "Edge {} of {} has a target `{}` which was not found as a child of {}.",
+                    edge_index,
+                    id_to_string(&id),
                     target_id,
-                    edge_index
+                    id_to_string(&id)
                 )
             })?)
         };
 
         match (source, target) {
             (None, None) => {
-                return Err(anyhow!("Start -> end edge detected in node {:?}", id));
+                return Err(anyhow!(
+                    "{} has an edge from start to end.",
+                    id_to_capitalised_string(&id)
+                ));
             }
             (None, Some(target)) => {
                 //start edge
@@ -526,9 +602,9 @@ fn import_choice_graph(
                 //insert the edge and check that it's not inserted twice
                 if !start_nodes.insert(target) {
                     return Err(anyhow!(
-                        "Start edge to `{:?}` is duplicate in node {:?}.",
-                        children[target].id(),
-                        id
+                        "{} has a duplicate start edge to {}.",
+                        id_to_capitalised_string(&id),
+                        id_to_string(&children[target].id().cloned()),
                     ));
                 }
             }
@@ -538,9 +614,9 @@ fn import_choice_graph(
                 //insert the edge and check that it's not inserted twice
                 if !end_nodes.insert(source) {
                     return Err(anyhow!(
-                        "End edge from `{:?}` is duplicate in node {:?}.",
-                        children[source].id(),
-                        id
+                        "{} has a duplicate end edge from {}.",
+                        id_to_capitalised_string(&id),
+                        id_to_string(&children[source].id().cloned()),
                     ));
                 }
             }
@@ -550,19 +626,19 @@ fn import_choice_graph(
                 //check for self-edges
                 if source == target {
                     return Err(anyhow!(
-                        "A self-edge from and to `{}` was found in node {:?}.",
+                        "A self-edge from and to `{}` was found in {}.",
                         source_id,
-                        id
+                        id_to_string(&id)
                     ));
                 }
 
                 //insert the edge and check that it's not inserted twice
                 if !edges.insert((source, target)) {
                     return Err(anyhow!(
-                        "Edge from `{:?}` to `{:?}` is duplicate in node {:?}.",
-                        children[source].id(),
-                        children[target].id(),
-                        id
+                        "Edge from {} to {} is duplicate in node {}.",
+                        id_to_string(&children[source].id().cloned()),
+                        id_to_string(&children[target].id().cloned()),
+                        id_to_string(&id)
                     ));
                 }
             }
@@ -733,6 +809,22 @@ impl Exportable for PartiallyOrderedWorkflowLanguage {
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
         Ok(write!(f, "{}", self)?)
+    }
+}
+
+fn id_to_capitalised_string(id: &Option<String>) -> String {
+    if let Some(id) = id {
+        format!("Node {}", id)
+    } else {
+        format!("The root node")
+    }
+}
+
+fn id_to_string(id: &Option<String>) -> String {
+    if let Some(id) = id {
+        format!("node `{}`", id)
+    } else {
+        format!("the root node")
     }
 }
 
@@ -1208,6 +1300,7 @@ mod tests {
     #[test]
     fn import_partial_order_cycle() {
         let fin = fs::read_to_string("testfiles/and_a_b_invalid.powl").unwrap();
+        fin.parse::<PartiallyOrderedWorkflowLanguage>().unwrap();
         assert!(fin.parse::<PartiallyOrderedWorkflowLanguage>().is_err());
     }
 
