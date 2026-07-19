@@ -1,10 +1,15 @@
 use crate::{
-    ProcessTree,
-    ebi_objects::{
+    ProcessTree, StochasticProcessTree, ebi_objects::{
         partially_ordered_workflow_language::{Keys, PartiallyOrderedWorkflowLanguage, PowlNode},
         process_tree::{Node, Operator},
     },
 };
+
+impl From<StochasticProcessTree> for PartiallyOrderedWorkflowLanguage {
+    fn from(value: StochasticProcessTree) -> Self {
+        ProcessTree::from(value).into()
+    }
+}
 
 impl From<ProcessTree> for PartiallyOrderedWorkflowLanguage {
     fn from(value: ProcessTree) -> Self {
