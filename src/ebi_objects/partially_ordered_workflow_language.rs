@@ -461,12 +461,11 @@ fn import_partial_order(
     let mut edges = edges.into_iter().collect::<Vec<_>>();
     edges.sort();
 
+    //find strongly connected components
+    let (sccs, _node_2_scc) = strongly_connected_components(&edges, children.len());
+
     //detect cycles
-    if let Some(scc) = strongly_connected_components(&edges, children.len())
-        .0
-        .iter()
-        .find(|scc| scc.len() >= 2)
-    {
+    if let Some(scc) = sccs.iter().find(|scc| scc.len() >= 2) {
         //cycle detected
         return Err(anyhow!(
             "{} is a partial order and contains a cycle of its children {:?}.",
