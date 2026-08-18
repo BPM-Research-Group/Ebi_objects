@@ -271,7 +271,7 @@ impl LabelledPetriNet {
             self.transition2output_places_cardinality[from_transition][pos] += cardinality;
         } else {
             self.transition2output_places[from_transition].push(to_place);
-            self.transition2output_places_cardinality[from_transition].push(1);
+            self.transition2output_places_cardinality[from_transition].push(cardinality);
         }
 
         Ok(())
@@ -314,7 +314,7 @@ impl LabelledPetriNet {
             self.transition2input_places_cardinality[to_transition][pos] += cardinality;
         } else {
             self.transition2input_places[to_transition].push(from_place);
-            self.transition2input_places_cardinality[to_transition].push(1);
+            self.transition2input_places_cardinality[to_transition].push(cardinality);
         }
         Ok(())
     }
