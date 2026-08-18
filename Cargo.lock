@@ -382,8 +382,8 @@ dependencies = [
 
 [[package]]
 name = "ebi_bpmn"
-version = "0.0.49"
-source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#88e71268b38317e5d42349e97a84a5019aaae04e"
+version = "0.0.50"
+source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#34037a439ff1bea067963ae27c15184ff5409756"
 dependencies = [
  "anyhow",
  "bitvec",

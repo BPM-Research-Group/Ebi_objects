@@ -28,7 +28,7 @@ testactivities = [ "ebi_activity_key/testactivities", "ebi_bpmn/testactivities" 
 [dependencies]
 ebi_activity_key = "0.0.3"
 ebi_derive = "0.2.11"
-ebi_bpmn = { git = "https://github.com/BPM-Research-Group/Ebi_BPMN.git", version="0.0.49" }
+ebi_bpmn = { git = "https://github.com/BPM-Research-Group/Ebi_BPMN.git", version="0.0.50" }
 process_mining = "0.6.0"
 anyhow = "1.0.104"
 log = "0.4.33"
