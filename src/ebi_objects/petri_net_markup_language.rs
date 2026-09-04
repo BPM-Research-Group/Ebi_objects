@@ -1,23 +1,11 @@
-use super::{
-    deterministic_finite_automaton::DeterministicFiniteAutomaton,
-    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
-    labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree,
-    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
-    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
-    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
-    stochastic_process_tree::StochasticProcessTree,
-};
+use super::labelled_petri_net::LabelledPetriNet;
 use crate::{
-    Exportable, Graphable, HasActivityKey, Importable, StochasticNondeterministicFiniteAutomaton,
-    TranslateActivityKey,
+    Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    ebi_objects::{
-        partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
-        petri_net_markup_language::{
-            namespace::is_in_namespace,
-            parser::{can_eof, close_tag, empty_tag, open_tag, text_tag},
-            parser_state::ParserState,
-        },
+    ebi_objects::petri_net_markup_language::{
+        namespace::is_in_namespace,
+        parser::{can_eof, close_tag, empty_tag, open_tag, text_tag},
+        parser_state::ParserState,
     },
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
@@ -121,47 +109,27 @@ impl Exportable for PetriNetMarkupLanguage {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
             EbiObject::DeterministicFiniteAutomaton(dfa) => {
-                <DeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(dfa)?
-                    .export(f)
+                PetriNetMarkupLanguage::from(dfa).export(f)
             }
-            EbiObject::DirectlyFollowsGraph(dfm) => Ok(<DirectlyFollowsGraph as TryInto<
-                LabelledPetriNet,
-            >>::try_into(dfm)?
-            .export(f)?),
-            EbiObject::DirectlyFollowsModel(dfm) => {
-                <DirectlyFollowsModel as TryInto<LabelledPetriNet>>::try_into(dfm)?.export(f)
-            }
+            EbiObject::DirectlyFollowsGraph(dfm) => PetriNetMarkupLanguage::from(dfm).export(f),
+            EbiObject::DirectlyFollowsModel(dfm) => PetriNetMarkupLanguage::from(dfm).export(f),
             EbiObject::StochasticDirectlyFollowsModel(dfm) => {
-                <StochasticDirectlyFollowsModel as TryInto<LabelledPetriNet>>::try_into(dfm)?
-                    .export(f)
+                PetriNetMarkupLanguage::from(dfm).export(f)
             }
-            EbiObject::LabelledPetriNet(lpn) => {
-                <LabelledPetriNet as TryInto<LabelledPetriNet>>::try_into(lpn)?.export(f)
-            }
-            EbiObject::ProcessTree(tree) => {
-                <ProcessTree as TryInto<LabelledPetriNet>>::try_into(tree)?.export(f)
-            }
-            EbiObject::StochasticProcessTree(tree) => {
-                <StochasticProcessTree as TryInto<LabelledPetriNet>>::try_into(tree)?.export(f)
-            }
+            EbiObject::LabelledPetriNet(lpn) => PetriNetMarkupLanguage::from(lpn).export(f),
+            EbiObject::ProcessTree(tree) => PetriNetMarkupLanguage::from(tree).export(f),
+            EbiObject::StochasticProcessTree(tree) => PetriNetMarkupLanguage::from(tree).export(f),
             EbiObject::PartiallyOrderedWorkflowLanguage(powl) => {
-                <PartiallyOrderedWorkflowLanguage as TryInto<LabelledPetriNet>>::try_into(powl)?
-                    .export(f)
+                PetriNetMarkupLanguage::from(powl).export(f)
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(sdfa) => {
-                <StochasticDeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(
-                    sdfa,
-                )?
-                .export(f)
+                PetriNetMarkupLanguage::from(sdfa).export(f)
             }
             EbiObject::StochasticNondeterministicFiniteAutomaton(sdfa) => {
-                <StochasticNondeterministicFiniteAutomaton as TryInto<LabelledPetriNet>>::try_into(
-                    sdfa,
-                )?
-                .export(f)
+                PetriNetMarkupLanguage::from(sdfa).export(f)
             }
             EbiObject::StochasticLabelledPetriNet(slpn) => {
-                <StochasticLabelledPetriNet as TryInto<LabelledPetriNet>>::try_into(slpn)?.export(f)
+                PetriNetMarkupLanguage::from(slpn).export(f)
             }
 
             EbiObject::BusinessProcessModelAndNotation(_) => {

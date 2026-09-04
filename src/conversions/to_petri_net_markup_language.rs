@@ -1,12 +1,14 @@
-use crate::ebi_objects::{
-    deterministic_finite_automaton::DeterministicFiniteAutomaton,
-    directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
-    labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
-    process_tree::ProcessTree,
-    stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
-    stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
-    stochastic_labelled_petri_net::StochasticLabelledPetriNet,
-    stochastic_process_tree::StochasticProcessTree,
+use crate::{
+    PartiallyOrderedWorkflowLanguage, StochasticNondeterministicFiniteAutomaton, ebi_objects::{
+        deterministic_finite_automaton::DeterministicFiniteAutomaton,
+        directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
+        labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
+        process_tree::ProcessTree,
+        stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
+        stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
+        stochastic_labelled_petri_net::StochasticLabelledPetriNet,
+        stochastic_process_tree::StochasticProcessTree,
+    },
 };
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, anyhow};
 use process_mining::{
@@ -114,6 +116,12 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
     }
 }
 
+impl From<LabelledPetriNet> for PetriNetMarkupLanguage {
+    fn from(value: LabelledPetriNet) -> Self {
+        Self(value)
+    }
+}
+
 macro_rules! via_lpn {
     ($t:ident) => {
         impl TryFrom<$t> for process_mining::PetriNet {
@@ -125,12 +133,10 @@ macro_rules! via_lpn {
             }
         }
 
-        impl TryFrom<$t> for PetriNetMarkupLanguage {
-            type Error = Error;
-
-            fn try_from(value: $t) -> Result<Self, Self::Error> {
+        impl From<$t> for PetriNetMarkupLanguage {
+            fn from(value: $t) -> Self {
                 let lpn: LabelledPetriNet = value.into();
-                Ok(Self(lpn))
+                lpn.into()
             }
         }
     };
@@ -139,8 +145,10 @@ macro_rules! via_lpn {
 via_lpn!(DeterministicFiniteAutomaton);
 via_lpn!(DirectlyFollowsGraph);
 via_lpn!(DirectlyFollowsModel);
+via_lpn!(PartiallyOrderedWorkflowLanguage);
 via_lpn!(ProcessTree);
 via_lpn!(StochasticDeterministicFiniteAutomaton);
+via_lpn!(StochasticNondeterministicFiniteAutomaton);
 via_lpn!(StochasticDirectlyFollowsModel);
 via_lpn!(StochasticLabelledPetriNet);
 via_lpn!(StochasticProcessTree);
