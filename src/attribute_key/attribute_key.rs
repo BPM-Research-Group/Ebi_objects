@@ -23,6 +23,10 @@ impl<'a> AttributeKey {
         }
     }
 
+    pub fn attributes(&self) -> impl Iterator<Item = Attribute> {
+        self.name2attribute.values().copied()
+    }
+
     pub fn attribute_to_label(&self, attribute: impl Borrow<Attribute>) -> Option<&String> {
         self.attribute2name.get(attribute.borrow().id)
     }
