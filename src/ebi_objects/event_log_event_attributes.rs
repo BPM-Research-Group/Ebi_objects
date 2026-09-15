@@ -142,7 +142,7 @@ from_string!(EventLogEventAttributes);
 impl Exportable for EventLogEventAttributes {
     fn export_from_object(object: EbiObject, f: &mut dyn Write) -> Result<()> {
         match object {
-            EbiObject::EventLogTraceAttributes(log) => log.export(f),
+            EbiObject::EventLogEventAttributes(log) => log.export(f),
             _ => Err(anyhow!("Cannot export as event log.")),
         }
     }
