@@ -63,7 +63,7 @@ impl Importable for PetriNetMarkupLanguage {
                     open_tag(&mut state, &e, n).with_context(|| {
                         format!(
                             "Tag `{}` at position {}.",
-                            String::from_utf8_lossy(e.local_name().as_ref()),
+                            e.local_name().as_ref(),
                             xml_reader.buffer_position()
                         )
                     })?;
@@ -78,7 +78,7 @@ impl Importable for PetriNetMarkupLanguage {
                 (Some(n), Event::End(e)) => close_tag(&mut state, &e, n).with_context(|| {
                     format!(
                         "Tag `{}` at position {}.",
-                        String::from_utf8_lossy(e.local_name().as_ref()),
+                        e.local_name().as_ref(),
                         xml_reader.buffer_position()
                     )
                 })?,
@@ -87,7 +87,7 @@ impl Importable for PetriNetMarkupLanguage {
                 (Some(n), Event::Empty(e)) => empty_tag(&mut state, &e, n).with_context(|| {
                     format!(
                         "Tag `{}` at position {}.",
-                        String::from_utf8_lossy(e.local_name().as_ref()),
+                        e.local_name().as_ref(),
                         xml_reader.buffer_position()
                     )
                 })?,
@@ -237,7 +237,7 @@ pub(crate) mod parser {
                     }
 
                     *text = Some(
-                        e.xml_content(quick_xml::XmlVersion::Implicit1_0)?
+                        e.xml_content(quick_xml::XmlVersion::Implicit1_0)
                             .to_string(),
                     );
                 }
@@ -259,7 +259,7 @@ pub(crate) mod parser {
             if let Some(id) = parse_attribute(e, "id") {
                 state
                     .not_recognised_id_2_tag
-                    .insert(id, String::from_utf8_lossy(e.name().as_ref()).to_string());
+                    .insert(id, e.name().as_ref().to_string());
             }
         }
 
@@ -278,34 +278,28 @@ pub(crate) mod parser {
                 //closing tag matches last remaining opening tag
 
                 OpenedTag::close_tag(most_recent_open_tag, e, state).with_context(|| {
-                    anyhow!(
-                        "At the closing of tag `{}`.",
-                        String::from_utf8_lossy(&most_recent_open_tag_name)
-                    )
+                    anyhow!("At the closing of tag `{}`.", &most_recent_open_tag_name)
                 })?;
 
                 Ok(())
             } else {
                 Err(anyhow!(
                     "Attempted to close tag `{}` but `{}` was open.",
-                    String::from_utf8_lossy(e.local_name().as_ref()),
-                    String::from_utf8_lossy(&most_recent_open_tag_name)
+                    e.local_name().as_ref(),
+                    &most_recent_open_tag_name
                 ))
             }
         } else {
             Err(anyhow!(
                 "Attempted to close tag `{}` that was not open.",
-                String::from_utf8_lossy(e.local_name().as_ref())
+                e.local_name().as_ref()
             ))
         }
     }
 
     pub(crate) fn can_eof(state: &ParserState) -> Result<()> {
         if let Some(tag) = state.open_tag_names.iter().next() {
-            Err(anyhow!(
-                "file ended while tag `{}` was still open",
-                String::from_utf8_lossy(&tag)
-            ))
+            Err(anyhow!("file ended while tag `{}` was still open", &tag))
         } else {
             Ok(())
         }
@@ -322,7 +316,7 @@ pub(crate) mod parser_state {
     use std::collections::{HashMap, HashSet};
 
     pub(crate) struct ParserState {
-        pub(crate) open_tag_names: Vec<Vec<u8>>,
+        pub(crate) open_tag_names: Vec<String>,
         pub(crate) open_tags: Vec<OpenedTag>,
         pub(crate) ids: HashSet<String>,
         pub(crate) pnmls: Vec<DraftPnml>,
@@ -386,7 +380,7 @@ pub(crate) mod parser_state {
         if let Ok(Some(attribute)) = e.try_get_attribute(attribute_name) {
             Some(
                 attribute
-                    .decoded_and_normalized_value(quick_xml::XmlVersion::Implicit1_0, e.decoder())
+                    .normalized_value(quick_xml::XmlVersion::Implicit1_0)
                     .ok()?
                     .as_ref()
                     .to_owned(),
@@ -406,7 +400,7 @@ pub(crate) mod namespace {
         PNML,
     }
 
-    pub const NAMESPACE_PNML: &[u8; 45] = b"http://www.pnml.org/version-2009/grammar/pnml";
+    pub const NAMESPACE_PNML: &str = "http://www.pnml.org/version-2009/grammar/pnml";
 
     pub(crate) fn is_in_namespace(result: ResolveResult) -> Option<NameSpace> {
         match result {
@@ -630,7 +624,7 @@ pub(crate) mod tag_pnml {
         {
             if n.is_pnml() {
                 if state.open_tags.is_empty() {
-                    if e.local_name().as_ref() == b"pnml" {
+                    if e.local_name().as_ref() == "pnml" {
                         return Some(Tag::Pnml);
                     }
                 }
@@ -693,7 +687,7 @@ pub(crate) mod tag_net {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Pnml { .. }) => {
-                        if e.local_name().as_ref() == b"net" {
+                        if e.local_name().as_ref() == "net" {
                             return Some(Tag::Net);
                         }
                     }
@@ -777,7 +771,7 @@ mod tag_page {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Net { .. }) => {
-                        if e.local_name().as_ref() == b"page" {
+                        if e.local_name().as_ref() == "page" {
                             return Some(Tag::Page);
                         }
                     }
@@ -903,7 +897,7 @@ mod tag_place {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Page { .. }) => {
-                        if e.local_name().as_ref() == b"place" {
+                        if e.local_name().as_ref() == "place" {
                             return Some(Tag::Place);
                         }
                     }
@@ -980,7 +974,7 @@ pub(crate) mod tag_initial_marking {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Place { .. }) => {
-                        if e.local_name().as_ref() == b"initialMarking" {
+                        if e.local_name().as_ref() == "initialMarking" {
                             return Some(Tag::InitialMarking);
                         }
                     }
@@ -1047,7 +1041,7 @@ pub(crate) mod tag_text {
                         | OpenedTag::Name { .. }
                         | OpenedTag::Inscription { .. },
                     ) => {
-                        if e.local_name().as_ref() == b"text" {
+                        if e.local_name().as_ref() == "text" {
                             return Some(Tag::Text);
                         }
                     }
@@ -1149,7 +1143,7 @@ pub(crate) mod tag_transition {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Page { .. }) => {
-                        if e.local_name().as_ref() == b"transition" {
+                        if e.local_name().as_ref() == "transition" {
                             return Some(Tag::Transition);
                         }
                     }
@@ -1233,7 +1227,7 @@ pub(crate) mod tag_name {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Transition { .. }) => {
-                        if e.local_name().as_ref() == b"name" {
+                        if e.local_name().as_ref() == "name" {
                             return Some(Tag::Name);
                         }
                     }
@@ -1290,7 +1284,7 @@ pub(crate) mod tag_tool_specific {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Transition { .. }) => {
-                        if e.local_name().as_ref() == b"toolspecific" {
+                        if e.local_name().as_ref() == "toolspecific" {
                             //tool must be ProM
                             if parse_attribute(e, "tool") != Some("ProM".to_string()) {
                                 return None;
@@ -1367,7 +1361,7 @@ pub(crate) mod tag_arc {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Page { .. }) => {
-                        if e.local_name().as_ref() == b"arc" {
+                        if e.local_name().as_ref() == "arc" {
                             return Some(Tag::Arc);
                         }
                     }
@@ -1449,7 +1443,7 @@ pub(crate) mod tag_inscription {
             if n.is_pnml() {
                 match state.open_tags.iter().last() {
                     Some(OpenedTag::Arc { .. }) => {
-                        if e.local_name().as_ref() == b"inscription" {
+                        if e.local_name().as_ref() == "inscription" {
                             return Some(Tag::Inscription);
                         }
                     }

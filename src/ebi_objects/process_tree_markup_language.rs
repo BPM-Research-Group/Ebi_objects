@@ -41,7 +41,7 @@ impl TranslateActivityKey for ProcessTreeMarkupLanguage {
 }
 
 struct State {
-    in_tags: Vec<Vec<u8>>,
+    in_tags: Vec<String>,
     open_ptml_tags: usize,
     open_process_tree_tags: usize,
     first_open_tag_is_ptml: bool,
@@ -49,9 +49,9 @@ struct State {
     seen_ptml_tag: bool,
     seen_process_tree_tag: bool,
     activity_key: ActivityKey,
-    root: Option<Vec<u8>>,
-    nodes: HashMap<Vec<u8>, Node>,
-    edges: HashMap<Vec<u8>, Vec<Vec<u8>>>,
+    root: Option<String>,
+    nodes: HashMap<String, Node>,
+    edges: HashMap<String, Vec<String>>,
 }
 
 impl State {
@@ -78,7 +78,7 @@ impl State {
 
     fn open_tag(&mut self, e: BytesStart) -> Result<()> {
         match e.name().as_ref() {
-            b"ptml" => {
+            "ptml" => {
                 if self.in_tags.is_empty() {
                     self.first_open_tag_is_ptml = true;
 
@@ -91,7 +91,7 @@ impl State {
                 }
                 self.open_ptml_tags += 1
             }
-            b"processTree" => {
+            "processTree" => {
                 if self.in_tags.len() == 1 {
                     self.second_open_tag_is_process_tree = true;
 
@@ -106,7 +106,7 @@ impl State {
 
                     //extract the root node
                     if let Ok(Some(attribute)) = e.try_get_attribute("root") {
-                        self.root = Some(attribute.value.to_vec())
+                        self.root = Some(attribute.value.to_string())
                     } else {
                         //the process tree may be empty, thus it is not necessary to declare a root node
                     }
@@ -125,13 +125,13 @@ impl State {
         if let Some(last_tag) = self.in_tags.pop() {
             if last_tag == e.name().as_ref() {
                 match e.name().as_ref() {
-                    b"ptml" => {
+                    "ptml" => {
                         if self.in_tags.is_empty() {
                             self.first_open_tag_is_ptml = false;
                         }
                         self.open_ptml_tags -= 1
                     }
-                    b"processTree" => {
+                    "processTree" => {
                         if self.in_tags.len() == 1 {
                             self.second_open_tag_is_process_tree = false;
                         }
@@ -143,14 +143,14 @@ impl State {
             } else {
                 Err(anyhow!(
                     "attempted to close tag `{}` but `{}` was open",
-                    String::from_utf8_lossy(e.name().as_ref()),
-                    String::from_utf8_lossy(&last_tag)
+                    e.name().as_ref(),
+                    &last_tag
                 ))
             }
         } else {
             Err(anyhow!(
                 "attempted to close tag `{}` that was not open",
-                String::from_utf8_lossy(e.name().as_ref())
+                e.name().as_ref()
             ))
         }
     }
@@ -170,12 +170,9 @@ impl State {
             //node
             if let Ok(Some(attribute)) = e.try_get_attribute("id") {
                 let id = attribute.value;
-                match self.nodes.entry(id.to_vec()) {
+                match self.nodes.entry(id.to_string()) {
                     Entry::Occupied(_) => {
-                        return Err(anyhow!(
-                            "two nodes have the id `{}`",
-                            String::from_utf8_lossy(&id)
-                        ));
+                        return Err(anyhow!("two nodes have the id `{}`", &id));
                     }
                     Entry::Vacant(vacant_entry) => {
                         vacant_entry.insert(tag.to_node());
@@ -187,15 +184,15 @@ impl State {
                     tag
                 ));
             }
-        } else if e.name().as_ref() == b"parentsNode" {
+        } else if e.name().as_ref() == "parentsNode" {
             //edge
             let source = if let Ok(Some(attribute)) = e.try_get_attribute("sourceId") {
-                attribute.value.to_vec()
+                attribute.value.to_string()
             } else {
                 return Err(anyhow!("a `parentsNode` tag has no `sourceId` attribute"));
             };
             let target = if let Ok(Some(attribute)) = e.try_get_attribute("targetId") {
-                attribute.value.to_vec()
+                attribute.value.to_string()
             } else {
                 return Err(anyhow!("a `parentsNode` tag has no `targetId` attribute"));
             };
@@ -212,10 +209,7 @@ impl State {
 
     fn can_eof(&self) -> Result<()> {
         if let Some(tag) = self.in_tags.iter().next() {
-            Err(anyhow!(
-                "file ended while tag `{}` was still open",
-                String::from_utf8_lossy(&tag)
-            ))
+            Err(anyhow!("file ended while tag `{}` was still open", &tag))
         } else if !self.seen_ptml_tag {
             return Err(anyhow!("no `ptml` tag found at the top level"));
         } else if !self.seen_process_tree_tag {
@@ -230,8 +224,8 @@ impl State {
     fn to_tree(self) -> Result<ProcessTree> {
         if let Some(root) = self.root {
             let mut tree = vec![];
-            let mut nodes: HashMap<Vec<u8>, Node> = self.nodes;
-            let mut edges: HashMap<Vec<u8>, Vec<Vec<u8>>> = self.edges;
+            let mut nodes: HashMap<String, Node> = self.nodes;
+            let mut edges: HashMap<String, Vec<String>> = self.edges;
 
             Self::to_tree_node(&mut nodes, &mut edges, &mut tree, &root)?;
 
@@ -239,14 +233,14 @@ impl State {
             if let Some((node_id, _)) = nodes.into_iter().next() {
                 return Err(anyhow!(
                     "node `{}` is not reachable from the root",
-                    String::from_utf8_lossy(&node_id)
+                    &node_id
                 ));
             }
             if let Some((source, targets)) = edges.into_iter().next() {
                 return Err(anyhow!(
                     "the edge from `{}` to `{}` is not reachable from the root",
-                    String::from_utf8_lossy(&source),
-                    String::from_utf8_lossy(&targets.into_iter().next().unwrap())
+                    &source,
+                    &targets.into_iter().next().unwrap()
                 ));
             }
 
@@ -264,18 +258,14 @@ impl State {
     }
 
     fn to_tree_node(
-        nodes: &mut HashMap<Vec<u8>, Node>,
-        edges: &mut HashMap<Vec<u8>, Vec<Vec<u8>>>,
+        nodes: &mut HashMap<String, Node>,
+        edges: &mut HashMap<String, Vec<String>>,
         tree: &mut Vec<Node>,
-        node_id: &[u8],
+        node_id: &str,
     ) -> Result<()> {
         log::debug!("tree {:?}", tree);
         log::debug!("nodes {:?}", nodes);
-        log::debug!(
-            "process node {:?}, {}",
-            node_id,
-            String::from_utf8_lossy(node_id)
-        );
+        log::debug!("process node {:?}, {}", node_id, node_id);
 
         match (nodes.remove(node_id), edges.remove(node_id)) {
             (Some(mut node), Some(children)) => {
@@ -299,7 +289,7 @@ impl State {
                 } else {
                     node.set_number_of_children(children.len())
                         .with_context(|| {
-                            format!("preparing node `{}`", String::from_utf8_lossy(node_id))
+                            format!("preparing node `{}`", node_id)
                         })?;
                     tree.push(node);
 
@@ -313,7 +303,7 @@ impl State {
                 if !node.is_leaf() {
                     return Err(anyhow!(
                         "operator node `{}` has no children",
-                        String::from_utf8_lossy(node_id)
+                        node_id
                     ));
                 }
                 tree.push(node);
@@ -321,7 +311,7 @@ impl State {
             _ => {
                 return Err(anyhow!(
                     "node `{}` is not declared, or it is a child of two parents",
-                    String::from_utf8_lossy(node_id)
+                    node_id
                 ));
             }
         }
@@ -564,18 +554,18 @@ enum PTMLTag {
 impl PTMLTag {
     fn to_tag(e: &BytesStart, activity_key: &mut ActivityKey) -> Result<Option<Self>> {
         match e.name().as_ref() {
-            b"and" => Ok(Some(Self::And)),
-            b"sequence" => Ok(Some(Self::Sequence)),
-            b"automaticTask" => Ok(Some(Self::AutomaticTask)),
-            b"xor" => Ok(Some(Self::Xor)),
-            b"def" => Ok(Some(Self::Def)),
-            b"xorLoop" => Ok(Some(Self::XorLoop)),
-            b"defLoop" => Ok(Some(Self::DefLoop)),
-            b"or" => Ok(Some(Self::Or)),
-            b"interleaved" => Ok(Some(Self::Interleaved)),
-            b"manualTask" => {
+            "and" => Ok(Some(Self::And)),
+            "sequence" => Ok(Some(Self::Sequence)),
+            "automaticTask" => Ok(Some(Self::AutomaticTask)),
+            "xor" => Ok(Some(Self::Xor)),
+            "def" => Ok(Some(Self::Def)),
+            "xorLoop" => Ok(Some(Self::XorLoop)),
+            "defLoop" => Ok(Some(Self::DefLoop)),
+            "or" => Ok(Some(Self::Or)),
+            "interleaved" => Ok(Some(Self::Interleaved)),
+            "manualTask" => {
                 if let Ok(Some(attribute)) = e.try_get_attribute("name") {
-                    let activity_label = String::from_utf8_lossy(&attribute.value);
+                    let activity_label = &attribute.value;
                     let activity = activity_key.process_activity(&activity_label);
                     Ok(Some(Self::ManualTask(activity)))
                 } else {
