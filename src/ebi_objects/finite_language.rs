@@ -3,7 +3,8 @@ use crate::{
     IntoRefTraceIterator, NumberOfTraces, TranslateActivityKey,
     constants::ebi_object::EbiObject,
     iterators::{
-        parallel_ref_trace_iterator::ParallelRefTraceIterator, ref_trace_iterator::RefTraceIterator,
+        parallel_ref_trace_iterator::ParallelRefTraceIterator::{self},
+        ref_trace_iterator::RefTraceIterator,
     },
     line_reader::LineReader,
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
@@ -66,6 +67,25 @@ impl FiniteLanguage {
 
     pub fn push(&mut self, trace: Vec<Activity>) {
         self.traces.insert(trace);
+    }
+
+    /// Removes the traces for which `f` return false.
+    /// Traces may be changed by `f`.
+    pub fn retain_traces_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&Vec<Activity>) -> bool,
+    {
+        //get our hands free to change the traces without cloning
+        let mut traces = HashSet::default();
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        traces = traces
+            .into_iter()
+            .filter_map(|mut trace| if f(&mut trace) { Some(trace) } else { None })
+            .collect();
+
+        //swap the the traces back
+        std::mem::swap(&mut self.traces, &mut traces);
     }
 }
 

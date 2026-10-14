@@ -102,11 +102,13 @@ impl FiniteStochasticLanguage {
                 x += y;
                 x
             });
-            log::info!("the extracted traces cover a sum of {}", sum);
-            self.traces.retain(|_, v| {
-                *v /= &sum;
-                true
-            });
+            if !sum.is_one() {
+                log::info!("the extracted traces cover a sum of {}", sum);
+                self.traces.retain(|_, v| {
+                    *v /= &sum;
+                    true
+                });
+            }
         }
     }
 
@@ -131,6 +133,34 @@ impl FiniteStochasticLanguage {
         *self.traces.entry(trace).or_insert_with(|| Fraction::zero()) += probability;
 
         Ok(())
+    }
+
+    /// Removes the traces for which `f` return false.
+    /// Traces may be changed by `f`.
+    /// Will re-normalise the probabilities, that is, after the call, the sum of probabilities is 1, unless the language has no traces.
+    pub fn retain_traces_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&Vec<Activity>) -> bool,
+    {
+        //get our hands free to change the traces without cloning
+        let mut traces = HashMap::default();
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        traces = traces
+            .into_iter()
+            .filter_map(|(mut trace, probability)| {
+                if f(&mut trace) {
+                    Some((trace, probability))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        //swap the the traces back
+        std::mem::swap(&mut self.traces, &mut traces);
+
+        self.normalise();
     }
 }
 
