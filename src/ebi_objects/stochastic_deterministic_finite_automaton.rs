@@ -46,6 +46,21 @@ impl StochasticDeterministicFiniteAutomaton {
         }
     }
 
+    /**
+     * Creates a new SDFA with the empty language.
+     */
+    pub fn new_empty() -> Self {
+        Self {
+            activity_key: ActivityKey::new(),
+            initial_state: None,
+            sources: vec![],
+            targets: vec![],
+            activities: vec![],
+            probabilities: vec![],
+            terminating_probabilities: vec![],
+        }
+    }
+
     pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
         if let Some(state) = state {
             self.ensure_states(state);

@@ -162,6 +162,43 @@ impl FiniteStochasticLanguage {
 
         self.normalise();
     }
+
+    /**
+     * Remove traces for which the function returns false.
+     * Normalisation is applied afterwards, that is, after the call, the sum of probabilities is 1, unless the language is empty.
+     *
+     * Note to callers: please put the closure definition inside the Box::new in the call of retain_traces.
+     * Otherwise, Rust may give weird compile errors.
+     */
+    pub fn retain_traces_probabilities<'a>(
+        &'a mut self,
+        f: Box<dyn Fn(&Vec<Activity>, &Fraction) -> bool + 'static>,
+    ) {
+        self.traces
+            .retain(|trace, probability| f(trace, probability));
+        self.normalise();
+    }
+
+    /**
+     * Remove traces for which the function returns false.
+     * It is the responsibility of the caller to ensure normalisation. That is, probabilities will not be re-scaled.
+     *
+     * Note to callers: please put the closure definition inside the Box::new in the call of retain_traces.
+     * Otherwise, Rust may give weird compile errors.
+     */
+    pub fn retain_traces_probabilities_mut<'a>(
+        &'a mut self,
+        f: Box<dyn FnMut(&Vec<Activity>, &mut Fraction) -> bool + 'static>,
+    ) {
+        self.traces.retain(f);
+    }
+
+    /**
+     * Empties the language.
+     */
+    fn clear(&mut self) {
+        self.traces.clear();
+    }
 }
 
 impl TranslateActivityKey for FiniteStochasticLanguage {
