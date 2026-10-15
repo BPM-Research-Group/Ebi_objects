@@ -196,7 +196,7 @@ impl FiniteStochasticLanguage {
     /**
      * Empties the language.
      */
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.traces.clear();
     }
 }
