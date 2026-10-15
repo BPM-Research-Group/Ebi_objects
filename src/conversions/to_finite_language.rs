@@ -6,8 +6,10 @@ use crate::{
     Activity, ActivityKey, CompressedEventLog, CompressedEventLogXes, EventLogOcel,
     EventLogTraceAttributes, EventLogXes,
     ebi_objects::{
+        compressed_event_log_event_attributes::CompressedEventLogEventAttributes,
         compressed_event_log_trace_attributes::CompressedEventLogTraceAttributes,
-        event_log::EventLog, event_log_csv::EventLogCsv, event_log_python::EventLogPython,
+        event_log::EventLog, event_log_csv::EventLogCsv,
+        event_log_event_attributes::EventLogEventAttributes, event_log_python::EventLogPython,
         finite_language::FiniteLanguage, finite_stochastic_language::FiniteStochasticLanguage,
     },
 };
@@ -44,7 +46,9 @@ from_via_log!(EventLogPython);
 from_via_log!(CompressedEventLog);
 from_via_log!(CompressedEventLogXes);
 from_via_log!(CompressedEventLogTraceAttributes);
+from_via_log!(CompressedEventLogEventAttributes);
 from_via_log!(EventLogTraceAttributes);
+from_via_log!(EventLogEventAttributes);
 
 impl From<FiniteStochasticLanguage> for FiniteLanguage {
     fn from(value: FiniteStochasticLanguage) -> Self {
