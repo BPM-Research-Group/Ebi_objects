@@ -1018,8 +1018,7 @@ macro_rules! tree_semantics {
         fn enable_next_sequential_nodes(tree: &$t, state: &mut TreeMarking, node: usize) {
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau => unreachable!(),
-                    Node::Activity(_) => unreachable!(),
+                    Node::Tau | Node::Activity(_) => unreachable!(),
                     Node::Operator(Operator::Xor, _) => {
                         //propagate to parent
                         enable_next_sequential_nodes(tree, state, parent);
@@ -1068,8 +1067,7 @@ macro_rules! tree_semantics {
             // println!("\t\twithdraw enablement next sequential nodes node {node}");
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau => unreachable!(),
-                    Node::Activity(_) => unreachable!(),
+                    Node::Tau | Node::Activity(_) => unreachable!(),
                     Node::Operator(Operator::Sequence, number_of_children) => {
                         if child_rank < number_of_children - 1 {
                             //we were a non-last child; withdraw the enablement of our next sibling
@@ -1113,7 +1111,7 @@ macro_rules! tree_semantics {
         }
 
         fn close_node(tree: &$t, state: &mut TreeMarking, node: usize) {
-            // println!("\tclose node {node} state {state}");
+            println!("\tclose node {node} state {state}");
 
             //close this node and all of its children
             for grandchild in node..tree.traverse(node) {
@@ -1123,8 +1121,7 @@ macro_rules! tree_semantics {
             //this may open another node, based on the operator of the parent
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau => unreachable!(),
-                    Node::Activity(_) => unreachable!(),
+                    Node::Tau | Node::Activity(_) => unreachable!(),
                     Node::Operator(Operator::Sequence, number_of_children) => {
                         //for a sequence parent, we enable the next child
                         // log::debug!("close node {}, parent is sequence node {}", node, parent);
@@ -1207,7 +1204,7 @@ macro_rules! tree_semantics {
         /// Starts executing a node.
         /// Recurses upwards to adjust enablement.
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
-            // println!("\tstart node {node}, child {:?} state {state}", child);
+            println!("\tstart node {node}, child {:?} state {state}", child);
             match tree.tree[node] {
                 Node::Tau
                 | Node::Activity(_)

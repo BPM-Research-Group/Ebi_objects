@@ -419,6 +419,15 @@ mod tests {
     }
 
     #[test]
+    fn sptree_to_snfa_interleaved() {
+        let fin = fs::read_to_string("testfiles/loop(interleaved(seq(a,b),loop(c,d),e).sptree").unwrap();
+        let tree = fin.parse::<StochasticProcessTree>().unwrap();
+
+        let snfa = StochasticNondeterministicFiniteAutomaton::from(tree);
+        
+    }
+
+    #[test]
     fn sptree_to_snfa_all_operators() {
         let fin = fs::read_to_string("testfiles/all_operators.sptree").unwrap();
         let tree = fin.parse::<StochasticProcessTree>().unwrap();
