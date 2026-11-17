@@ -584,7 +584,7 @@ impl PTMLTag {
             PTMLTag::AutomaticTask => Node::Tau,
             PTMLTag::Xor => Node::Operator(Operator::Xor, 0),
             PTMLTag::XorLoop => Node::Operator(Operator::Loop, 0),
-            PTMLTag::Or => Node::Operator(Operator::Loop, 0),
+            PTMLTag::Or => Node::Operator(Operator::Or, 0),
             PTMLTag::Interleaved => Node::Operator(Operator::Interleaved, 0),
             PTMLTag::Def => Node::Operator(Operator::Xor, 0),
             PTMLTag::DefLoop => Node::Operator(Operator::Loop, 0),
