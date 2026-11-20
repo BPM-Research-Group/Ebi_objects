@@ -144,7 +144,7 @@ impl State {
                 Err(anyhow!(
                     "attempted to close tag `{}` but `{}` was open",
                     e.name().as_ref(),
-                    &last_tag
+                    last_tag
                 ))
             }
         } else {
@@ -172,7 +172,7 @@ impl State {
                 let id = attribute.value;
                 match self.nodes.entry(id.to_string()) {
                     Entry::Occupied(_) => {
-                        return Err(anyhow!("two nodes have the id `{}`", &id));
+                        return Err(anyhow!("two nodes have the id `{}`", id));
                     }
                     Entry::Vacant(vacant_entry) => {
                         vacant_entry.insert(tag.to_node());
@@ -209,7 +209,7 @@ impl State {
 
     fn can_eof(&self) -> Result<()> {
         if let Some(tag) = self.in_tags.iter().next() {
-            Err(anyhow!("file ended while tag `{}` was still open", &tag))
+            Err(anyhow!("file ended while tag `{}` was still open", tag))
         } else if !self.seen_ptml_tag {
             Err(anyhow!("no `ptml` tag found at the top level"))
         } else if !self.seen_process_tree_tag {
@@ -233,14 +233,14 @@ impl State {
             if let Some((node_id, _)) = nodes.into_iter().next() {
                 return Err(anyhow!(
                     "node `{}` is not reachable from the root",
-                    &node_id
+                    node_id
                 ));
             }
             if let Some((source, targets)) = edges.into_iter().next() {
                 return Err(anyhow!(
                     "the edge from `{}` to `{}` is not reachable from the root",
-                    &source,
-                    &targets.into_iter().next().unwrap()
+                    source,
+                    targets.into_iter().next().unwrap()
                 ));
             }
 

@@ -278,7 +278,7 @@ pub(crate) mod parser {
                 //closing tag matches last remaining opening tag
 
                 OpenedTag::close_tag(most_recent_open_tag, e, state).with_context(|| {
-                    anyhow!("At the closing of tag `{}`.", &most_recent_open_tag_name)
+                    anyhow!("At the closing of tag `{}`.", most_recent_open_tag_name)
                 })?;
 
                 Ok(())
@@ -286,7 +286,7 @@ pub(crate) mod parser {
                 Err(anyhow!(
                     "Attempted to close tag `{}` but `{}` was open.",
                     e.local_name().as_ref(),
-                    &most_recent_open_tag_name
+                    most_recent_open_tag_name
                 ))
             }
         } else {
@@ -299,7 +299,7 @@ pub(crate) mod parser {
 
     pub(crate) fn can_eof(state: &ParserState) -> Result<()> {
         if let Some(tag) = state.open_tag_names.iter().next() {
-            Err(anyhow!("file ended while tag `{}` was still open", &tag))
+            Err(anyhow!("file ended while tag `{}` was still open", tag))
         } else {
             Ok(())
         }

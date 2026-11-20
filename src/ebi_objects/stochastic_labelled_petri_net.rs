@@ -312,7 +312,7 @@ impl fmt::Display for StochasticLabelledPetriNet {
                     writeln!(f, "silent")?;
                 }
 
-                writeln!(f, "# weight\n{}", &self.weights[transition])?;
+                writeln!(f, "# weight\n{}", self.weights[transition])?;
 
                 let number_of_input_places = self.transition2input_places[transition]
                     .iter()
