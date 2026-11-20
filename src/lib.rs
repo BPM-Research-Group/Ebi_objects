@@ -14,7 +14,9 @@
     clippy::redundant_closure,
     clippy::let_and_return,
     clippy::to_string_in_format_args,
-    clippy::useless_borrows_in_formatting
+    clippy::useless_borrows_in_formatting,
+    clippy::match_like_matches_macro,
+    clippy::single_match,
 )]
 #![doc = include_str!("../README.md")]
 

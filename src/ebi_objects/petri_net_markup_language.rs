@@ -1412,7 +1412,7 @@ pub(crate) mod tag_arc {
                         id,
                         source_id,
                         target_id,
-                        cardinality: if let Some(c) = cardinality { c } else { 1 },
+                        cardinality: cardinality.unwrap_or(1),
                     });
                 }
                 Ok(())

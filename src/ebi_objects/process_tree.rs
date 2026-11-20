@@ -32,15 +32,17 @@ pub struct ProcessTree {
     pub transition2node: Vec<usize>,
 }
 
-impl ProcessTree {
-    pub fn new() -> ProcessTree {
+impl Default for ProcessTree {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             tree: vec![],
             transition2node: vec![],
         }
     }
+}
 
+impl ProcessTree {
     pub fn new_with_activity_key(activity_key: ActivityKey) -> ProcessTree {
         Self {
             activity_key,
@@ -732,38 +734,23 @@ impl Node {
     }
 
     pub fn is_operator_or(&self) -> bool {
-        match self {
-            Node::Operator(Operator::Or, _) => true,
-            _ => false,
-        }
+        matches!(self, Node::Operator(Operator::Or, _))
     }
 
     pub fn is_operator_interleaved(&self) -> bool {
-        match self {
-            Node::Operator(Operator::Interleaved, _) => true,
-            _ => false,
-        }
+        matches!(self, Node::Operator(Operator::Interleaved, _))
     }
 
     pub fn is_operator_concurrent(&self) -> bool {
-        match self {
-            Node::Operator(Operator::Concurrent, _) => true,
-            _ => false,
-        }
+        matches!(self, Node::Operator(Operator::Concurrent, _))
     }
 
     pub fn is_operator_loop(&self) -> bool {
-        match self {
-            Node::Operator(Operator::Loop, _) => true,
-            _ => false,
-        }
+        matches!(self, Node::Operator(Operator::Loop, _))
     }
 
     pub fn is_operator_sequence(&self) -> bool {
-        match self {
-            Node::Operator(Operator::Sequence, _) => true,
-            _ => false,
-        }
+        matches!(self, Node::Operator(Operator::Sequence, _))
     }
 }
 
@@ -1233,14 +1220,13 @@ macro_rules! tree_semantics {
                         }
                     } else if let Some(from_child) = child {
                         //we are starting a non-first child of an interleaved node: withdraw enablement in the finished grand child
-                        
+
                         //find the previous child that was started
                         for sibling in tree.get_children(node) {
                             if sibling != from_child && state[sibling] == NodeState::Started {
                                 close_node(tree, state, sibling);
                             }
                         }
-
                     } else {
                         unreachable!()
                     }
@@ -1553,6 +1539,6 @@ mod tests {
         println!("execute tt {}", tt);
         execute_transition(&tree, &mut state, tt).unwrap();
         println!("{}\n", state);
-        assert_eq!(get_enabled_transitions(&tree, &state), [0;0]);
+        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
     }
 }

@@ -208,7 +208,7 @@ impl State {
     }
 
     fn can_eof(&self) -> Result<()> {
-        if let Some(tag) = self.in_tags.iter().next() {
+        if let Some(tag) = self.in_tags.first() {
             Err(anyhow!("file ended while tag `{}` was still open", tag))
         } else if !self.seen_ptml_tag {
             Err(anyhow!("no `ptml` tag found at the top level"))
@@ -221,11 +221,11 @@ impl State {
         }
     }
 
-    fn to_tree(self) -> Result<ProcessTree> {
+    fn convert_to_tree(self) -> Result<ProcessTree> {
         if let Some(root) = self.root {
             let mut tree = vec![];
-            let mut nodes: HashMap<String, Node> = self.nodes;
-            let mut edges: HashMap<String, Vec<String>> = self.edges;
+            let mut nodes = self.nodes;
+            let mut edges = self.edges;
 
             Self::to_tree_node(&mut nodes, &mut edges, &mut tree, &root)?;
 
@@ -371,7 +371,7 @@ For instance:
                 Ok(Event::Eof) => {
                     state.can_eof()?;
                     return Ok(Self {
-                        tree: state.to_tree()?,
+                        tree: state.convert_to_tree()?,
                     });
                 }
 
@@ -576,11 +576,11 @@ impl PTMLTag {
         }
     }
 
-    fn to_node(&self) -> Node {
+    fn to_node(self) -> Node {
         match self {
             PTMLTag::And => Node::Operator(Operator::Concurrent, 0),
             PTMLTag::Sequence => Node::Operator(Operator::Sequence, 0),
-            PTMLTag::ManualTask(activity) => Node::Activity(*activity),
+            PTMLTag::ManualTask(activity) => Node::Activity(activity),
             PTMLTag::AutomaticTask => Node::Tau,
             PTMLTag::Xor => Node::Operator(Operator::Xor, 0),
             PTMLTag::XorLoop => Node::Operator(Operator::Loop, 0),
