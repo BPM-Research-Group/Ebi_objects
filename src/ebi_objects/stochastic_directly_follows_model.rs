@@ -317,7 +317,7 @@ impl TranslateActivityKey for StochasticDirectlyFollowsModel {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
         self.node_2_activity
             .iter_mut()
-            .for_each(|activity| *activity = translator.translate_activity(&activity));
+            .for_each(|activity| *activity = translator.translate_activity(activity));
         self.activity_key = to_activity_key.clone();
     }
 }
@@ -476,10 +476,10 @@ impl Infoable for StochasticDirectlyFollowsModel {
         sum += &self.end_node_weights.iter().sum::<Fraction>();
         writeln!(f, "Sum weight of edges\t{}", sum)?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

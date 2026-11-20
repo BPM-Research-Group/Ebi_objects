@@ -209,12 +209,12 @@ impl Infoable for EventLog {
 
         log_infoable_stats!(f, self, lengths);
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
         log_infoable_startend!(f, self);
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

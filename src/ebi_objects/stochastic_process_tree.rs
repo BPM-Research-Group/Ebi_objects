@@ -63,7 +63,7 @@ impl StochasticProcessTree {
                     f,
                     "{}activity {}\n{}# weight node {}\n{}{}",
                     id,
-                    self.activity_key.get_activity_label(&activity),
+                    self.activity_key.get_activity_label(activity),
                     id,
                     node,
                     id,
@@ -209,7 +209,7 @@ impl StochasticProcessTree {
             Node::Operator(Operator::Xor, number_of_children) => {
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = StochasticProcessTree::node_to_dot(&self, graph, child, entry, exit);
+                    child = StochasticProcessTree::node_to_dot(self, graph, child, entry, exit);
                 }
                 child
             }
@@ -232,7 +232,7 @@ impl StochasticProcessTree {
                     };
 
                     child = StochasticProcessTree::node_to_dot(
-                        &self,
+                        self,
                         graph,
                         child,
                         child_entry,
@@ -249,7 +249,7 @@ impl StochasticProcessTree {
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = StochasticProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                    child = StochasticProcessTree::node_to_dot(self, graph, child, &split, &join);
                 }
                 child
             }
@@ -261,7 +261,7 @@ impl StochasticProcessTree {
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = StochasticProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                    child = StochasticProcessTree::node_to_dot(self, graph, child, &split, &join);
                 }
                 child
             }
@@ -273,7 +273,7 @@ impl StochasticProcessTree {
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = StochasticProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                    child = StochasticProcessTree::node_to_dot(self, graph, child, &split, &join);
                 }
                 child
             }
@@ -285,14 +285,14 @@ impl StochasticProcessTree {
 
                 let mut child = node + 1;
 
-                child = StochasticProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                child = StochasticProcessTree::node_to_dot(self, graph, child, &split, &join);
 
                 if number_of_children == 1 {
                     graphable::create_edge(graph, &join, &split, "");
                 } else {
                     for _ in 1..number_of_children {
                         child =
-                            StochasticProcessTree::node_to_dot(&self, graph, child, &join, &split);
+                            StochasticProcessTree::node_to_dot(self, graph, child, &join, &split);
                     }
                 }
                 child
@@ -378,7 +378,7 @@ impl Importable for StochasticProcessTree {
 
         let termination_weight = lreader
             .next_line_weight()
-            .with_context(|| format!("could not read termination weight at end of file"))?;
+            .with_context(|| "could not read termination weight at end of file".to_string())?;
         if !termination_weight.is_positive() {
             return Err(anyhow!(
                 "termination weight ({}) is not positive",

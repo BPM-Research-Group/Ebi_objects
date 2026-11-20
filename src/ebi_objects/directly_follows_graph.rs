@@ -455,7 +455,7 @@ impl Importable for DirectlyFollowsGraph {
         let mut result = DirectlyFollowsGraph::new(ActivityKey::new());
 
         let activities = json::read_field_object(&json, "activities")
-            .with_context(|| format!("reading field `activities`"))?;
+            .with_context(|| "reading field `activities`".to_string())?;
         let frequencies: Result<HashMap<Activity, Fraction>> = activities
             .into_iter()
             .map(|(activity, json)| {
@@ -469,7 +469,7 @@ impl Importable for DirectlyFollowsGraph {
         let mut frequencies_out = frequencies_in.clone();
 
         let edges = json::read_field_list(&json, "directly_follows_relations")
-            .with_context(|| format!("reading field `directly follows relations`"))?;
+            .with_context(|| "reading field `directly follows relations`".to_string())?;
         for (i, edge) in edges.into_iter().enumerate() {
             let edge_list = json::read_list(edge).with_context(|| format!("reading edge {}", i))?;
             let sourcetarget = json::read_list(
@@ -553,7 +553,7 @@ impl Importable for DirectlyFollowsGraph {
         }
 
         let start_activities = json::read_field_list(&json, "start_activities")
-            .with_context(|| format!("reading field `start activities`"))?;
+            .with_context(|| "reading field `start activities`".to_string())?;
         let err: Result<()> = start_activities
             .into_iter()
             .map(|json| {
@@ -581,7 +581,7 @@ impl Importable for DirectlyFollowsGraph {
         err?;
 
         let end_activities = json::read_field_list(&json, "end_activities")
-            .with_context(|| format!("reading field `end activities`"))?;
+            .with_context(|| "reading field `end activities`".to_string())?;
         let err: Result<()> = end_activities
             .into_iter()
             .map(|json| {
@@ -634,7 +634,7 @@ impl TranslateActivityKey for DirectlyFollowsGraph {
         let mut new_activity_2_node = IntMap::with_capacity(self.state_2_activity.len());
 
         for old_activity in self.state_2_activity.iter() {
-            let new_activity = translator.translate_activity(&old_activity);
+            let new_activity = translator.translate_activity(old_activity);
             let new_state = AutomatonState::of(new_node_2_activity.len());
             new_node_2_activity.push(new_activity);
             new_activity_2_node.insert(new_activity, new_state);
@@ -663,10 +663,10 @@ impl Infoable for DirectlyFollowsGraph {
         sum += &self.end_states.values().sum::<Fraction>();
         writeln!(f, "Sum weight of edges\t\t{}", sum)?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

@@ -215,7 +215,7 @@ impl TranslateActivityKey for StochasticLabelledPetriNet {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
         self.labels.iter_mut().for_each(|activity| {
             if let Some(a) = activity {
-                *a = translator.translate_activity(&a)
+                *a = translator.translate_activity(a)
             }
         });
         self.activity_key = to_activity_key.clone();
@@ -273,10 +273,10 @@ impl Infoable for StochasticLabelledPetriNet {
                 .count()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

@@ -128,7 +128,7 @@ impl Importable for Executions {
 
             //activity
             let activity = if let Some(activity) =
-                json::read_field_string_or_null(&json_execution, "activity").with_context(|| {
+                json::read_field_string_or_null(json_execution, "activity").with_context(|| {
                     anyhow!("Could not reach activity of execution {}.", execution_i)
                 })? {
                 Some(activity_key.process_activity(&activity))
@@ -158,7 +158,7 @@ impl Importable for Executions {
 
             //enabled transitions
             let json_enabled =
-                json::read_field_list(&json_execution, JSON_KEY_OTHER_ENABLED_TRANSITIONS)
+                json::read_field_list(json_execution, JSON_KEY_OTHER_ENABLED_TRANSITIONS)
                     .with_context(|| {
                         anyhow!(
                             "Enabled transitions are missing for execution {}.",
@@ -167,7 +167,7 @@ impl Importable for Executions {
                     })?;
             let mut other_enabled_transitions = Vec::with_capacity(json_enabled.len());
             for (enabledd_i, json_enabledd) in json_enabled.into_iter().enumerate() {
-                other_enabled_transitions.push(json::read_index(&json_enabledd).with_context(
+                other_enabled_transitions.push(json::read_index(json_enabledd).with_context(
                     || {
                         anyhow!(
                             "Could not read enabled transition {} of execution {}.",
@@ -190,7 +190,7 @@ impl Importable for Executions {
 
             //time of execution
             let time_of_execution =
-                json::read_field_time_or_null(&json_execution, JSON_KEY_TIME_OF_EXECUTION)
+                json::read_field_time_or_null(json_execution, JSON_KEY_TIME_OF_EXECUTION)
                     .with_context(|| {
                         anyhow!(
                             "Could not read time of execution of execution {}.",
@@ -200,7 +200,7 @@ impl Importable for Executions {
 
             //resource
             let resource = if let Some(resource) =
-                json::read_field_string_or_null(&json_execution, JSON_KEY_RESOURCE).with_context(
+                json::read_field_string_or_null(json_execution, JSON_KEY_RESOURCE).with_context(
                     || anyhow!("Could not read resource of execution {}.", execution_i),
                 )? {
                 Some(resource_key.process_activity(&resource))
@@ -209,7 +209,7 @@ impl Importable for Executions {
             };
 
             let resource_utilisation_fired_transition = json::read_field_fraction_or_null(
-                &json_execution,
+                json_execution,
                 JSON_KEY_RESOURCE_UTILISATION_FIRED_TRANSITION,
             )
             .with_context(|| {
@@ -221,7 +221,7 @@ impl Importable for Executions {
 
             //utilisation of enabled transitions
             let json_utilisation_enabled = json::read_field_list(
-                &json_execution,
+                json_execution,
                 JSON_KEY_RESOURCE_UTILISATION_OTHER_ENABLED_TRANSITIONS,
             )
             .with_context(|| {
@@ -234,7 +234,7 @@ impl Importable for Executions {
                 Vec::with_capacity(json_utilisation_enabled.len());
             for (enabledd_i, json_enabledd) in json_utilisation_enabled.into_iter().enumerate() {
                 resource_utilisation_other_enabled_transitions.push(
-                    json::read_fraction_or_null(&json_enabledd).with_context(|| {
+                    json::read_fraction_or_null(json_enabledd).with_context(|| {
                         anyhow!(
                             "Could not read utilisation of enabled transition {} of execution {}.",
                             enabledd_i,
@@ -246,7 +246,7 @@ impl Importable for Executions {
 
             //event attributes
             let json_event_attributes =
-                json::read_field_object_or_null(&json_execution, JSON_KEY_EVENT_ATTRIBUTES)
+                json::read_field_object_or_null(json_execution, JSON_KEY_EVENT_ATTRIBUTES)
                     .with_context(|| {
                         anyhow!(
                             "Event attributes of enabled transitions are missing for execution {}.",
@@ -300,7 +300,7 @@ impl Infoable for Executions {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         writeln!(f, "Number of executions\t\t{}", self.executions.len())?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

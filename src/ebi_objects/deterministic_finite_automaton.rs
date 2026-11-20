@@ -169,7 +169,7 @@ impl TranslateActivityKey for DeterministicFiniteAutomaton {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
         self.activities
             .iter_mut()
-            .for_each(|activity| *activity = translator.translate_activity(&activity));
+            .for_each(|activity| *activity = translator.translate_activity(activity));
         self.activity_key = to_activity_key.clone();
     }
 }
@@ -290,7 +290,7 @@ impl Infoable for DeterministicFiniteAutomaton {
             self.activity_key.get_number_of_activities()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
         Ok(write!(f, "")?)
@@ -313,7 +313,7 @@ impl Display for DeterministicFiniteAutomaton {
                 self.activity_key.get_activity_label(&self.activities[pos])
             )?;
             if pos + 1 == self.sources.len() {
-                writeln!(f, "")?;
+                writeln!(f)?;
             } else {
                 writeln!(f, ",")?;
             }

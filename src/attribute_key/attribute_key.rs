@@ -110,7 +110,7 @@ impl<'a> AttributeKey {
                 self.attribute2name.push(attribute_name.to_string());
                 self.name2attribute
                     .insert(attribute_name.to_string(), result);
-                self.attribute2type.push(DataType::init(&attribute_value));
+                self.attribute2type.push(DataType::init(attribute_value));
                 result
             }
         }

@@ -141,7 +141,7 @@ impl TranslateActivityKey for DirectlyFollowsModel {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
         self.node_2_activity
             .iter_mut()
-            .for_each(|activity| *activity = translator.translate_activity(&activity));
+            .for_each(|activity| *activity = translator.translate_activity(activity));
         self.activity_key = to_activity_key.clone();
     }
 }
@@ -405,10 +405,10 @@ impl Infoable for DirectlyFollowsModel {
             self.end_nodes.iter().filter(|x| **x).count()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

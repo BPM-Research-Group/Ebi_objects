@@ -214,16 +214,16 @@ impl Infoable for EventLogTraceAttributes {
         let lengths = self.traces.iter().map(|t| t.0.len());
         log_infoable_stats!(f, self, lengths);
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
         log_infoable_startend!(f, self);
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         writeln!(f, "Trace attributes:")?;
         self.attribute_key.info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

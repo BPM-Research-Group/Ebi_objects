@@ -242,7 +242,7 @@ impl Infoable for EventLogOcel {
         let lengths = self.get_trace_lengths();
         log_infoable_stats!(f, self, lengths.iter());
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
         log_infoable_startend!(f, self);
@@ -258,7 +258,7 @@ impl Infoable for EventLogOcel {
                 .join("\n\t")
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         writeln!(
             f,
             "Object types\n\t{}",
@@ -270,7 +270,7 @@ impl Infoable for EventLogOcel {
                 .join("\n\t")
         )?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

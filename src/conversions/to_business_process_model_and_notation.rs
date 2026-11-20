@@ -55,7 +55,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
             //transform transitions to input and output elements
             for transition in 0..value.get_number_of_transitions() {
                 //store whether there are multiple input or output arcs
-                let ain = if value.transition2input_places[transition].len() == 0 {
+                let ain = if value.transition2input_places[transition].is_empty() {
                     Card::Zero
                 } else if value.transition2input_places[transition].len() == 1
                     && value.transition2input_places_cardinality[transition][0] == 1
@@ -65,7 +65,7 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
                     Card::Multiple
                 };
 
-                let aout = if value.transition2output_places[transition].len() == 0 {
+                let aout = if value.transition2output_places[transition].is_empty() {
                     Card::Zero
                 } else if value.transition2output_places[transition].len() == 1
                     && value.transition2output_places_cardinality[transition][0] == 1
@@ -485,9 +485,9 @@ fn powl_node_2_bpmn(
             powl,
             result,
             node_index,
-            &edges,
-            &start_nodes,
-            &end_nodes,
+            edges,
+            start_nodes,
+            end_nodes,
             process,
             source,
             sink,

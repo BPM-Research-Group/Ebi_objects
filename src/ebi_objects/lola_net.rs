@@ -286,7 +286,7 @@ struct Tokeniser<'a> {
 impl<'a> Tokeniser<'a> {
     fn new(string: &'a str) -> Self {
         Self {
-            remainder: &string.trim(),
+            remainder: string.trim(),
         }
     }
 

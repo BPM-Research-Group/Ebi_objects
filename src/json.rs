@@ -48,7 +48,7 @@ pub fn read_field_list<'a>(json: &'a Value, field: &str) -> Result<&'a Vec<Value
         Value::Bool(_) => Err(anyhow!("field is a boolean, where list expected")),
         Value::Number(_) => Err(anyhow!("field is a number, where list expected")),
         Value::String(_) => Err(anyhow!("field is a literal, where list expected")),
-        Value::Array(arr) => Ok(&arr),
+        Value::Array(arr) => Ok(arr),
         Value::Object(_) => Err(anyhow!("field is an object, where list expected")),
     }
 }
@@ -60,7 +60,7 @@ pub fn read_field_object<'a>(json: &'a Value, field: &str) -> Result<&'a Map<Str
         Value::Number(_) => Err(anyhow!("field is a number, where object expected")),
         Value::String(_) => Err(anyhow!("field is a literal, where object expected")),
         Value::Array(_) => Err(anyhow!("field is an array, where object expected")),
-        Value::Object(obj) => Ok(&obj),
+        Value::Object(obj) => Ok(obj),
     }
 }
 
@@ -74,7 +74,7 @@ pub fn read_field_object_or_null<'a>(
         Value::Number(_) => Err(anyhow!("field is a number, where object expected")),
         Value::String(_) => Err(anyhow!("field is a literal, where object expected")),
         Value::Array(_) => Err(anyhow!("field is an array, where object expected")),
-        Value::Object(obj) => Ok(Some(&obj)),
+        Value::Object(obj) => Ok(Some(obj)),
     }
 }
 

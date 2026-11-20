@@ -360,7 +360,7 @@ impl<'a, K, V> Iterator for VecTupleIterator<'a, K, V> {
             mut compare: impl FnMut(&T, &T) -> bool + 'a,
         ) -> impl FnMut(T) -> bool + 'a {
             move |curr| {
-                if !compare(&last, &curr) {
+                if !compare(last, &curr) {
                     return false;
                 }
                 *last = curr;

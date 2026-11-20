@@ -122,7 +122,7 @@ impl<'a> LineReader<'a> {
     ) -> Result<Option<Activity>> {
         let line = self
             .next_line_string()
-            .with_context(|| format!("Failed to read activity."))?;
+            .with_context(|| "Failed to read activity.".to_string())?;
 
         if line.trim_start().starts_with("label ") {
             let label = line.trim_start()[6..].to_string();
@@ -158,7 +158,7 @@ impl<'a> LineReader<'a> {
     pub fn next_activity(&mut self, activity_key: &mut ActivityKey) -> Result<Activity> {
         let l = self
             .next_line_string()
-            .with_context(|| format!("Failed to read activity."))?;
+            .with_context(|| "Failed to read activity.".to_string())?;
         let mut line = l.as_str();
         let line_number = self.get_last_line_number();
 

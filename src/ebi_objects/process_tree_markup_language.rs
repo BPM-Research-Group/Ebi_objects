@@ -566,7 +566,7 @@ impl PTMLTag {
             "manualTask" => {
                 if let Ok(Some(attribute)) = e.try_get_attribute("name") {
                     let activity_label = &attribute.value;
-                    let activity = activity_key.process_activity(&activity_label);
+                    let activity = activity_key.process_activity(activity_label);
                     Ok(Some(Self::ManualTask(activity)))
                 } else {
                     Err(anyhow!("a manualTask has no name"))

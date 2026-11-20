@@ -252,12 +252,12 @@ impl Infoable for EventLogXes {
         let lengths = self.rust4pm_log.traces.iter().map(|t| t.events.len());
         log_infoable_stats!(f, self, lengths);
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
         log_infoable_startend!(f, self);
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

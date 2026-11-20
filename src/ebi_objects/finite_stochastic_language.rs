@@ -83,7 +83,7 @@ impl FiniteStochasticLanguage {
     }
 
     pub fn normalise_before(traces: &mut HashMap<Vec<String>, Fraction>) {
-        if traces.len() != 0 {
+        if !traces.is_empty() {
             let sum = traces.values().fold(Fraction::zero(), |mut x, y| {
                 x += y;
                 x
@@ -114,7 +114,7 @@ impl FiniteStochasticLanguage {
 
     fn contains(&self, atrace_b: Vec<&str>, probability_b: &Fraction) -> bool {
         for trace_a in self.traces.iter() {
-            let atrace_a = self.activity_key.deprocess_trace(&trace_a.0);
+            let atrace_a = self.activity_key.deprocess_trace(trace_a.0);
 
             if atrace_a == atrace_b && trace_a.1 == probability_b {
                 return true;
@@ -237,7 +237,7 @@ impl PartialEq for FiniteStochasticLanguage {
             return false;
         }
         for trace_b in other.traces.iter() {
-            let atrace_b = other.activity_key.deprocess_trace(&trace_b.0);
+            let atrace_b = other.activity_key.deprocess_trace(trace_b.0);
             if !self.contains(atrace_b, trace_b.1) {
                 return false;
             }
@@ -402,10 +402,10 @@ impl Infoable for FiniteStochasticLanguage {
             })
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

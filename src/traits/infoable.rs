@@ -28,7 +28,7 @@ impl Infoable for Fraction {
             (Ok(fr), Err(_)) => Ok(writeln!(f, "Approximate value\t{}", fr)?),
             (Err(_), Ok(fr)) => {
                 fr.info(f)?;
-                Ok(writeln!(f, "")?)
+                Ok(writeln!(f)?)
             }
             (Err(_), Err(_)) => Ok(writeln!(
                 f,

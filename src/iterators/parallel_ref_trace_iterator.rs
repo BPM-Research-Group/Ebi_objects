@@ -487,7 +487,7 @@ impl<'a, K, V> Iterator for ParallelVecTupleIteratorIterator<'a, K, V> {
         } else {
             let result = &self.keys.next()?.0;
             self.left -= 1;
-            Some(&result)
+            Some(result)
         }
     }
 

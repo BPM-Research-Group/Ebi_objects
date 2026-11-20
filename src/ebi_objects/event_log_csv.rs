@@ -100,7 +100,7 @@ impl EventLogCsv {
         attribute_key: &AttributeKey,
         column_name_or_number: &str,
     ) -> Option<Attribute> {
-        if let Some(attribute) = attribute_key.label_to_attribute(&column_name_or_number) {
+        if let Some(attribute) = attribute_key.label_to_attribute(column_name_or_number) {
             Some(attribute)
         } else if let Ok(attribute_id) = column_name_or_number.parse::<usize>()
             && attribute_id < attribute_key.len()
@@ -410,12 +410,12 @@ impl Infoable for EventLogCsv {
         let lengths = self.traces.iter().map(|t| t.1.len());
         log_infoable_stats!(f, self, lengths);
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
         log_infoable_startend!(f, self);
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 
@@ -442,7 +442,7 @@ impl StartEndActivities for EventLogCsv {
             if let Some(event) = trace.iter().next() {
                 let activity_label = event.get(self.activity_attribute);
                 if let Some(activity_label) = activity_label {
-                    let activity = self.activity_key.process_activity_attempt(&activity_label);
+                    let activity = self.activity_key.process_activity_attempt(activity_label);
                     if let Some(activity) = activity {
                         match result.entry(activity) {
                             intmap::Entry::Occupied(mut occupied_entry) => {
@@ -465,7 +465,7 @@ impl StartEndActivities for EventLogCsv {
             if let Some(event) = trace.iter().last() {
                 let activity_label = event.get(self.activity_attribute);
                 if let Some(activity_label) = activity_label {
-                    let activity = self.activity_key.process_activity_attempt(&activity_label);
+                    let activity = self.activity_key.process_activity_attempt(activity_label);
                     if let Some(activity) = activity {
                         match result.entry(activity) {
                             intmap::Entry::Occupied(mut occupied_entry) => {

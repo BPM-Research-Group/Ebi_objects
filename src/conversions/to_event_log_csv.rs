@@ -28,7 +28,7 @@ impl TryFrom<EventLog> for EventLogCsv {
         //transform the traces
         let mut data = Vec::with_capacity(traces.len());
         for (trace_id, trace) in traces.into_iter().enumerate() {
-            if trace.len() == 0 {
+            if trace.is_empty() {
                 return Err(anyhow!(
                     "cannot convert this event log to csv; a csv file does not support empty traces"
                 ));
@@ -95,7 +95,7 @@ impl TryFrom<EventLogXes> for EventLogCsv {
         //transform the traces and events
         let mut traces = Vec::with_capacity(rust4pm_log.traces.len());
         for old_trace in rust4pm_log.traces {
-            if old_trace.events.len() == 0 {
+            if old_trace.events.is_empty() {
                 return Err(anyhow!(
                     "cannot convert this XES event log to csv; a csv file does not support empty traces"
                 ));
@@ -163,7 +163,7 @@ impl TryFrom<EventLogEventAttributes> for EventLogCsv {
         //transform the traces
         let mut data = Vec::with_capacity(traces.len());
         for (trace_id, (_, trace_attributes)) in traces.into_iter().enumerate() {
-            if trace_attributes.len() == 0 {
+            if trace_attributes.is_empty() {
                 return Err(anyhow!(
                     "cannot convert this event log to csv; a csv file does not support empty traces"
                 ));

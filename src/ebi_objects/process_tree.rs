@@ -71,7 +71,7 @@ impl ProcessTree {
                     f,
                     "{}activity {}",
                     id,
-                    self.activity_key.get_activity_label(&activity)
+                    self.activity_key.get_activity_label(activity)
                 )?;
                 Ok(node + 1)
             }
@@ -116,7 +116,7 @@ impl ProcessTree {
             Node::Operator(Operator::Xor, number_of_children) => {
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(&self, graph, child, entry, exit);
+                    child = ProcessTree::node_to_dot(self, graph, child, entry, exit);
                 }
                 child
             }
@@ -138,7 +138,7 @@ impl ProcessTree {
                         &intermediate_nodes[i]
                     };
 
-                    child = ProcessTree::node_to_dot(&self, graph, child, child_entry, child_exit);
+                    child = ProcessTree::node_to_dot(self, graph, child, child_entry, child_exit);
                 }
                 child
             }
@@ -150,7 +150,7 @@ impl ProcessTree {
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
                 }
                 child
             }
@@ -162,7 +162,7 @@ impl ProcessTree {
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
                 }
                 child
             }
@@ -174,7 +174,7 @@ impl ProcessTree {
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
                 }
                 child
             }
@@ -186,13 +186,13 @@ impl ProcessTree {
 
                 let mut child = node + 1;
 
-                child = ProcessTree::node_to_dot(&self, graph, child, &split, &join);
+                child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
 
                 if number_of_children == 1 {
                     graphable::create_edge(graph, &join, &split, "");
                 } else {
                     for _ in 1..number_of_children {
-                        child = ProcessTree::node_to_dot(&self, graph, child, &join, &split);
+                        child = ProcessTree::node_to_dot(self, graph, child, &join, &split);
                     }
                 }
                 child

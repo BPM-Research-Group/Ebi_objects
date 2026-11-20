@@ -143,10 +143,10 @@ impl Infoable for FiniteLanguage {
             self.activity_key().get_number_of_activities()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

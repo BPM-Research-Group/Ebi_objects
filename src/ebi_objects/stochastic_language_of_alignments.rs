@@ -62,7 +62,7 @@ impl TranslateActivityKey for StochasticLanguageOfAlignments {
                 Move::SynchronousMove { activity, .. }
                 | Move::LogMove { activity, .. }
                 | Move::ModelMove { activity, .. } => {
-                    *activity = translator.translate_activity(&activity)
+                    *activity = translator.translate_activity(activity)
                 }
                 _ => {}
             })
@@ -342,10 +342,10 @@ impl Infoable for StochasticLanguageOfAlignments {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         writeln!(f, "Number of alignments\t\t{}", self.alignments.len())?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

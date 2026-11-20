@@ -169,7 +169,7 @@ impl PartiallyOrderedWorkflowLanguage {
 
 impl Importable for PartiallyOrderedWorkflowLanguage {
     const FILE_FORMAT_SPECIFICATION_LATEX: &str =
-        &"A partially ordered workflow language is a JSON structure.
+        "A partially ordered workflow language is a JSON structure.
         
         For instance:
         \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/or_a_b.powl}";
@@ -195,7 +195,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
             .with_context(|| anyhow!("Expected the root element to be an object."))?;
 
         //verify format
-        if json::read_string_from_object(&json, HEADER_FORMAT)? != HEADER_FORMAT_VALUE {
+        if json::read_string_from_object(json, HEADER_FORMAT)? != HEADER_FORMAT_VALUE {
             return Err(anyhow!(
                 "Expected field `{}` with string value `{}`.",
                 HEADER_FORMAT,
@@ -204,7 +204,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         }
 
         //verify version
-        if json::read_string_from_object(&json, HEADER_FORMAT_VERSION)?
+        if json::read_string_from_object(json, HEADER_FORMAT_VERSION)?
             != HEADER_FORMAT_VERSION_VALUE
         {
             return Err(anyhow!(
@@ -215,7 +215,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         }
 
         //read root model
-        let json_root_model = json::read_object_from_object(&json, "model")
+        let json_root_model = json::read_object_from_object(json, "model")
             .with_context(|| anyhow!("Could not read root model."))?;
 
         let mut activity_key = ActivityKey::new();
@@ -739,7 +739,7 @@ impl TranslateActivityKey for PartiallyOrderedWorkflowLanguage {
                 ..
             } = node
             {
-                *activity = translator.translate_activity(&activity);
+                *activity = translator.translate_activity(activity);
             }
         }
         self.activity_key = to_activity_key.clone();
@@ -755,10 +755,10 @@ impl Infoable for PartiallyOrderedWorkflowLanguage {
             self.activity_key().get_number_of_activities()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 
@@ -817,7 +817,7 @@ fn id_to_capitalised_string(id: &Option<String>) -> String {
     if let Some(id) = id {
         format!("Node {}", id)
     } else {
-        format!("The root node")
+        "The root node".to_string()
     }
 }
 
@@ -825,7 +825,7 @@ fn id_to_string(id: &Option<String>) -> String {
     if let Some(id) = id {
         format!("node `{}`", id)
     } else {
-        format!("the root node")
+        "the root node".to_string()
     }
 }
 
@@ -1086,7 +1086,7 @@ impl PowlNode {
                 };
                 let t = graphable::create_transition(
                     graph,
-                    powl.activity_key.get_activity_label(&activity),
+                    powl.activity_key.get_activity_label(activity),
                     cardinality,
                 );
                 (t, t)

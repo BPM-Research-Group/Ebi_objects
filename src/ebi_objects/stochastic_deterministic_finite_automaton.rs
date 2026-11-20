@@ -372,10 +372,10 @@ impl Infoable for StochasticDeterministicFiniteAutomaton {
             self.activity_key.get_number_of_activities()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 
@@ -396,7 +396,7 @@ impl fmt::Display for StochasticDeterministicFiniteAutomaton {
                 self.probabilities[pos]
             )?;
             if pos + 1 == self.sources.len() {
-                writeln!(f, "")?;
+                writeln!(f)?;
             } else {
                 writeln!(f, ",")?;
             }

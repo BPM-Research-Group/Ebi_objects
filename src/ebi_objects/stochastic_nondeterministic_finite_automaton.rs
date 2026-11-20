@@ -245,7 +245,7 @@ impl StochasticNondeterministicFiniteAutomaton {
     pub fn check_consistency(&self) -> Result<()> {
         let zero = Fraction::zero();
         //verify that sum of outgoing edges for each state is one
-        if self.termination_probabilities.len() > 0 {
+        if !self.termination_probabilities.is_empty() {
             let mut state = 0; //next state to check
             let mut transition = 0; //next transition to check
             let mut sum = self.termination_probabilities[0].clone(); //sum probability of the next state
@@ -531,10 +531,10 @@ impl Infoable for StochasticNondeterministicFiniteAutomaton {
             self.activity_key.get_number_of_activities()
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

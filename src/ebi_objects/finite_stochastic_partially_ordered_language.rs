@@ -280,10 +280,10 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
                 })
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         self.activity_key().info(f)?;
 
-        Ok(writeln!(f, "")?)
+        Ok(writeln!(f)?)
     }
 }
 

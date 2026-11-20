@@ -141,7 +141,7 @@ impl<'a> Iterator for ParallelIteratorCsv<'a> {
             let activity = self
                 .log
                 .activity_key
-                .process_activity_attempt(&activity_label)?;
+                .process_activity_attempt(activity_label)?;
             result.push(activity);
         }
 
@@ -169,7 +169,7 @@ impl<'a> DoubleEndedIterator for ParallelIteratorCsv<'a> {
                 let activity = self
                     .log
                     .activity_key
-                    .process_activity_attempt(&activity_label)?;
+                    .process_activity_attempt(activity_label)?;
                 result.push(activity);
             }
 
@@ -386,7 +386,7 @@ impl<'a> Iterator for ParallelIteratorOcel<'a> {
 
 impl<'a> DoubleEndedIterator for ParallelIteratorOcel<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.objects.len() > 0 {
+        if !self.objects.is_empty() {
             let object_id = self.objects.remove(0);
             //gather the relevant events
             Some(
