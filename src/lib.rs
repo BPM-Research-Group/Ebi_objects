@@ -1,7 +1,6 @@
-#![allow(
-    clippy::needless_range_loop,
+#![allow(clippy::needless_range_loop, 
     warnings
-)]
+    )]
 #![deny(
     clippy::needless_return,
     clippy::useless_format,
@@ -18,7 +17,8 @@
     clippy::match_like_matches_macro,
     clippy::single_match,
     clippy::collapsible_if,
-    clippy::iter_next_slice
+    clippy::iter_next_slice,
+    clippy::unnecessary_lazy_evaluations
 )]
 #![doc = include_str!("../README.md")]
 

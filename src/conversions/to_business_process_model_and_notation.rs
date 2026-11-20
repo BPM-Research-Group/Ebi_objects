@@ -308,7 +308,7 @@ fn transform_node(
             if let Some(child) = it.next() {
                 transform_node(tree, child, source, sub_sink, c, parent);
             }
-            while let Some(child) = it.next() {
+            for child in it {
                 let sub_source = sub_sink;
                 sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
@@ -514,6 +514,7 @@ fn powl_activity_2_bpmn(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn powl_partial_order_2_bpmn(
     powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut BPMNCreator,
@@ -571,6 +572,7 @@ fn powl_partial_order_2_bpmn(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn powl_choice_graph_2_bpmn(
     powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut BPMNCreator,

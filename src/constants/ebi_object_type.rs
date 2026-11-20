@@ -111,8 +111,6 @@ impl Ord for EbiObjectType {
 
 impl PartialOrd for EbiObjectType {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.to_string()
-            .to_lowercase()
-            .partial_cmp(&other.to_string().to_lowercase())
+        Some(self.cmp(other))
     }
 }

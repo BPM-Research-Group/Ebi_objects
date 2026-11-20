@@ -322,7 +322,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
                                     .insert(*target_marking);
                             } else {
                                 //silent step: add to queue
-                                if inner_visited.insert(target_marking.clone()) {
+                                if inner_visited.insert(*target_marking) {
                                     inner_queue.push_back(*target_marking);
                                 }
                             }
