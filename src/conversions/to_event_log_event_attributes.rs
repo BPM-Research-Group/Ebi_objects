@@ -272,7 +272,7 @@ impl From<EventLogCsv> for EventLogEventAttributes {
                         let empty = String::new();
                         let activity_label = csv_attributes
                             .get(activity_attribute)
-                            .unwrap_or_else(|| &empty);
+                            .unwrap_or(&empty);
                         activity_key
                             .process_activity_attempt(activity_label)
                             .unwrap()
