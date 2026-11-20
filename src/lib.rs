@@ -1,5 +1,12 @@
 #![allow(warnings)]
-#![deny(clippy::needless_return)]
+#![deny(
+    clippy::needless_return,
+    clippy::useless_format,
+    clippy::needless_borrow,
+    clippy::writeln_empty_string,
+    clippy::len_zero,
+    clippy::useless_format
+)]
 #![doc = include_str!("../README.md")]
 
 //! ## Sister crates
