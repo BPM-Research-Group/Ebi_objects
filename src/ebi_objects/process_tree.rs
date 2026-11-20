@@ -676,17 +676,11 @@ impl Node {
     }
 
     pub fn is_activity(&self) -> bool {
-        match self {
-            Self::Activity(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Activity(_))
     }
 
     pub fn is_tau(&self) -> bool {
-        match self {
-            Self::Tau => true,
-            _ => false,
-        }
+        matches!(self, Self::Tau)
     }
 
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
@@ -727,10 +721,7 @@ impl Node {
     }
 
     pub fn is_operator_xor(&self) -> bool {
-        match self {
-            Node::Operator(Operator::Xor, _) => true,
-            _ => false,
-        }
+        matches!(self, Node::Operator(Operator::Xor, _))
     }
 
     pub fn is_operator_or(&self) -> bool {

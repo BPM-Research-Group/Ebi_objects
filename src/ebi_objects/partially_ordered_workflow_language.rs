@@ -154,13 +154,10 @@ impl PartiallyOrderedWorkflowLanguage {
         }
 
         for child in (node + 1)..self.traverse(node) {
-            match self.tree[child] {
-                PowlNode::Activity { activity, .. } => {
-                    if activity.is_some() {
-                        return false;
-                    }
+            if let PowlNode::Activity { activity, .. } = self.tree[child] {
+                if activity.is_some() {
+                    return false;
                 }
-                _ => {}
             }
         }
         true

@@ -17,6 +17,7 @@
     clippy::useless_borrows_in_formatting,
     clippy::match_like_matches_macro,
     clippy::single_match,
+    clippy::collapsible_if
 )]
 #![doc = include_str!("../README.md")]
 

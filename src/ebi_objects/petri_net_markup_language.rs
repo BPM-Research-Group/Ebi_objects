@@ -230,18 +230,15 @@ pub(crate) mod parser {
 
     pub(crate) fn text_tag(state: &mut ParserState, e: &BytesText, n: NameSpace) -> Result<()> {
         if n.is_pnml() {
-            match state.open_tags.iter_mut().last() {
-                Some(OpenedTag::Text { text }) => {
-                    if text.is_some() {
-                        return Err(anyhow!("Cannot set text twice."));
-                    }
-
-                    *text = Some(
-                        e.xml_content(quick_xml::XmlVersion::Implicit1_0)
-                            .to_string(),
-                    );
+            if let Some(OpenedTag::Text { text }) = state.open_tags.iter_mut().last() {
+                if text.is_some() {
+                    return Err(anyhow!("Cannot set text twice."));
                 }
-                _ => (),
+
+                *text = Some(
+                    e.xml_content(quick_xml::XmlVersion::Implicit1_0)
+                        .to_string(),
+                );
             }
         }
         Ok(())
@@ -685,13 +682,10 @@ pub(crate) mod tag_net {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Pnml { .. }) => {
-                        if e.local_name().as_ref() == "net" {
-                            return Some(Tag::Net);
-                        }
+                if let Some(OpenedTag::Pnml { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "net" {
+                        return Some(Tag::Net);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -769,13 +763,10 @@ mod tag_page {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Net { .. }) => {
-                        if e.local_name().as_ref() == "page" {
-                            return Some(Tag::Page);
-                        }
+                if let Some(OpenedTag::Net { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "page" {
+                        return Some(Tag::Page);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -895,13 +886,10 @@ mod tag_place {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Page { .. }) => {
-                        if e.local_name().as_ref() == "place" {
-                            return Some(Tag::Place);
-                        }
+                if let Some(OpenedTag::Page { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "place" {
+                        return Some(Tag::Place);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -972,13 +960,10 @@ pub(crate) mod tag_initial_marking {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Place { .. }) => {
-                        if e.local_name().as_ref() == "initialMarking" {
-                            return Some(Tag::InitialMarking);
-                        }
+                if let Some(OpenedTag::Place { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "initialMarking" {
+                        return Some(Tag::InitialMarking);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -1035,17 +1020,14 @@ pub(crate) mod tag_text {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(
+                if let Some(
                         OpenedTag::InitialMarking { .. }
                         | OpenedTag::Name { .. }
                         | OpenedTag::Inscription { .. },
-                    ) => {
-                        if e.local_name().as_ref() == "text" {
-                            return Some(Tag::Text);
-                        }
+                    ) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "text" {
+                        return Some(Tag::Text);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -1141,13 +1123,10 @@ pub(crate) mod tag_transition {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Page { .. }) => {
-                        if e.local_name().as_ref() == "transition" {
-                            return Some(Tag::Transition);
-                        }
+                if let Some(OpenedTag::Page { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "transition" {
+                        return Some(Tag::Transition);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -1225,13 +1204,10 @@ pub(crate) mod tag_name {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Transition { .. }) => {
-                        if e.local_name().as_ref() == "name" {
-                            return Some(Tag::Name);
-                        }
+                if let Some(OpenedTag::Transition { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "name" {
+                        return Some(Tag::Name);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -1282,23 +1258,20 @@ pub(crate) mod tag_tool_specific {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Transition { .. }) => {
-                        if e.local_name().as_ref() == "toolspecific" {
-                            //tool must be ProM
-                            if parse_attribute(e, "tool") != Some("ProM".to_string()) {
-                                return None;
-                            }
-
-                            //activity must be invisible
-                            if parse_attribute(e, "activity") != Some("$invisible$".to_string()) {
-                                return None;
-                            }
-
-                            return Some(Tag::ToolSpecific);
+                if let Some(OpenedTag::Transition { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "toolspecific" {
+                        //tool must be ProM
+                        if parse_attribute(e, "tool") != Some("ProM".to_string()) {
+                            return None;
                         }
+
+                        //activity must be invisible
+                        if parse_attribute(e, "activity") != Some("$invisible$".to_string()) {
+                            return None;
+                        }
+
+                        return Some(Tag::ToolSpecific);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -1359,13 +1332,10 @@ pub(crate) mod tag_arc {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Page { .. }) => {
-                        if e.local_name().as_ref() == "arc" {
-                            return Some(Tag::Arc);
-                        }
+                if let Some(OpenedTag::Page { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "arc" {
+                        return Some(Tag::Arc);
                     }
-                    _ => (),
                 }
                 None
             } else {
@@ -1441,13 +1411,10 @@ pub(crate) mod tag_inscription {
             Self: Sized,
         {
             if n.is_pnml() {
-                match state.open_tags.iter().last() {
-                    Some(OpenedTag::Arc { .. }) => {
-                        if e.local_name().as_ref() == "inscription" {
-                            return Some(Tag::Inscription);
-                        }
+                if let Some(OpenedTag::Arc { .. }) = state.open_tags.iter().last() {
+                    if e.local_name().as_ref() == "inscription" {
+                        return Some(Tag::Inscription);
                     }
-                    _ => (),
                 }
                 None
             } else {
