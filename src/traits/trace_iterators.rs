@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use ebi_bpmn::ebi_arithmetic::Fraction;
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
 use std::collections::HashMap;
@@ -47,7 +48,7 @@ pub trait IntoRefTraceProbabilityIterator {
     fn par_iter_traces_probabilities(&'_ self) -> ParallelRefProbabilityTraceIterator<'_>;
 }
 
-impl IntoRefTraceIterator for Vec<(Vec<Activity>, HashMap<String, u64>)> {
+impl IntoRefTraceIterator for Vec<(Vec<Activity>, HashMap<String, u64, FnvBuildHasher>)> {
     fn iter_traces(&self) -> RefTraceIterator<'_> {
         RefTraceIterator::VecTupleHashMap(self.into())
     }

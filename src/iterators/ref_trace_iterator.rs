@@ -1,5 +1,6 @@
 use crate::{Activity, Attribute};
 use ebi_bpmn::ebi_arithmetic::Fraction;
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;
 use std::collections::HashMap;
@@ -7,7 +8,7 @@ use std::collections::HashMap;
 /// Iterator over references to traces.
 pub enum RefTraceIterator<'a> {
     Vec(std::slice::Iter<'a, Vec<Activity>>),
-    VecTupleHashMap(VecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>),
+    VecTupleHashMap(VecTupleIterator<'a, Vec<Activity>, HashMap<String, u64, FnvBuildHasher>>),
     VecTupleIntMap(VecTupleIterator<'a, Vec<Activity>, IntMap<Attribute, AttributeValue>>),
     VecTupleVecIntMap(VecTupleIterator<'a, Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>>),
     HashSet(std::collections::hash_set::Iter<'a, Vec<Activity>>),
@@ -140,10 +141,10 @@ impl<'a> Iterator for RefTraceIterator<'a> {
 
 pub struct VecTupleIterator<'a, K, V>(std::slice::Iter<'a, (K, V)>);
 
-impl<'a> From<&'a Vec<(Vec<Activity>, HashMap<String, u64>)>>
-    for VecTupleIterator<'a, Vec<Activity>, HashMap<String, u64>>
+impl<'a> From<&'a Vec<(Vec<Activity>, HashMap<String, u64, FnvBuildHasher>)>>
+    for VecTupleIterator<'a, Vec<Activity>, HashMap<String, u64, FnvBuildHasher>>
 {
-    fn from(value: &'a Vec<(Vec<Activity>, HashMap<String, u64>)>) -> Self {
+    fn from(value: &'a Vec<(Vec<Activity>, HashMap<String, u64, FnvBuildHasher>)>) -> Self {
         Self(value.iter())
     }
 }
