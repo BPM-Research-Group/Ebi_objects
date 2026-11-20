@@ -1,11 +1,16 @@
-#![allow(warnings)]
+// #![allow(warnings)]
 #![deny(
     clippy::needless_return,
     clippy::useless_format,
     clippy::needless_borrow,
     clippy::writeln_empty_string,
     clippy::len_zero,
-    clippy::useless_format
+    clippy::useless_format,
+    clippy::needless_lifetimes,
+    clippy::get_first,
+    clippy::redundant_closure,
+    clippy::let_and_return,
+    clippy::to_string_in_format_args
 )]
 #![doc = include_str!("../README.md")]
 

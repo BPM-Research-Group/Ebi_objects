@@ -16,7 +16,6 @@ use ebi_derive::ActivityKey;
 use itertools::Itertools;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
 use std::{
-    backtrace::Backtrace,
     fmt::Display,
     ops::{Index, IndexMut},
     str::FromStr,

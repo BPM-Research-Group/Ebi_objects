@@ -17,7 +17,7 @@ impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomato
     fn from(value: FiniteStochasticLanguage) -> Self {
         log::info!("convert finite stochastic language to SNFA");
 
-        let mut result = StochasticNondeterministicFiniteAutomaton::new();
+        let mut result = StochasticNondeterministicFiniteAutomaton::default();
         if value.number_of_traces().is_zero() {
             result.initial_state = None;
         } else {
@@ -105,7 +105,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticNondeterministic
 
 impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
     fn from(value: DirectlyFollowsGraph) -> Self {
-        let mut result = Self::new();
+        let mut result = Self::default();
         let initial_state = 0;
 
         //add states
@@ -115,11 +115,8 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 
         //start activities
         {
-            let mut sum_of_start_activities = value
-                .start_states
-                .iter()
-                .map(|(_, f)| f)
-                .sum::<Fraction>();
+            let mut sum_of_start_activities =
+                value.start_states.iter().map(|(_, f)| f).sum::<Fraction>();
             sum_of_start_activities += &value.empty_traces_weight;
             for (node, weight) in &value.start_states {
                 let activity = value.state_2_activity[node.0];
@@ -188,7 +185,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 
 impl From<StochasticDirectlyFollowsModel> for StochasticNondeterministicFiniteAutomaton {
     fn from(value: StochasticDirectlyFollowsModel) -> Self {
-        let mut result = Self::new();
+        let mut result = Self::default();
 
         if value.node_2_activity.is_empty() && !value.empty_traces_weight.is_positive() {
             //empty language
@@ -291,7 +288,7 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
             };
         };
 
-        let mut result = StochasticNondeterministicFiniteAutomaton::new();
+        let mut result = StochasticNondeterministicFiniteAutomaton::default();
         let translator = ActivityKeyTranslator::new(tree.activity_key(), result.activity_key_mut());
 
         let mut marking2node = HashMap::new();
@@ -420,11 +417,11 @@ mod tests {
 
     #[test]
     fn sptree_to_snfa_interleaved() {
-        let fin = fs::read_to_string("testfiles/loop(interleaved(seq(a,b),loop(c,d),e).sptree").unwrap();
+        let fin =
+            fs::read_to_string("testfiles/loop(interleaved(seq(a,b),loop(c,d),e).sptree").unwrap();
         let tree = fin.parse::<StochasticProcessTree>().unwrap();
 
-        let snfa = StochasticNondeterministicFiniteAutomaton::from(tree);
-        
+        let _ = StochasticNondeterministicFiniteAutomaton::from(tree);
     }
 
     #[test]

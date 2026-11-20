@@ -127,8 +127,8 @@ pub fn read_field_string_or_null<'a>(json: &'a Value, field: &str) -> Result<Opt
     }
 }
 
-pub fn read_field_time_or_null<'a>(
-    json: &'a Value,
+pub fn read_field_time_or_null(
+    json: &Value,
     field: &str,
 ) -> Result<Option<DateTime<FixedOffset>>> {
     match &json[field] {

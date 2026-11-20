@@ -20,7 +20,7 @@ use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
-use std::{backtrace::Backtrace, fmt::Display};
+use std::fmt::Display;
 
 pub const HEADER: &str = "stochastic process tree";
 

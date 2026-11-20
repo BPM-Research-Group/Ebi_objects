@@ -33,9 +33,9 @@ pub struct StochasticNondeterministicFiniteAutomaton {
     pub termination_probabilities: Vec<Fraction>, //state -> termination probability
 }
 
-impl StochasticNondeterministicFiniteAutomaton {
+impl Default for StochasticNondeterministicFiniteAutomaton {
     /// Create an empty SNFA with a single initial / final state
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             initial_state: Some(AutomatonState::zero()),
@@ -46,7 +46,9 @@ impl StochasticNondeterministicFiniteAutomaton {
             termination_probabilities: vec![Fraction::one()],
         }
     }
+}
 
+impl StochasticNondeterministicFiniteAutomaton {
     pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
         if let Some(state) = state {
             self.ensure_states(state);
@@ -420,7 +422,7 @@ impl Importable for StochasticNondeterministicFiniteAutomaton {
     {
         let mut lreader = LineReader::new(reader);
 
-        let mut result = Self::new();
+        let mut result = Self::default();
 
         let head = lreader
             .next_line_string()
