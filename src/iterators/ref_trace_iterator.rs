@@ -213,13 +213,13 @@ impl<'a, K, V> Iterator for VecTupleIterator<'a, K, V> {
         self
     }
 
-    fn fold<B, F>(mut self, init: B, mut f: F) -> B
+    fn fold<B, F>(self, init: B, mut f: F) -> B
     where
         Self: Sized,
         F: FnMut(B, Self::Item) -> B,
     {
         let mut accum = init;
-        while let Some(x) = self.next() {
+        for x in self {
             accum = f(accum, x);
         }
         accum

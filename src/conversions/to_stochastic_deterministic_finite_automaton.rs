@@ -16,7 +16,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
     fn from(value: FiniteStochasticLanguage) -> Self {
         log::info!("convert finite stochastic language to SDFA");
 
-        let mut result = StochasticDeterministicFiniteAutomaton::new();
+        let mut result = StochasticDeterministicFiniteAutomaton::default();
         if value.number_of_traces().is_zero() {
             result.set_initial_state(None);
         } else {
@@ -58,7 +58,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
 
 impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
     fn from(value: DirectlyFollowsGraph) -> Self {
-        let mut result = Self::new();
+        let mut result = Self::default();
         let initial_state = 0;
 
         //add states
@@ -146,7 +146,7 @@ macro_rules! log {
             fn from(value: $t) -> Self {
                 log::info!("convert event log to SDFA");
 
-                let mut result = StochasticDeterministicFiniteAutomaton::new();
+                let mut result = StochasticDeterministicFiniteAutomaton::default();
                 result.activity_key = value.activity_key().clone();
 
                 if value.number_of_traces().is_zero() {

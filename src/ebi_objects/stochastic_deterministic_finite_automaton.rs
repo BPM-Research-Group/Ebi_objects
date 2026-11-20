@@ -30,11 +30,11 @@ pub struct StochasticDeterministicFiniteAutomaton {
     pub terminating_probabilities: Vec<Fraction>, //state -> termination probability
 }
 
-impl StochasticDeterministicFiniteAutomaton {
+impl Default for StochasticDeterministicFiniteAutomaton {
     /**
      * Creates a new SDFA with an initial state. That is, it will have the stochastic language with the empty trace.
      */
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             initial_state: Some(AutomatonState::zero()),
@@ -45,7 +45,9 @@ impl StochasticDeterministicFiniteAutomaton {
             terminating_probabilities: vec![Fraction::one()],
         }
     }
+}
 
+impl StochasticDeterministicFiniteAutomaton {
     /**
      * Creates a new SDFA with the empty language.
      */
@@ -257,7 +259,7 @@ impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
         for (source, (target, (probability, activity))) in sources.into_iter().zip(
             targets
                 .into_iter()
-                .zip(probabilities.into_iter().zip(activities.into_iter())),
+                .zip(probabilities.into_iter().zip(activities)),
         ) {
             let activity = translator.translate_activity(&activity);
             let (_, from) =
@@ -306,7 +308,7 @@ impl Importable for StochasticDeterministicFiniteAutomaton {
     {
         let json: Value = serde_json::from_reader(reader)?;
 
-        let mut result = StochasticDeterministicFiniteAutomaton::new();
+        let mut result = StochasticDeterministicFiniteAutomaton::default();
 
         result.set_initial_state(AutomatonState::of_option(
             json::read_field_index(&json, "initialState").ok(),
@@ -478,7 +480,7 @@ impl<'a> Iterator for StochasticDeterministicFiniteAutomatonIterator<'a> {
             let target = self.it_targets.next().unwrap();
             let activity = self.it_activities.next().unwrap();
             let probability = self.it_probabilities.next().unwrap();
-            
+
             Some((source, target, activity, probability))
         } else {
             None
@@ -530,7 +532,7 @@ impl<'a> Iterator for StochasticDeterministicFiniteAutomatonMutIterator<'a> {
             let target = self.it_targets.next().unwrap();
             let activity = self.it_activities.next().unwrap();
             let probability = self.it_probabilities.next().unwrap();
-            
+
             Some((source, target, activity, probability))
         } else {
             None

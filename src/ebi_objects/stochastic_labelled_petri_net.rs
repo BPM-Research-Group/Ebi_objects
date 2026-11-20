@@ -33,8 +33,8 @@ pub struct StochasticLabelledPetriNet {
     pub weights: Vec<Fraction>,
 }
 
-impl StochasticLabelledPetriNet {
-    pub fn new() -> Self {
+impl Default for StochasticLabelledPetriNet {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             initial_marking: Some(Marking::new(0)),
@@ -47,7 +47,9 @@ impl StochasticLabelledPetriNet {
             weights: vec![],
         }
     }
+}
 
+impl StochasticLabelledPetriNet {
     pub fn new_empty_language() -> Self {
         Self {
             activity_key: ActivityKey::new(),

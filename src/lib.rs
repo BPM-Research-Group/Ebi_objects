@@ -1,4 +1,7 @@
-#![allow(warnings)]
+#![allow(
+    clippy::needless_range_loop,
+    // warnings
+)]
 #![deny(
     clippy::needless_return,
     clippy::useless_format,
@@ -10,7 +13,8 @@
     clippy::get_first,
     clippy::redundant_closure,
     clippy::let_and_return,
-    clippy::to_string_in_format_args
+    clippy::to_string_in_format_args,
+    clippy::useless_borrows_in_formatting
 )]
 #![doc = include_str!("../README.md")]
 

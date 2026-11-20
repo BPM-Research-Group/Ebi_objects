@@ -332,13 +332,9 @@ impl TranslateActivityKey for StochasticNondeterministicFiniteAutomaton {
         for (source, (target, (probability, activity))) in sources.into_iter().zip(
             targets
                 .into_iter()
-                .zip(probabilities.into_iter().zip(activities.into_iter())),
+                .zip(probabilities.into_iter().zip(activities)),
         ) {
-            let activity = if let Some(activity) = activity {
-                Some(translator.translate_activity(&activity))
-            } else {
-                None
-            };
+            let activity = activity.map(|activity| translator.translate_activity(&activity));
             let (_, from) = self.binary_search(source, self.label_to_id(activity), target);
 
             self.sources.insert(from, source);
@@ -641,7 +637,7 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonIterator<'a> {
             let target = self.it_targets.next().unwrap();
             let activity = self.it_activities.next().unwrap();
             let probability = self.it_probabilities.next().unwrap();
-            
+
             Some((source, target, activity, probability))
         } else {
             None
@@ -693,7 +689,7 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
             let target = self.it_targets.next().unwrap();
             let activity = self.it_activities.next().unwrap();
             let probability = self.it_probabilities.next().unwrap();
-            
+
             Some((source, target, activity, probability))
         } else {
             None

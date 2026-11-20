@@ -83,7 +83,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
             return Self::new_empty_language();
         }
 
-        let mut result = StochasticLabelledPetriNet::new();
+        let mut result = StochasticLabelledPetriNet::default();
         let translator =
             ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
         let source = result.add_place();

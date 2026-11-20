@@ -45,6 +45,10 @@ impl StochasticLanguageOfAlignments {
         self.alignments.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.alignments.is_empty()
+    }
+
     pub fn get(&self, index: usize) -> Option<&Vec<Move>> {
         self.alignments.get(index)
     }

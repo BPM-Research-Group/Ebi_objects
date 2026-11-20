@@ -42,9 +42,7 @@ impl<'a> Iterator for TraceIteratorCsv<'a> {
         let mut result = Vec::with_capacity(trace.len());
         for event in trace.iter() {
             let empty = String::new();
-            let activity_label = event
-                .get(self.log.activity_attribute)
-                .unwrap_or_else(|| &empty);
+            let activity_label = event.get(self.log.activity_attribute).unwrap_or(&empty);
             let activity = self
                 .log
                 .activity_key
