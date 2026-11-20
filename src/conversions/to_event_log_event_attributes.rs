@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use ebi_activity_key::{Activity, ActivityKey};
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use process_mining::{
     OCEL,
@@ -126,7 +127,7 @@ impl From<EventLogOcel> for EventLogEventAttributes {
         let activity_attribute = attribute_key.process_attribute_column(1, "a");
         let resource_attribute = attribute_key.process_attribute_column(2, "a");
 
-        let mut object_id2attributes = HashMap::new();
+        let mut object_id2attributes = HashMap::<_, _, FnvBuildHasher>::default();
         for object in objects.iter() {
             let mut attributes = IntMap::new();
             for rust4pm_attribute in &object.attributes {

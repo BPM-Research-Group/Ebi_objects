@@ -48,8 +48,8 @@ pub struct LabelledPetriNet {
     pub transition2output_places_cardinality: Vec<Vec<u64>>, //fields are the same as in StochasticLabelledPetriNet
 }
 
-impl LabelledPetriNet {
-    pub fn new() -> Self {
+impl Default for LabelledPetriNet {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             initial_marking: Some(Marking::new(0)),
@@ -61,7 +61,9 @@ impl LabelledPetriNet {
             transition2output_places_cardinality: vec![],
         }
     }
+}
 
+impl LabelledPetriNet {
     pub fn new_with_activity_key(activity_key: ActivityKey) -> Self {
         Self {
             activity_key,
@@ -123,7 +125,7 @@ impl LabelledPetriNet {
                 .iter()
                 .zip(self.transition2input_places_cardinality.iter())
                 .enumerate()
-                .map(move |(transition, (places, cardinalities))| {
+                .flat_map(move |(transition, (places, cardinalities))| {
                     places.iter().zip(cardinalities.iter()).filter_map(
                         move |(place_2, cardinality)| {
                             if *place_2 == place {
@@ -133,8 +135,7 @@ impl LabelledPetriNet {
                             }
                         },
                     )
-                })
-                .flatten(),
+                }),
         )
     }
 
@@ -205,7 +206,7 @@ impl LabelledPetriNet {
                 .iter()
                 .zip(self.transition2output_places_cardinality.iter())
                 .enumerate()
-                .map(move |(transition, (places, cardinalities))| {
+                .flat_map(move |(transition, (places, cardinalities))| {
                     places.iter().zip(cardinalities.iter()).filter_map(
                         move |(place_2, cardinality)| {
                             if *place_2 == place {
@@ -215,8 +216,7 @@ impl LabelledPetriNet {
                             }
                         },
                     )
-                })
-                .flatten(),
+                }),
         )
     }
 

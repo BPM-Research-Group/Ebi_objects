@@ -19,6 +19,7 @@ use crate::{
 };
 use ebi_activity_key::Activity;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
+use fnv::FnvBuildHasher;
 use std::collections::HashMap;
 
 macro_rules! tree {
@@ -31,7 +32,7 @@ macro_rules! tree {
                     return Self::new_empty_language();
                 }
 
-                let mut result = LabelledPetriNet::new();
+                let mut result = LabelledPetriNet::default();
                 let translator =
                     ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
                 let source = result.add_place();
@@ -575,7 +576,7 @@ impl From<DirectlyFollowsModel> for LabelledPetriNet {
             return Self::new_empty_language();
         }
 
-        let mut result = LabelledPetriNet::new();
+        let mut result = LabelledPetriNet::default();
         let translator =
             ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
         let source = result.add_place();
@@ -690,7 +691,7 @@ impl From<DeterministicFiniteAutomaton> for LabelledPetriNet {
             return Self::new_empty_language();
         };
 
-        let mut result = LabelledPetriNet::new();
+        let mut result = LabelledPetriNet::default();
         let translator =
             ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
 
@@ -746,17 +747,17 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
     fn try_from(pnml: process_mining::PetriNet) -> Result<Self, Self::Error> {
         log::info!("convert PNML to LPN");
 
-        let mut result = LabelledPetriNet::new();
+        let mut result = LabelledPetriNet::default();
 
         //create map of places
-        let mut place2index = HashMap::new();
+        let mut place2index = HashMap::<_, _, FnvBuildHasher>::default();
         for (place_id, _) in pnml.places {
             let place = result.add_place();
             place2index.insert(place_id, place);
         }
 
         //transitions
-        let mut transition2index = HashMap::new();
+        let mut transition2index = HashMap::<_, _, FnvBuildHasher>::default();
         for (transition_id, transition) in &pnml.transitions {
             let label = match &transition.label {
                 Some(activity) => Some(result.activity_key_mut().process_activity(activity)),

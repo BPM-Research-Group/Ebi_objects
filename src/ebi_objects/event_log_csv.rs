@@ -13,6 +13,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One};
 use ebi_derive::{ActivityKey, AttributeKey};
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use std::{
     collections::{HashMap, hash_map::Entry},
@@ -181,7 +182,7 @@ impl Importable for EventLogCsv {
                 .ok_or_else(|| anyhow!("parameter not found"))?
                 .0
                 .as_string()?;
-            if sep.as_bytes().len() != 1 {
+            if sep.len() != 1 {
                 return Err(anyhow!(
                     "separator must be a one one-byte character, found `{}`",
                     sep
@@ -196,7 +197,7 @@ impl Importable for EventLogCsv {
                 .ok_or_else(|| anyhow!("parameter not found"))?
                 .0
                 .as_string()?;
-            if quote.as_bytes().len() != 1 {
+            if quote.len() != 1 {
                 return Err(anyhow!(
                     "quote character must be a one one-byte character, found `{}`",
                     quote
@@ -308,7 +309,7 @@ impl Importable for EventLogCsv {
         };
 
         //combine events into traces
-        let mut traces: HashMap<String, Vec<IntMap<Attribute, String>>> = HashMap::new();
+        let mut traces: HashMap<String, Vec<IntMap<Attribute, String>>, FnvBuildHasher> = HashMap::default();
         for event in events {
             if let Some(trace_id) = event.get(trace_id_attribute) {
                 match traces.entry(trace_id.to_string()) {

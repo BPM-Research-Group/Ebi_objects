@@ -1,6 +1,7 @@
 use crate::constants::ebi_object::EbiObject;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{ConstFraction, Fraction};
+use fnv::FnvBuildHasher;
 use std::{collections::HashMap, fmt::Debug, hash::Hash, io::BufRead};
 use strum_macros::Display;
 
@@ -23,7 +24,7 @@ pub trait Importable {
         Self: Sized;
 
     fn default_importer_parameter_values() -> ImporterParameterValues {
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         for parameter in Self::IMPORTER_PARAMETERS {
             result.insert(*parameter, (parameter.default(), false));
         }
@@ -46,7 +47,7 @@ macro_rules! from_string {
 }
 pub(crate) use from_string;
 
-pub type ImporterParameterValues = HashMap<ImporterParameter, (ImporterParameterValue, bool)>;
+pub type ImporterParameterValues = HashMap<ImporterParameter, (ImporterParameterValue, bool), FnvBuildHasher>;
 
 /// Parameters that can be given to an importer.
 /// It is a design decision that every parameter must have a default,

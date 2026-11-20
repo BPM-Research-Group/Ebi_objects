@@ -15,6 +15,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed};
 use ebi_derive::ActivityKey;
+use fnv::FnvBuildHasher;
 use layout::topo::layout::VisualGraph;
 use serde_json::Value;
 use std::{cmp::Ordering, collections::HashMap, fmt, io::BufRead};
@@ -156,7 +157,7 @@ impl StochasticDeterministicFiniteAutomaton {
     /**
      * Scales the outgoing probabilities of the state.
      */
-    pub fn scale_outgoing_probabilities(&mut self, state2scale: HashMap<AutomatonState, Fraction>) {
+    pub fn scale_outgoing_probabilities(&mut self, state2scale: HashMap<AutomatonState, Fraction, FnvBuildHasher>) {
         let mut new_terminating_probabilities =
             vec![Fraction::one(); self.terminating_probabilities.len()];
         for (state, _, _, outgoing_probability) in &mut self.into_iter() {

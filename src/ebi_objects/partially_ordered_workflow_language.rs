@@ -14,6 +14,7 @@ use ebi_activity_key::{
 };
 use ebi_bpmn::ebi_arithmetic::Fraction;
 use ebi_derive::ActivityKey;
+use fnv::FnvBuildHasher;
 use layout::{adt::dag::NodeHandle, core::base::Orientation, topo::layout::VisualGraph};
 use serde_json::{Map, Value, json};
 use std::{
@@ -113,12 +114,10 @@ impl PartiallyOrderedWorkflowLanguage {
     /// Return the rank of the child within parent that contains grandChild.
     /// If grandChild is not a child of parent, will return None.
     pub fn get_child_rank_with(&self, parent: usize, grand_child: usize) -> Option<usize> {
-        let mut child_rank = 0;
-        for child in self.get_children(parent) {
+        for (child_rank, child) in self.get_children(parent).enumerate() {
             if self.is_parent_of(child, grand_child) {
                 return Some(child_rank);
             }
-            child_rank += 1;
         }
         None
     }
@@ -155,9 +154,10 @@ impl PartiallyOrderedWorkflowLanguage {
 
         for child in (node + 1)..self.traverse(node) {
             if let PowlNode::Activity { activity, .. } = self.tree[child]
-                && activity.is_some() {
-                    return false;
-                }
+                && activity.is_some()
+            {
+                return false;
+            }
         }
         true
     }
@@ -303,13 +303,11 @@ fn import_node(
                 id_to_capitalised_string(&id)
             )
         }),
-        x => {
-            Err(anyhow!(
-                "{} has a type `{}`, but expected `activity`, `partial_order` or `choice_graph`.",
-                id_to_capitalised_string(&id),
-                x
-            ))
-        }
+        x => Err(anyhow!(
+            "{} has a type `{}`, but expected `activity`, `partial_order` or `choice_graph`.",
+            id_to_capitalised_string(&id),
+            x
+        )),
     }
 }
 
@@ -352,17 +350,14 @@ fn import_activity(
     };
 
     //read the label
-    let activity = if let Some(label) = json::read_string_or_null_from_object(json_model, "label")
+    let activity = json::read_string_or_null_from_object(json_model, "label")
         .with_context(|| {
-        anyhow!(
-            "{} has a field `label`, which should be absent or of type string.",
-            id_to_capitalised_string(&id)
-        )
-    })? {
-        Some(activity_key.process_activity(&label))
-    } else {
-        None
-    };
+            anyhow!(
+                "{} has a field `label`, which should be absent or of type string.",
+                id_to_capitalised_string(&id)
+            )
+        })?
+        .map(|label| activity_key.process_activity(&label));
 
     Ok(vec![PowlNode::Activity {
         id,
@@ -403,7 +398,7 @@ fn import_partial_order(
                 id_to_string(&id)
             )
         })?
-        .into_iter()
+        .iter()
         .enumerate()
     {
         //transform to object
@@ -528,7 +523,7 @@ fn import_choice_graph(
                 id_to_capitalised_string(&id)
             )
         })?
-        .into_iter()
+        .iter()
         .enumerate()
     {
         //transform to object
@@ -685,12 +680,12 @@ fn read_nodes(
     json_model: &Map<String, Value>,
     activity_key: &mut ActivityKey,
     keys: &mut Keys,
-) -> Result<(Vec<PowlNode>, HashMap<String, usize>)> {
-    let mut id_2_index = HashMap::new();
+) -> Result<(Vec<PowlNode>, HashMap<String, usize, FnvBuildHasher>)> {
+    let mut id_2_index = HashMap::<_, _, FnvBuildHasher>::default();
     let mut nodes: Vec<PowlNode> = vec![];
     for (node_index, json_node) in json::read_list_from_object(json_model, "nodes")
         .with_context(|| anyhow!("Reading `nodes` as a list."))?
-        .into_iter()
+        .iter()
         .enumerate()
     {
         //transform to object

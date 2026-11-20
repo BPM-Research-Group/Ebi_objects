@@ -108,6 +108,7 @@ impl EventLogXes {
         std::mem::swap(&mut self.rust4pm_log.traces, &mut rust4pm_traces);
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn retain_traces<'a>(&'a mut self, f: Box<dyn Fn(&Vec<Activity>) -> bool + 'static>) {
         let mut activity_key = self.activity_key().clone();
 

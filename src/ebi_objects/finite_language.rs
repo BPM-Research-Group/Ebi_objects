@@ -32,14 +32,16 @@ pub struct FiniteLanguage {
     pub traces: HashSet<Vec<Activity>, FnvBuildHasher>,
 }
 
-impl FiniteLanguage {
-    pub fn new() -> Self {
+impl Default for FiniteLanguage {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             traces: Self::new_hashmap(),
         }
     }
+}
 
+impl FiniteLanguage {
     pub fn new_with_activity_key_from<T>(obj: &T) -> Self
     where
         T: HasActivityKey,

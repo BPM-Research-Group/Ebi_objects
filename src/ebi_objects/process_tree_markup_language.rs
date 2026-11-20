@@ -8,6 +8,7 @@ use crate::{
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use fnv::FnvBuildHasher;
 use quick_xml::{
     Reader,
     events::{BytesEnd, BytesStart, Event},
@@ -50,8 +51,8 @@ struct State {
     seen_process_tree_tag: bool,
     activity_key: ActivityKey,
     root: Option<String>,
-    nodes: HashMap<String, Node>,
-    edges: HashMap<String, Vec<String>>,
+    nodes: HashMap<String, Node, FnvBuildHasher>,
+    edges: HashMap<String, Vec<String>, FnvBuildHasher>,
 }
 
 impl State {
@@ -66,8 +67,8 @@ impl State {
             seen_process_tree_tag: false,
             activity_key: ActivityKey::new(),
             root: None,
-            nodes: HashMap::new(),
-            edges: HashMap::new(),
+            nodes: HashMap::default(),
+            edges: HashMap::default(),
         }
     }
 
@@ -221,7 +222,7 @@ impl State {
         }
     }
 
-    fn convert_to_tree(self) -> Result<ProcessTree> {
+    fn into_tree(self) -> Result<ProcessTree> {
         if let Some(root) = self.root {
             let mut tree = vec![];
             let mut nodes = self.nodes;
@@ -258,8 +259,8 @@ impl State {
     }
 
     fn to_tree_node(
-        nodes: &mut HashMap<String, Node>,
-        edges: &mut HashMap<String, Vec<String>>,
+        nodes: &mut HashMap<String, Node, FnvBuildHasher>,
+        edges: &mut HashMap<String, Vec<String>, FnvBuildHasher>,
         tree: &mut Vec<Node>,
         node_id: &str,
     ) -> Result<()> {
@@ -371,7 +372,7 @@ For instance:
                 Ok(Event::Eof) => {
                     state.can_eof()?;
                     return Ok(Self {
-                        tree: state.convert_to_tree()?,
+                        tree: state.into_tree()?,
                     });
                 }
 

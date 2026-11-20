@@ -14,7 +14,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticLabelledPetriNet
         log::info!("convert SDFA to SLPN");
 
         if let Some(initial_state) = value.initial_state {
-            let mut result = LabelledPetriNet::new();
+            let mut result = LabelledPetriNet::default();
             let translator =
                 ActivityKeyTranslator::new(value.activity_key(), result.activity_key_mut());
             let mut weights = vec![];
@@ -193,7 +193,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for StochasticLabelledPetri
             return Self::new_empty_language();
         }
 
-        let mut result = LabelledPetriNet::new();
+        let mut result = LabelledPetriNet::default();
         let mut weights = vec![];
 
         let source = result.add_place();

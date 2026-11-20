@@ -807,7 +807,7 @@ impl Graphable for DirectlyFollowsGraph {
                     &mut graph,
                     &nodes[self
                         .activity_key
-                        .get_id_from_activity(&self.state_2_activity[activity.0])],
+                        .get_id_from_activity(self.state_2_activity[activity.0])],
                     &sink,
                     &format!("{}", weight),
                 );
@@ -824,10 +824,10 @@ impl Graphable for DirectlyFollowsGraph {
                 &mut graph,
                 &nodes[self
                     .activity_key
-                    .get_id_from_activity(&self.state_2_activity[source.0])],
+                    .get_id_from_activity(self.state_2_activity[source.0])],
                 &nodes[self
                     .activity_key
-                    .get_id_from_activity(&self.state_2_activity[target.0])],
+                    .get_id_from_activity(self.state_2_activity[target.0])],
                 &format!("{}", weight),
             );
         }

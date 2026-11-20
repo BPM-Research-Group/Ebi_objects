@@ -16,6 +16,7 @@ use ebi_bpmn::{
     },
     traits::objectable::BPMNObject,
 };
+use fnv::FnvBuildHasher;
 use layout::{core::base::Orientation, topo::layout::VisualGraph};
 use std::{collections::HashMap, io::Write};
 
@@ -152,7 +153,7 @@ impl Graphable for BusinessProcessModelAndNotation {
     fn to_dot(&self) -> Result<VisualGraph> {
         let mut graph = VisualGraph::new(Orientation::LeftToRight);
 
-        let mut object_2_node = HashMap::new();
+        let mut object_2_node = HashMap::<_, _, FnvBuildHasher>::default();
         for element in &self.elements() {
             //add nodes
 

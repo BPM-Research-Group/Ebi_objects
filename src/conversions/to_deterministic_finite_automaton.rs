@@ -20,6 +20,7 @@ use crate::{
 };
 use ebi_activity_key::HasActivityKey;
 use ebi_bpmn::ebi_arithmetic::ebi_number::{Signed, Zero};
+use fnv::FnvBuildHasher;
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 impl From<FiniteLanguage> for DeterministicFiniteAutomaton {
@@ -189,7 +190,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
         let mut result = DeterministicFiniteAutomaton::new();
         let translator = ActivityKeyTranslator::new(tree.activity_key(), result.activity_key_mut());
 
-        let mut markingset2node = HashMap::new();
+        let mut markingset2node = HashMap::<_, _, FnvBuildHasher>::default();
 
         //initial state
         let source_node = result.initial_state.unwrap(); //exists by contract of new()
@@ -202,7 +203,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
             let node = markingset2node[&markingset];
 
             //gather activity -> marking set (for each activity, the set of markings that can be reached with that activity)
-            let mut activity2markings = HashMap::new();
+            let mut activity2markings = HashMap::<_, _, FnvBuildHasher>::default();
             {
                 let mut inner_queue = VecDeque::new();
                 let mut inner_visited = HashSet::new();
@@ -287,7 +288,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
         let mut result = DeterministicFiniteAutomaton::new();
         let translator = ActivityKeyTranslator::new(snfa.activity_key(), result.activity_key_mut());
 
-        let mut markingset2node = HashMap::new();
+        let mut markingset2node = HashMap::<_, _, FnvBuildHasher>::default();
 
         //initial state
         let source_node = result.initial_state.unwrap(); //exists by contract of new()
@@ -300,7 +301,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
             let node = markingset2node[&markingset];
 
             //gather activity -> marking set (for each activity, the set of markings that can be reached with that activity)
-            let mut activity2markings = HashMap::new();
+            let mut activity2markings = HashMap::<_, _, FnvBuildHasher>::default();
             {
                 let mut inner_queue = VecDeque::new();
                 let mut inner_visited = HashSet::new();

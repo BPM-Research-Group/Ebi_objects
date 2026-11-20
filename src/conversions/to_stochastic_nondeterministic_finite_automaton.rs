@@ -11,6 +11,7 @@ use crate::{
     },
 };
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
+use fnv::FnvBuildHasher;
 use std::collections::{HashMap, VecDeque, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomaton {
@@ -21,7 +22,7 @@ impl From<FiniteStochasticLanguage> for StochasticNondeterministicFiniteAutomato
         if value.number_of_traces().is_zero() {
             result.initial_state = None;
         } else {
-            let mut final_states = HashMap::new();
+            let mut final_states = HashMap::<_, _, FnvBuildHasher>::default();
             result.activity_key = value.activity_key;
 
             //create automaton
@@ -291,7 +292,7 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
         let mut result = StochasticNondeterministicFiniteAutomaton::default();
         let translator = ActivityKeyTranslator::new(tree.activity_key(), result.activity_key_mut());
 
-        let mut marking2node = HashMap::new();
+        let mut marking2node = HashMap::<_, _, FnvBuildHasher>::default();
 
         //initial state
         let source_node = result.initial_state.unwrap(); //exists by contract of new()

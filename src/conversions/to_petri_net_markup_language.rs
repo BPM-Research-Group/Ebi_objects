@@ -11,6 +11,7 @@ use crate::{
     },
 };
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, anyhow};
+use fnv::FnvBuildHasher;
 use process_mining::{
     PetriNet,
     core::process_models::petri_net::{self, ArcType},
@@ -27,7 +28,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
             let mut result = PetriNet::new();
 
             //create places
-            let mut place2new_place = HashMap::new();
+            let mut place2new_place = HashMap::<_, _, FnvBuildHasher>::default();
             {
                 for place in 0..lpn.get_number_of_places() {
                     let new_place = result.add_place(None);
@@ -50,7 +51,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
                 //incoming
                 {
                     //transform to a map of places and arc weights
-                    let mut map = HashMap::new();
+                    let mut map = HashMap::<_, _, FnvBuildHasher>::default();
                     for (pos, place) in lpn.transition2input_places[transition].iter().enumerate() {
                         *map.entry(*place).or_insert(0) += u32::try_from(
                             lpn.transition2input_places_cardinality[transition][pos],
@@ -72,7 +73,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
                 //outgoing
                 {
                     //transform to a map of places and arc weights
-                    let mut map = HashMap::new();
+                    let mut map = HashMap::<_, _, FnvBuildHasher>::default();
                     for (pos, place) in lpn.transition2output_places[transition].iter().enumerate()
                     {
                         *map.entry(*place).or_insert(0) += u32::try_from(

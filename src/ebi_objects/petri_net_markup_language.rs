@@ -37,7 +37,7 @@ impl Importable for PetriNetMarkupLanguage {
         parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject> {
         Ok(EbiObject::LabelledPetriNet(
-            Self::import(reader, parameter_values)?.try_into()?,
+            Self::import(reader, parameter_values)?.into(),
         ))
     }
 
@@ -95,7 +95,7 @@ impl Importable for PetriNetMarkupLanguage {
                 //end of file: check whether we can finish
                 (_, Event::Eof) => {
                     can_eof(&state).with_context(|| "Unexpected end of file.")?;
-                    return Ok(PetriNetMarkupLanguage(state.to_lpn()?));
+                    return Ok(PetriNetMarkupLanguage(state.into_lpn()?));
                 }
 
                 _ => (),
@@ -184,7 +184,7 @@ impl Exportable for PetriNetMarkupLanguage {
 
 impl Graphable for PetriNetMarkupLanguage {
     fn to_dot(&self) -> Result<layout::topo::layout::VisualGraph> {
-        TryInto::<LabelledPetriNet>::try_into(self.clone())?.to_dot()
+        Into::<LabelledPetriNet>::into(self.clone()).to_dot()
     }
 }
 
@@ -308,7 +308,8 @@ pub(crate) mod parser_state {
         ebi_objects::petri_net_markup_language::{tag_pnml::DraftPnml, tags::OpenedTag},
     };
     use anyhow::{Result, anyhow};
-    use quick_xml::events::BytesStart;
+    use fnv::FnvBuildHasher;
+use quick_xml::events::BytesStart;
     use std::collections::{HashMap, HashSet};
 
     pub(crate) struct ParserState {
@@ -316,7 +317,7 @@ pub(crate) mod parser_state {
         pub(crate) open_tags: Vec<OpenedTag>,
         pub(crate) ids: HashSet<String>,
         pub(crate) pnmls: Vec<DraftPnml>,
-        pub(crate) not_recognised_id_2_tag: HashMap<String, String>,
+        pub(crate) not_recognised_id_2_tag: HashMap<String, String, FnvBuildHasher>,
     }
 
     impl ParserState {
@@ -326,7 +327,7 @@ pub(crate) mod parser_state {
                 open_tags: vec![],
                 pnmls: vec![],
                 ids: HashSet::new(),
-                not_recognised_id_2_tag: HashMap::new(),
+                not_recognised_id_2_tag: HashMap::default(),
             }
         }
 
@@ -342,7 +343,7 @@ pub(crate) mod parser_state {
             }
         }
 
-        pub(crate) fn to_lpn(self) -> Result<LabelledPetriNet> {
+        pub(crate) fn into_lpn(self) -> Result<LabelledPetriNet> {
             let ParserState { mut pnmls, .. } = self;
 
             if pnmls.len() == 1 {
@@ -393,15 +394,15 @@ pub(crate) mod namespace {
 
     #[derive(Clone, Copy, EnumIs)]
     pub enum NameSpace {
-        PNML,
+        Pnml,
     }
 
     pub const NAMESPACE_PNML: &str = "http://www.pnml.org/version-2009/grammar/pnml";
 
     pub(crate) fn is_in_namespace(result: ResolveResult) -> Option<NameSpace> {
         match result {
-            ResolveResult::Unbound => Some(NameSpace::PNML),
-            ResolveResult::Bound(Namespace(n)) if n == NAMESPACE_PNML => Some(NameSpace::PNML),
+            ResolveResult::Unbound => Some(NameSpace::Pnml),
+            ResolveResult::Bound(Namespace(n)) if n == NAMESPACE_PNML => Some(NameSpace::Pnml),
             _ => None,
         }
     }
@@ -526,6 +527,7 @@ pub(crate) mod tags {
         }
     }
 
+    #[allow(clippy::large_enum_variant)]
     #[derive(Debug)]
     pub(crate) enum OpenedTag {
         Unknown,
@@ -780,7 +782,7 @@ mod tag_page {
 
             Ok(OpenedTag::Page {
                 id,
-                lpn: LabelledPetriNet::new(),
+                lpn: LabelledPetriNet::default(),
                 place_id_2_rank: HashMap::<_, _, FnvBuildHasher>::default(),
                 transition_id_2_rank: HashMap::<_, _, FnvBuildHasher>::default(),
                 draft_arcs: vec![],

@@ -16,6 +16,7 @@ use ebi_bpmn::{
     BPMNCreator, BusinessProcessModelAndNotation, Container, EndEventType, GatewayType,
     GlobalIndex, StartEventType,
 };
+use fnv::FnvBuildHasher;
 
 impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
     type Error = Error;
@@ -317,7 +318,7 @@ fn transform_node(
         }
         Some(Node::Operator(Operator::Interleaved, _)) => {
             let children = tree.get_children(node).collect::<Vec<_>>();
-            let mut children_left_2_gateway = HashMap::new();
+            let mut children_left_2_gateway = HashMap::<_, _, FnvBuildHasher>::default();
             children_left_2_gateway.insert(vec![], sink);
             children_left_2_gateway.insert(children.clone(), source);
 

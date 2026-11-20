@@ -17,6 +17,7 @@ use crate::{
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use fnv::FnvBuildHasher;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -67,7 +68,7 @@ For instance:
         reader.read_to_string(&mut string)?;
         let mut tokeniser = Tokeniser::new(&string);
 
-        let mut lpn = LabelledPetriNet::new();
+        let mut lpn = LabelledPetriNet::default();
 
         let place_id_2_place = tokeniser
             .read_places(&mut lpn)
@@ -294,7 +295,7 @@ impl<'a> Tokeniser<'a> {
         if self.remainder.is_empty() {
             //no more tokens
             None
-        } else if let Some(mut index) = self.remainder.find(&[' ', '\t', '\n', '\r', ',', ';', ':'])
+        } else if let Some(mut index) = self.remainder.find([' ', '\t', '\n', '\r', ',', ';', ':'])
         {
             let mut token;
             let remainder;
@@ -329,7 +330,7 @@ impl<'a> Tokeniser<'a> {
         !string.contains([',', ';', '(', ')', '{', '}', '\t', '\n', '\r', ' '])
     }
 
-    fn read_places(&mut self, lpn: &mut LabelledPetriNet) -> Result<HashMap<String, usize>> {
+    fn read_places(&mut self, lpn: &mut LabelledPetriNet) -> Result<HashMap<String, usize, FnvBuildHasher>> {
         //read place
         match self.next() {
             Some("PLACE") => {}
@@ -337,7 +338,7 @@ impl<'a> Tokeniser<'a> {
             None => return Err(anyhow!("expected PLACE")),
         };
 
-        let mut map = HashMap::new();
+        let mut map = HashMap::<_, _, FnvBuildHasher>::default();
 
         //read places
         while let Some(token) = self.next() {
@@ -376,7 +377,7 @@ impl<'a> Tokeniser<'a> {
 
     fn read_initial_marking(
         &mut self,
-        place_id_2_place: &HashMap<String, usize>,
+        place_id_2_place: &HashMap<String, usize, FnvBuildHasher>,
         lpn: &mut LabelledPetriNet,
     ) -> Result<()> {
         //read marking
@@ -465,7 +466,7 @@ impl<'a> Tokeniser<'a> {
 
     fn read_transitions(
         &mut self,
-        place_id_2_place: HashMap<String, usize>,
+        place_id_2_place: HashMap<String, usize, FnvBuildHasher>,
         lpn: &mut LabelledPetriNet,
     ) -> Result<()> {
         #[derive(PartialEq)]

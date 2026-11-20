@@ -45,8 +45,10 @@ pub struct EventLogEventAttributes {
     pub activity_attribute: Attribute,
     pub resource_attribute: Option<Attribute>,
     pub time_attribute: Option<Attribute>,
-    pub traces: Vec<(Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>)>,
+    pub traces: Traces,
 }
+
+type Traces = Vec<(Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>)>;
 
 impl EventLogEventAttributes {
     pub fn create_attribute_key(&mut self, rust4pm_log: process_mining::EventLog) {

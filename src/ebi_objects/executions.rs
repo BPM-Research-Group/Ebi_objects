@@ -52,8 +52,8 @@ impl TranslateActivityKey for Executions {
         let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
 
         self.executions.iter_mut().for_each(|execution| {
-            if let Some(mut activity) = execution.activity {
-                translator.translate_activity(&mut activity);
+            if let Some(activity) = execution.activity {
+                translator.translate_activity(&activity);
             }
         });
 
@@ -107,7 +107,7 @@ impl Importable for Executions {
         let mut attribute_key = AttributeKey::new();
         let mut executions = Vec::with_capacity(json_executions.len());
 
-        for (execution_i, json_execution) in json_executions.into_iter().enumerate() {
+        for (execution_i, json_execution) in json_executions.iter().enumerate() {
             //trace
             let trace =
                 json::read_field_index(json_execution, JSON_KEY_TRACE).with_context(|| {
@@ -127,14 +127,9 @@ impl Importable for Executions {
                 })?;
 
             //activity
-            let activity = if let Some(activity) =
-                json::read_field_string_or_null(json_execution, "activity").with_context(|| {
-                    anyhow!("Could not reach activity of execution {}.", execution_i)
-                })? {
-                Some(activity_key.process_activity(&activity))
-            } else {
-                None
-            };
+            let activity = json::read_field_string_or_null(json_execution, "activity")
+                .with_context(|| anyhow!("Could not reach activity of execution {}.", execution_i))?
+                .map(|activity| activity_key.process_activity(&activity));
 
             //also in log
             let also_in_log = json::read_field_bool(json_execution, JSON_KEY_ALSO_IN_LOG)
@@ -166,7 +161,7 @@ impl Importable for Executions {
                         )
                     })?;
             let mut other_enabled_transitions = Vec::with_capacity(json_enabled.len());
-            for (enabledd_i, json_enabledd) in json_enabled.into_iter().enumerate() {
+            for (enabledd_i, json_enabledd) in json_enabled.iter().enumerate() {
                 other_enabled_transitions.push(json::read_index(json_enabledd).with_context(
                     || {
                         anyhow!(
@@ -199,14 +194,9 @@ impl Importable for Executions {
                     })?;
 
             //resource
-            let resource = if let Some(resource) =
-                json::read_field_string_or_null(json_execution, JSON_KEY_RESOURCE).with_context(
-                    || anyhow!("Could not read resource of execution {}.", execution_i),
-                )? {
-                Some(resource_key.process_activity(&resource))
-            } else {
-                None
-            };
+            let resource = json::read_field_string_or_null(json_execution, JSON_KEY_RESOURCE)
+                .with_context(|| anyhow!("Could not read resource of execution {}.", execution_i))?
+                .map(|resource| resource_key.process_activity(&resource));
 
             let resource_utilisation_fired_transition = json::read_field_fraction_or_null(
                 json_execution,
@@ -232,7 +222,7 @@ impl Importable for Executions {
             })?;
             let mut resource_utilisation_other_enabled_transitions =
                 Vec::with_capacity(json_utilisation_enabled.len());
-            for (enabledd_i, json_enabledd) in json_utilisation_enabled.into_iter().enumerate() {
+            for (enabledd_i, json_enabledd) in json_utilisation_enabled.iter().enumerate() {
                 resource_utilisation_other_enabled_transitions.push(
                     json::read_fraction_or_null(json_enabledd).with_context(|| {
                         anyhow!(

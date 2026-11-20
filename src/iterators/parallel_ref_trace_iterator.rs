@@ -533,7 +533,7 @@ use rayon::iter::ParallelIterator;
 
     #[test]
     fn keys_iterator() {
-        let mut umap = HashMap::new();
+        let mut umap = HashMap::<_, _, FnvBuildHasher>::default();
         for i in 10..100 {
             umap.insert(i, i + 200);
         }

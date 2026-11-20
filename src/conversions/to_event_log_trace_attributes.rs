@@ -6,6 +6,7 @@ use crate::{
         event_log_ocel::EventLogOcel,
     },
 };
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use process_mining::{
     OCEL,
@@ -49,7 +50,7 @@ impl From<EventLogOcel> for EventLogTraceAttributes {
 
         //gather attributes
         let mut attribute_key = AttributeKey::new();
-        let mut object_id2attributes = HashMap::new();
+        let mut object_id2attributes = HashMap::<_, _, FnvBuildHasher>::default();
         for object in objects.iter() {
             let mut attributes = IntMap::new();
             for rust4pm_attribute in &object.attributes {

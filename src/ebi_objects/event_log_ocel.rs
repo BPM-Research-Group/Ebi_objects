@@ -15,6 +15,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One};
 use ebi_derive::ActivityKey;
+use fnv::FnvBuildHasher;
 use intmap::IntMap;
 use process_mining::{
     Importable as I, OCEL,
@@ -68,7 +69,7 @@ pub struct EventLogOcel {
     pub rust4pm_log: process_mining::OCEL,
     /// The object type that determines the traces, in case an event log is extracted.
     pub case_object_type: ObjectType,
-    ///
+    /// The object type that determines the resource, in case an event log is extracted.
     pub(crate) resource_object_type: Option<ObjectType>,
     pub(crate) time_attribute: String,
 }
@@ -80,9 +81,9 @@ impl EventLogOcel {
         }
     }
 
-    pub fn get_relevant_objects(objects: &Vec<OCELObject>, object_type: &str) -> HashSet<String> {
+    pub fn get_relevant_objects(objects: &[OCELObject], object_type: &str) -> HashSet<String> {
         objects
-            .into_iter()
+            .iter()
             .filter_map(|ob| {
                 if ob.object_type == object_type {
                     Some(ob.id.clone())
@@ -94,7 +95,7 @@ impl EventLogOcel {
     }
 
     pub fn get_trace_lengths(&self) -> Vec<usize> {
-        let mut object_id2length = HashMap::new();
+        let mut object_id2length = HashMap::<_, _, FnvBuildHasher>::default();
         let objects = Self::get_relevant_objects(&self.rust4pm_log.objects, &self.case_object_type);
         for event in &self.rust4pm_log.events {
             for relation in &event.relationships {
@@ -110,7 +111,7 @@ impl EventLogOcel {
     }
 
     pub fn find_object_type<'a>(
-        object_types: &'a Vec<OCELType>,
+        object_types: &'a [OCELType],
         name_or_number: &str,
     ) -> Option<&'a ObjectType> {
         if let Some(object_type) = object_types.iter().find(|t| t.name == name_or_number) {
@@ -312,16 +313,17 @@ impl StartEndActivities for EventLogOcel {
                         .activity_key()
                         .process_activity_attempt(&event.event_type);
                     if let Some(activity) = activity
-                        && started_traces.insert(relation.object_id.clone()) {
-                            match result.entry(activity) {
-                                intmap::Entry::Occupied(mut occupied_entry) => {
-                                    *occupied_entry.get_mut() += 1
-                                }
-                                intmap::Entry::Vacant(vacant_entry) => {
-                                    vacant_entry.insert(Fraction::one());
-                                }
+                        && started_traces.insert(relation.object_id.clone())
+                    {
+                        match result.entry(activity) {
+                            intmap::Entry::Occupied(mut occupied_entry) => {
+                                *occupied_entry.get_mut() += 1
+                            }
+                            intmap::Entry::Vacant(vacant_entry) => {
+                                vacant_entry.insert(Fraction::one());
                             }
                         }
+                    }
                 }
             }
         }
@@ -336,21 +338,22 @@ impl StartEndActivities for EventLogOcel {
         for event in self.rust4pm_log.events.iter().rev() {
             for relation in &event.relationships {
                 if relevant_objects.contains(&relation.object_id)
-                    && started_traces.insert(relation.object_id.clone()) {
-                        let activity = self
-                            .activity_key()
-                            .process_activity_attempt(&event.event_type);
-                        if let Some(activity) = activity {
-                            match result.entry(activity) {
-                                intmap::Entry::Occupied(mut occupied_entry) => {
-                                    *occupied_entry.get_mut() += 1
-                                }
-                                intmap::Entry::Vacant(vacant_entry) => {
-                                    vacant_entry.insert(Fraction::one());
-                                }
+                    && started_traces.insert(relation.object_id.clone())
+                {
+                    let activity = self
+                        .activity_key()
+                        .process_activity_attempt(&event.event_type);
+                    if let Some(activity) = activity {
+                        match result.entry(activity) {
+                            intmap::Entry::Occupied(mut occupied_entry) => {
+                                *occupied_entry.get_mut() += 1
+                            }
+                            intmap::Entry::Vacant(vacant_entry) => {
+                                vacant_entry.insert(Fraction::one());
                             }
                         }
                     }
+                }
             }
         }
         result

@@ -1,6 +1,7 @@
 use crate::{Attribute, DataType, Infoable};
 use anyhow::anyhow;
 use ebi_bpmn::ebi_arithmetic::anyhow::Result;
+use fnv::FnvBuildHasher;
 use process_mining::core::event_data::{
     case_centric::AttributeValue, object_centric::OCELAttributeValue,
 };
@@ -9,7 +10,7 @@ use std::{borrow::Borrow, collections::HashMap};
 
 #[derive(Clone, Debug)]
 pub struct AttributeKey {
-    pub(crate) name2attribute: HashMap<String, Attribute>,
+    pub(crate) name2attribute: HashMap<String, Attribute, FnvBuildHasher>,
     pub(crate) attribute2name: Vec<String>,
     pub(crate) attribute2type: Vec<DataType>,
 }
@@ -17,7 +18,7 @@ pub struct AttributeKey {
 impl<'a> AttributeKey {
     pub fn new() -> Self {
         Self {
-            name2attribute: HashMap::new(),
+            name2attribute: HashMap::default(),
             attribute2name: vec![],
             attribute2type: vec![],
         }

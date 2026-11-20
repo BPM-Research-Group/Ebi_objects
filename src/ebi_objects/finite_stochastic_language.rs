@@ -170,6 +170,7 @@ impl FiniteStochasticLanguage {
      * Note to callers: please put the closure definition inside the Box::new in the call of retain_traces.
      * Otherwise, Rust may give weird compile errors.
      */
+    #[allow(clippy::type_complexity)]
     pub fn retain_traces_probabilities<'a>(
         &'a mut self,
         f: Box<dyn Fn(&Vec<Activity>, &Fraction) -> bool + 'static>,
@@ -186,6 +187,7 @@ impl FiniteStochasticLanguage {
      * Note to callers: please put the closure definition inside the Box::new in the call of retain_traces.
      * Otherwise, Rust may give weird compile errors.
      */
+    #[allow(clippy::type_complexity)]
     pub fn retain_traces_probabilities_mut<'a>(
         &'a mut self,
         f: Box<dyn FnMut(&Vec<Activity>, &mut Fraction) -> bool + 'static>,
@@ -225,7 +227,7 @@ impl NumberOfTraces for FiniteStochasticLanguage {
     }
 
     fn number_of_events(&self) -> usize {
-        self.traces.iter().map(|(t, _)| t.len()).sum()
+        self.traces.keys().map(|t| t.len()).sum()
     }
 }
 

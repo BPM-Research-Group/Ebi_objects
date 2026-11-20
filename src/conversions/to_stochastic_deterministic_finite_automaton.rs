@@ -10,6 +10,7 @@ use crate::{
     traits::trace_iterators::{IntoRefTraceIterator, IntoTraceIterator},
 };
 use ebi_bpmn::ebi_arithmetic::{Fraction, One, Signed, Zero};
+use fnv::FnvBuildHasher;
 use std::collections::{HashMap, hash_map::Entry};
 
 impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
@@ -20,7 +21,7 @@ impl From<FiniteStochasticLanguage> for StochasticDeterministicFiniteAutomaton {
         if value.number_of_traces().is_zero() {
             result.set_initial_state(None);
         } else {
-            let mut final_states = HashMap::new();
+            let mut final_states = HashMap::<_, _, FnvBuildHasher>::default();
             result.activity_key = value.activity_key.clone();
 
             //create automaton
@@ -68,11 +69,8 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
 
         //start activities
         {
-            let mut sum_of_start_activities = value
-                .start_states
-                .iter()
-                .map(|(_, f)| f)
-                .sum::<Fraction>();
+            let mut sum_of_start_activities =
+                value.start_states.iter().map(|(_, f)| f).sum::<Fraction>();
             sum_of_start_activities += &value.empty_traces_weight;
             for (node, weight) in &value.start_states {
                 let activity = value.state_2_activity[node.0];
@@ -152,7 +150,7 @@ macro_rules! log {
                 if value.number_of_traces().is_zero() {
                     result.set_initial_state(None);
                 } else {
-                    let mut final_states = HashMap::new();
+                    let mut final_states = HashMap::<_, _, FnvBuildHasher>::default();
 
                     //create automaton
                     for trace in value.iter_traces() {
