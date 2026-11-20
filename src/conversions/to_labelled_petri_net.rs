@@ -488,6 +488,7 @@ fn powl_partial_order_2_lpn(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn powl_choice_graph_2_lpn(
     powl: &PartiallyOrderedWorkflowLanguage,
     result: &mut LabelledPetriNet,
@@ -759,10 +760,10 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
         //transitions
         let mut transition2index = HashMap::<_, _, FnvBuildHasher>::default();
         for (transition_id, transition) in &pnml.transitions {
-            let label = match &transition.label {
-                Some(activity) => Some(result.activity_key_mut().process_activity(activity)),
-                None => None,
-            };
+            let label = transition
+                .label
+                .as_ref()
+                .map(|activity| result.activity_key_mut().process_activity(activity));
             let transition = result.add_transition(label);
 
             transition2index.insert(transition_id, transition);

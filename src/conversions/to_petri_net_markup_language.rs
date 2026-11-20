@@ -1,5 +1,6 @@
 use crate::{
-    PartiallyOrderedWorkflowLanguage, StochasticNondeterministicFiniteAutomaton, ebi_objects::{
+    PartiallyOrderedWorkflowLanguage, StochasticNondeterministicFiniteAutomaton,
+    ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
         directly_follows_graph::DirectlyFollowsGraph, directly_follows_model::DirectlyFollowsModel,
         labelled_petri_net::LabelledPetriNet, petri_net_markup_language::PetriNetMarkupLanguage,
@@ -39,12 +40,8 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
             //create transitions
             for transition in 0..lpn.transition2input_places.len() {
                 let new_transition = result.add_transition(
-                    match lpn.get_transition_label(transition) {
-                        Some(activity) => {
-                            Some(lpn.activity_key.get_activity_label(&activity).to_string())
-                        }
-                        None => None,
-                    },
+                    lpn.get_transition_label(transition)
+                        .map(|activity| lpn.activity_key.get_activity_label(&activity).to_string()),
                     None,
                 );
 
@@ -97,7 +94,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
 
             //initial marking
             let mut new_initial_marking = petri_net::Marking::new();
-            for (place, cardinality) in initial_marking.get_place2token().into_iter().enumerate() {
+            for (place, cardinality) in initial_marking.get_place2token().iter().enumerate() {
                 if cardinality > &0u64 {
                     let new_place = place2new_place
                         .get(&place)

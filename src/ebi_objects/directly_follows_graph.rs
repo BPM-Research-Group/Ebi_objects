@@ -246,10 +246,11 @@ impl DirectlyFollowsGraph {
 
     pub fn contains_edge(&self, source: Activity, target: Activity) -> bool {
         if let Some(source_state) = self.activity_2_state.get(source)
-            && let Some(target_state) = self.activity_2_state.get(target) {
-                let (found, edge) = self.binary_search(*source_state, *target_state);
-                return found && self.weights[edge].is_positive();
-            }
+            && let Some(target_state) = self.activity_2_state.get(target)
+        {
+            let (found, edge) = self.binary_search(*source_state, *target_state);
+            return found && self.weights[edge].is_positive();
+        }
         false
     }
 
@@ -469,15 +470,17 @@ impl Importable for DirectlyFollowsGraph {
 
         let edges = json::read_field_list(&json, "directly_follows_relations")
             .with_context(|| "reading field `directly follows relations`".to_string())?;
-        for (i, edge) in edges.into_iter().enumerate() {
+        for (i, edge) in edges.iter().enumerate() {
             let edge_list = json::read_list(edge).with_context(|| format!("reading edge {}", i))?;
             let sourcetarget = json::read_list(
-                edge_list.first()
+                edge_list
+                    .first()
                     .ok_or_else(|| anyhow!("could not read source and target of edge {}", i))?,
             )?;
 
             let source_act = json::read_string(
-                sourcetarget.first()
+                sourcetarget
+                    .first()
                     .ok_or_else(|| anyhow!("could not read source of edge {}", i))?,
             )
             .with_context(|| format!("reading source of edge {}", i))?;
@@ -551,59 +554,51 @@ impl Importable for DirectlyFollowsGraph {
 
         let start_activities = json::read_field_list(&json, "start_activities")
             .with_context(|| "reading field `start activities`".to_string())?;
-        let err: Result<()> = start_activities
-            .into_iter()
-            .map(|json| {
-                let act = json::read_string(json)?;
-                let activity = result.activity_key.process_activity(act);
+        start_activities.iter().try_for_each(|json| {
+            let act = json::read_string(json)?;
+            let activity = result.activity_key.process_activity(act);
 
-                match frequencies_in.entry(activity) {
-                    hash_map::Entry::Occupied(occupied_entry) => {
-                        let weight = occupied_entry.remove();
-                        if weight.is_positive() {
-                            result.add_start_activity(activity, &weight);
-                        }
-                    }
-                    hash_map::Entry::Vacant(_) => {
-                        //activity not declared
-                        return Err(anyhow!(format!(
-                            "non-declared activity {} used as start activity",
-                            act
-                        )));
+            match frequencies_in.entry(activity) {
+                hash_map::Entry::Occupied(occupied_entry) => {
+                    let weight = occupied_entry.remove();
+                    if weight.is_positive() {
+                        result.add_start_activity(activity, &weight);
                     }
                 }
-                Ok(())
-            })
-            .collect();
-        err?;
+                hash_map::Entry::Vacant(_) => {
+                    //activity not declared
+                    return Err(anyhow!(format!(
+                        "non-declared activity {} used as start activity",
+                        act
+                    )));
+                }
+            }
+            Ok(())
+        })?;
 
         let end_activities = json::read_field_list(&json, "end_activities")
             .with_context(|| "reading field `end activities`".to_string())?;
-        let err: Result<()> = end_activities
-            .into_iter()
-            .map(|json| {
-                let act = json::read_string(json)?;
-                let activity = result.activity_key.process_activity(act);
+        end_activities.iter().try_for_each(|json| {
+            let act = json::read_string(json)?;
+            let activity = result.activity_key.process_activity(act);
 
-                match frequencies_out.entry(activity) {
-                    hash_map::Entry::Occupied(occupied_entry) => {
-                        let weight = occupied_entry.remove();
-                        if weight.is_positive() {
-                            result.add_end_activity(activity, &weight);
-                        }
-                    }
-                    hash_map::Entry::Vacant(_) => {
-                        //activity not declared
-                        return Err(anyhow!(format!(
-                            "non-declared activity {} used as end activity",
-                            act
-                        )));
+            match frequencies_out.entry(activity) {
+                hash_map::Entry::Occupied(occupied_entry) => {
+                    let weight = occupied_entry.remove();
+                    if weight.is_positive() {
+                        result.add_end_activity(activity, &weight);
                     }
                 }
-                Ok(())
-            })
-            .collect();
-        err?;
+                hash_map::Entry::Vacant(_) => {
+                    //activity not declared
+                    return Err(anyhow!(format!(
+                        "non-declared activity {} used as end activity",
+                        act
+                    )));
+                }
+            }
+            Ok(())
+        })?;
 
         Ok(result)
     }
@@ -794,7 +789,7 @@ impl Graphable for DirectlyFollowsGraph {
                     &source,
                     &nodes[self
                         .activity_key
-                        .get_id_from_activity(&self.state_2_activity[activity.0])],
+                        .get_id_from_activity(self.state_2_activity[activity.0])],
                     &format!("{}", weight),
                 );
             }

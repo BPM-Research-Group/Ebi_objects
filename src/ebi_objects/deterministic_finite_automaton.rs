@@ -1,8 +1,13 @@
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject, Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey, dfg_format_comparison, ebi_objects::labelled_petri_net::TransitionIndex, json, traits::{
+    Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject,
+    Exportable, Graphable, HasActivityKey, Importable, Infoable, TranslateActivityKey,
+    dfg_format_comparison,
+    ebi_objects::labelled_petri_net::TransitionIndex,
+    json,
+    traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    }
+    },
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
@@ -26,11 +31,11 @@ pub struct DeterministicFiniteAutomaton {
     pub final_states: Vec<bool>,
 }
 
-impl DeterministicFiniteAutomaton {
+impl Default for DeterministicFiniteAutomaton {
     /**
      * Creates a new DFA with an initial state that is not an explicit final state. As this state is a deadlock, it is an implicit final state anyway, until an outgoing transition is added.
      */
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             activity_key: ActivityKey::new(),
             initial_state: Some(AutomatonState::zero()),
@@ -40,7 +45,9 @@ impl DeterministicFiniteAutomaton {
             final_states: vec![false],
         }
     }
+}
 
+impl DeterministicFiniteAutomaton {
     pub fn set_initial_state(&mut self, state: Option<AutomatonState>) {
         if let Some(state) = state {
             self.ensure_states(state);
@@ -207,7 +214,7 @@ impl Importable for DeterministicFiniteAutomaton {
     {
         let json: Value = serde_json::from_reader(reader)?;
 
-        let mut result = DeterministicFiniteAutomaton::new();
+        let mut result = DeterministicFiniteAutomaton::default();
 
         result.set_initial_state(AutomatonState::of_option(
             json::read_field_index(&json, "initialState").ok(),
@@ -472,7 +479,7 @@ mod tests {
 
     #[test]
     fn insert_wrong_edge() {
-        let mut dfa = DeterministicFiniteAutomaton::new();
+        let mut dfa = DeterministicFiniteAutomaton::default();
         let state = dfa.initial_state.unwrap();
         let activity = dfa.activity_key_mut().process_activity("a");
 

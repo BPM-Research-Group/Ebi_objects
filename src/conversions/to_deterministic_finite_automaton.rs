@@ -26,7 +26,7 @@ use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 impl From<FiniteLanguage> for DeterministicFiniteAutomaton {
     fn from(value: FiniteLanguage) -> Self {
         log::info!("convert finite language into a DFA");
-        let mut result = DeterministicFiniteAutomaton::new();
+        let mut result = DeterministicFiniteAutomaton::default();
         result.set_activity_key(value.activity_key().clone());
 
         if value.number_of_traces().is_zero() {
@@ -187,7 +187,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
             };
         };
 
-        let mut result = DeterministicFiniteAutomaton::new();
+        let mut result = DeterministicFiniteAutomaton::default();
         let translator = ActivityKeyTranslator::new(tree.activity_key(), result.activity_key_mut());
 
         let mut markingset2node = HashMap::<_, _, FnvBuildHasher>::default();
@@ -285,7 +285,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
             };
         };
 
-        let mut result = DeterministicFiniteAutomaton::new();
+        let mut result = DeterministicFiniteAutomaton::default();
         let translator = ActivityKeyTranslator::new(snfa.activity_key(), result.activity_key_mut());
 
         let mut markingset2node = HashMap::<_, _, FnvBuildHasher>::default();

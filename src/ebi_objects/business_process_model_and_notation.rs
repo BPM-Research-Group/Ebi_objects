@@ -71,13 +71,13 @@ impl Exportable for BusinessProcessModelAndNotation {
                 BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
             EbiObject::ProcessTree(obj) => {
-                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
+                BusinessProcessModelAndNotation::from(obj).export(f)
             }
             EbiObject::PartiallyOrderedWorkflowLanguage(obj) => {
-                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
+                BusinessProcessModelAndNotation::from(obj).export(f)
             }
             EbiObject::StochasticProcessTree(obj) => {
-                BusinessProcessModelAndNotation::try_from(obj)?.export(f)
+                BusinessProcessModelAndNotation::from(obj).export(f)
             }
             EbiObject::StochasticDeterministicFiniteAutomaton(obj) => {
                 BusinessProcessModelAndNotation::try_from(obj)?.export(f)

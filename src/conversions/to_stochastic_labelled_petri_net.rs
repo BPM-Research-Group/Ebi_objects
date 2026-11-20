@@ -124,7 +124,7 @@ impl From<StochasticDirectlyFollowsModel> for StochasticLabelledPetriNet {
         for (source_node, (target_node, weight)) in value
             .sources
             .into_iter()
-            .zip(value.targets.into_iter().zip(value.weights.into_iter()))
+            .zip(value.targets.into_iter().zip(value.weights))
         {
             if weight.is_positive() {
                 let from_place = node2place[source_node];

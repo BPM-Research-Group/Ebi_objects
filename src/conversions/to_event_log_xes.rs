@@ -37,7 +37,7 @@ impl TryFrom<EventLogCsv> for EventLogXes {
             //add events
             for event in trace {
                 let mut new_event = Event {
-                    attributes: vec![].into(),
+                    attributes: vec![],
                 };
 
                 for (attribute_key, attribute_value) in event {
@@ -81,7 +81,7 @@ impl TryFrom<EventLogCsv> for EventLogXes {
         let time = if let Some(att) = value.time_attribute {
             value
                 .attribute_key
-                .attribute_to_label(&att)
+                .attribute_to_label(att)
                 .cloned()
                 .unwrap_or(XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE.to_string())
         } else {

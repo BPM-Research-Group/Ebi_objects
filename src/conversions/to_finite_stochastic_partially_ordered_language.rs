@@ -6,7 +6,7 @@ use bitvec::bitvec;
 use ebi_activity_key::{Activity, ActivityKey};
 use ebi_bpmn::ebi_arithmetic::Fraction;
 use ebi_bpmn::partially_ordered_run::PartiallyOrderedRun;
-use std::{collections::BTreeSet, usize};
+use std::collections::BTreeSet;
 
 impl From<(ActivityKey, Vec<PartiallyOrderedTrace>, Vec<Fraction>)>
     for FiniteStochasticPartiallyOrderedLanguage
