@@ -1,3 +1,18 @@
+#![allow(warnings)]
+#![deny(clippy::needless_return)]
+#![doc = include_str!("../README.md")]
+
+//! ## Sister crates
+//!
+//! Ebi has several sister crates:
+//! 1. The crate [Ebi](https://docs.rs/ebi/latest/ebi/) contains the framework, surfaces (CLI and libraries for other languages), traits, documentation and manual.
+//! 1. The crate [Ebi_objects](https://docs.rs/ebi_objects/latest/ebi_objects/) contains the logs, models and other object structs, as well as conversions between them.
+//! 1. The crate [Ebi_bpmn](https://docs.rs/ebi_bpmn/latest/ebi_bpmn/) takes care of BPMN models.
+//! 1. The crate [Ebi_arithmetic](https://docs.rs/ebi_arithmetic/latest/ebi_arithmetic/) contains exact and approximate arithmetic machinery.
+//! 1. The crate [Ebi_activity_key](https://docs.rs/ebi_activity_key/latest/ebi_activity_key/) contains a string-deduplication abstraction.
+//! 1. The crate [Ebi_optimisation](https://docs.rs/ebi_optimisation/latest/ebi_optimisation/) contains optimisation routines.
+//! 1. The crate [Ebi_derive](https://docs.rs/ebi_derive/latest/ebi_derive/) contains derivation macros.
+
 pub mod attribute_key {
     pub mod attribute;
     pub mod attribute_key;
