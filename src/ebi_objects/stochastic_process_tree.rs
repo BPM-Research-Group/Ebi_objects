@@ -20,7 +20,7 @@ use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
-use std::fmt::Display;
+use std::{backtrace::Backtrace, fmt::Display};
 
 pub const HEADER: &str = "stochastic process tree";
 
@@ -1061,11 +1061,15 @@ pub mod tests {
 
         assert_execute_expect!(tree, state, td, [tc]);
 
-        assert_execute_expect!(tree, state, tc, [td, te, tfin]);
+        assert_execute_expect!(tree, state, tc, [ta, td]);
 
         assert_execute_expect!(tree, state, td, [tc]);
 
-        assert_execute_expect!(tree, state, tc, [td, te, tfin]);
+        assert_execute_expect!(tree, state, tc, [ta, td]);
+
+        assert_execute_expect!(tree, state, ta, [tb]);
+
+        assert_execute_expect!(tree, state, tb, [te, tfin]);
 
         assert_terminate!(tree, state, tfin);
     }

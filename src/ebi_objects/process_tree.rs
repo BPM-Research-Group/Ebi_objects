@@ -16,6 +16,7 @@ use ebi_derive::ActivityKey;
 use itertools::Itertools;
 use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
 use std::{
+    backtrace::Backtrace,
     fmt::Display,
     ops::{Index, IndexMut},
     str::FromStr,
@@ -982,6 +983,8 @@ macro_rules! tree_semantics {
                             return false;
                         }
                     } else {
+                        // println!("{state}");
+                        // println!("Custom backtrace: {}", Backtrace::force_capture());
                         unreachable!()
                     }
                 }
@@ -1111,7 +1114,7 @@ macro_rules! tree_semantics {
         }
 
         fn close_node(tree: &$t, state: &mut TreeMarking, node: usize) {
-            println!("\tclose node {node} state {state}");
+            // println!("\tclose node {node} state {state}");
 
             //close this node and all of its children
             for grandchild in node..tree.traverse(node) {
@@ -1133,7 +1136,8 @@ macro_rules! tree_semantics {
                             close_node(tree, state, parent);
                         }
                     }
-                    Node::Operator(Operator::Concurrent, _) => {
+                    Node::Operator(Operator::Concurrent, _)
+                    | Node::Operator(Operator::Interleaved, _) => {
                         //for a concurrent parent, the parent can be closed if all of its children have been closed
                         if tree
                             .get_children(parent)
@@ -1141,23 +1145,6 @@ macro_rules! tree_semantics {
                         {
                             //close the parent
                             close_node(tree, state, parent);
-                        }
-                    }
-                    Node::Operator(Operator::Interleaved, _) => {
-                        //for a interleaved parent, the parent can be closed if all of its children have been closed
-                        if tree
-                            .get_children(parent)
-                            .all(|child| state[child] == NodeState::Closed)
-                        {
-                            //close the parent
-                            close_node(tree, state, parent);
-                        } else {
-                            //If we cannot close the parent, then re-enable all children that are not yet executed.
-                            for child in tree.get_children(parent) {
-                                if state[child] == NodeState::NotYetExecuted {
-                                    enable_node(tree, state, child);
-                                }
-                            }
                         }
                     }
                     Node::Operator(Operator::Or, _) => {
@@ -1204,7 +1191,7 @@ macro_rules! tree_semantics {
         /// Starts executing a node.
         /// Recurses upwards to adjust enablement.
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
-            println!("\tstart node {node}, child {:?} state {state}", child);
+            // println!("\tstart node {node}, child {:?} state {state}", child);
             match tree.tree[node] {
                 Node::Tau
                 | Node::Activity(_)
@@ -1246,15 +1233,15 @@ macro_rules! tree_semantics {
                             start_node(tree, state, parent, Some(node));
                         }
                     } else if let Some(from_child) = child {
-                        //we are starting a non-first child of an interleaved node: withdraw enablement in all grand children and mark them as NotYetExecuted.
-                        for child in tree.get_children(node) {
-                            if child != from_child {
-                                if state[child] == NodeState::Enabled {
-                                    withdraw_enablement(tree, state, child);
-                                    state[child] = NodeState::NotYetExecuted;
-                                }
+                        //we are starting a non-first child of an interleaved node: withdraw enablement in the finished grand child
+                        
+                        //find the previous child that was started
+                        for sibling in tree.get_children(node) {
+                            if sibling != from_child && state[sibling] == NodeState::Started {
+                                close_node(tree, state, sibling);
                             }
                         }
+
                     } else {
                         unreachable!()
                     }
@@ -1500,5 +1487,73 @@ mod tests {
         execute_transition(&tree, &mut state, tc).unwrap();
         println!("{}\n", state);
         assert_eq!(get_enabled_transitions(&tree, &state), [tt]);
+    }
+
+    #[test]
+    fn ptree_semantics_interleaved_4() {
+        let fin1 =
+            fs::read_to_string("testfiles/loop(interleaved(seq(a,b),loop(c,d),e).sptree").unwrap();
+        let tree: ProcessTree = fin1.parse::<StochasticProcessTree>().unwrap().into();
+
+        let ta = 0;
+        let tb = 1;
+        let tc = 2;
+        let td = 3;
+        let te = 4;
+        let tt = 5;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tc]);
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb]);
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tc]);
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [td, te, tt]);
+
+        println!("execute d {}", td);
+        execute_transition(&tree, &mut state, td).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tc]);
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [td, te, tt]);
+
+        println!("execute e {}", te);
+        execute_transition(&tree, &mut state, te).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, tc]);
+
+        println!("execute c {}", tc);
+        execute_transition(&tree, &mut state, tc).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [ta, td]);
+
+        println!("execute a {}", ta);
+        execute_transition(&tree, &mut state, ta).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [tb]);
+
+        println!("execute b {}", tb);
+        execute_transition(&tree, &mut state, tb).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [te, tt]);
+
+        println!("execute tt {}", tt);
+        execute_transition(&tree, &mut state, tt).unwrap();
+        println!("{}\n", state);
+        assert_eq!(get_enabled_transitions(&tree, &state), [0;0]);
     }
 }
