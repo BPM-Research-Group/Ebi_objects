@@ -1,6 +1,6 @@
 #![allow(
     clippy::needless_range_loop,
-    // warnings
+    warnings
 )]
 #![deny(
     clippy::needless_return,
