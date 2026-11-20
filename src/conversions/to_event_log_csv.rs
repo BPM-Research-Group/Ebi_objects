@@ -126,9 +126,7 @@ impl TryFrom<EventLogXes> for EventLogCsv {
         let activity_attribute = attribute_key
             .label_to_attribute(
                 classifier
-                    .keys
-                    .iter()
-                    .next()
+                    .keys.first()
                     .ok_or_else(|| anyhow!("no event classifier attribute defined"))?,
             )
             .ok_or_else(|| anyhow!("could not find event attribute"))?;

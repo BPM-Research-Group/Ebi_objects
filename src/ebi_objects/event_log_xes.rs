@@ -276,7 +276,7 @@ impl StartEndActivities for EventLogXes {
     fn start_activities(&self) -> intmap::IntMap<Activity, Fraction> {
         let mut result = IntMap::new();
         for trace in self.rust4pm_log.traces.iter() {
-            if let Some(event) = trace.events.iter().next() {
+            if let Some(event) = trace.events.first() {
                 let activity_label = self.event_classifier().get_class_identity(event);
                 let activity = self.activity_key.process_activity_attempt(&activity_label);
                 if let Some(activity) = activity {

@@ -87,7 +87,7 @@ impl From<(process_mining::EventLog, EventLogClassifier, String, String)>
             .collect();
 
         let activity_attribute = attribute_key
-            .label_to_attribute(classifier.keys.iter().next().unwrap_or(&String::new()))
+            .label_to_attribute(classifier.keys.first().unwrap_or(&String::new()))
             .unwrap_or(attribute_key.id_to_attribute(0));
 
         let time_attribute = attribute_key.label_to_attribute(&time);

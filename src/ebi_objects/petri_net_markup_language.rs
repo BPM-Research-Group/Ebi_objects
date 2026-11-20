@@ -294,7 +294,7 @@ pub(crate) mod parser {
     }
 
     pub(crate) fn can_eof(state: &ParserState) -> Result<()> {
-        if let Some(tag) = state.open_tag_names.iter().next() {
+        if let Some(tag) = state.open_tag_names.first() {
             Err(anyhow!("file ended while tag `{}` was still open", tag))
         } else {
             Ok(())
