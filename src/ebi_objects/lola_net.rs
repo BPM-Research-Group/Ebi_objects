@@ -330,7 +330,10 @@ impl<'a> Tokeniser<'a> {
         !string.contains([',', ';', '(', ')', '{', '}', '\t', '\n', '\r', ' '])
     }
 
-    fn read_places(&mut self, lpn: &mut LabelledPetriNet) -> Result<HashMap<String, usize, FnvBuildHasher>> {
+    fn read_places(
+        &mut self,
+        lpn: &mut LabelledPetriNet,
+    ) -> Result<HashMap<String, usize, FnvBuildHasher>> {
         //read place
         match self.next() {
             Some("PLACE") => {}

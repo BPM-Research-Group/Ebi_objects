@@ -527,11 +527,7 @@ impl Infoable for StochasticNondeterministicFiniteAutomaton {
             self.termination_probabilities.len()
         )?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key.len()
-        )?;
+        writeln!(f, "Number of activities\t{}", self.activity_key.len())?;
 
         writeln!(f)?;
         self.activity_key().info(f)?;

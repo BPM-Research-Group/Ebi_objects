@@ -232,10 +232,7 @@ impl State {
 
             //check that every node and edge has been used
             if let Some((node_id, _)) = nodes.into_iter().next() {
-                return Err(anyhow!(
-                    "node `{}` is not reachable from the root",
-                    node_id
-                ));
+                return Err(anyhow!("node `{}` is not reachable from the root", node_id));
             }
             if let Some((source, targets)) = edges.into_iter().next() {
                 return Err(anyhow!(
@@ -289,9 +286,7 @@ impl State {
                     }
                 } else {
                     node.set_number_of_children(children.len())
-                        .with_context(|| {
-                            format!("preparing node `{}`", node_id)
-                        })?;
+                        .with_context(|| format!("preparing node `{}`", node_id))?;
                     tree.push(node);
 
                     for child_id in children {
@@ -302,10 +297,7 @@ impl State {
             (Some(node), None) => {
                 //only a node, no edges -> leaf
                 if !node.is_leaf() {
-                    return Err(anyhow!(
-                        "operator node `{}` has no children",
-                        node_id
-                    ));
+                    return Err(anyhow!("operator node `{}` has no children", node_id));
                 }
                 tree.push(node);
             }

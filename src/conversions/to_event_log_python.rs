@@ -2,7 +2,9 @@ use crate::{
     EventLogXes,
     ebi_objects::{
         event_log_python::EventLogPython,
-        event_log_xes::{XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE, XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE},
+        event_log_xes::{
+            XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE, XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE,
+        },
     },
 };
 use process_mining::core::event_data::case_centric::EventLogClassifier;

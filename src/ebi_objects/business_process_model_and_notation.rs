@@ -70,9 +70,7 @@ impl Exportable for BusinessProcessModelAndNotation {
             EbiObject::LabelledPetriNet(obj) => {
                 BusinessProcessModelAndNotation::try_from(obj)?.export(f)
             }
-            EbiObject::ProcessTree(obj) => {
-                BusinessProcessModelAndNotation::from(obj).export(f)
-            }
+            EbiObject::ProcessTree(obj) => BusinessProcessModelAndNotation::from(obj).export(f),
             EbiObject::PartiallyOrderedWorkflowLanguage(obj) => {
                 BusinessProcessModelAndNotation::from(obj).export(f)
             }
@@ -136,11 +134,7 @@ impl Infoable for BusinessProcessModelAndNotation {
         writeln!(f, "Number of processes (pools)\t{}", self.elements.len())?;
         writeln!(f, "Number of elements\t\t{}", self.number_of_elements())?;
         writeln!(f, "Number of message flows\t\t{}", self.message_flows.len())?;
-        writeln!(
-            f,
-            "Number of activities\t\t{}",
-            self.activity_key().len()
-        )?;
+        writeln!(f, "Number of activities\t\t{}", self.activity_key().len())?;
 
         writeln!(f)?;
         self.activity_key().info(f)?;

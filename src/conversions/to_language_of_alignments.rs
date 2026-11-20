@@ -1,4 +1,7 @@
-use crate::ebi_objects::{language_of_alignments::LanguageOfAlignments, stochastic_language_of_alignments::StochasticLanguageOfAlignments};
+use crate::ebi_objects::{
+    language_of_alignments::LanguageOfAlignments,
+    stochastic_language_of_alignments::StochasticLanguageOfAlignments,
+};
 
 impl From<StochasticLanguageOfAlignments> for LanguageOfAlignments {
     fn from(value: StochasticLanguageOfAlignments) -> Self {

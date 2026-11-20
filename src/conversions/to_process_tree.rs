@@ -1,7 +1,11 @@
-use crate::{ActivityKey, ebi_objects::{
-    process_tree::{Node, ProcessTree}, process_tree_markup_language::ProcessTreeMarkupLanguage,
-    stochastic_process_tree::StochasticProcessTree,
-}};
+use crate::{
+    ActivityKey,
+    ebi_objects::{
+        process_tree::{Node, ProcessTree},
+        process_tree_markup_language::ProcessTreeMarkupLanguage,
+        stochastic_process_tree::StochasticProcessTree,
+    },
+};
 
 impl From<ProcessTreeMarkupLanguage> for ProcessTree {
     fn from(value: ProcessTreeMarkupLanguage) -> Self {

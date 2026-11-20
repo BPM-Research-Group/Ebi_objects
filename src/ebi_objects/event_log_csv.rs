@@ -309,7 +309,8 @@ impl Importable for EventLogCsv {
         };
 
         //combine events into traces
-        let mut traces: HashMap<String, Vec<IntMap<Attribute, String>>, FnvBuildHasher> = HashMap::default();
+        let mut traces: HashMap<String, Vec<IntMap<Attribute, String>>, FnvBuildHasher> =
+            HashMap::default();
         for event in events {
             if let Some(trace_id) = event.get(trace_id_attribute) {
                 match traces.entry(trace_id.to_string()) {

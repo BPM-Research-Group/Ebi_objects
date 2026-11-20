@@ -2,7 +2,10 @@
 mod tests {
     use std::fs;
 
-    use crate::{ebi_objects::directly_follows_model::DirectlyFollowsModel, ActivityKey, HasActivityKey, TranslateActivityKey};
+    use crate::{
+        ActivityKey, HasActivityKey, TranslateActivityKey,
+        ebi_objects::directly_follows_model::DirectlyFollowsModel,
+    };
 
     #[test]
     fn activity_key_translating() {

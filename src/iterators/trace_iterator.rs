@@ -43,10 +43,7 @@ impl<'a> Iterator for TraceIteratorCsv<'a> {
         for event in trace.iter() {
             let empty = String::new();
             let activity_label = event.get(self.log.activity_attribute).unwrap_or(&empty);
-            let activity = self
-                .log
-                .activity_key
-                .try_process_activity(activity_label)?;
+            let activity = self.log.activity_key.try_process_activity(activity_label)?;
             result.push(activity);
         }
         Some(result)

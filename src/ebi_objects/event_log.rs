@@ -339,7 +339,8 @@ impl TestActivityKey for EventLog {
 mod tests {
     use super::EventLog;
     use crate::{
-        ActivityKey, NumberOfTraces, TranslateActivityKey, ebi_objects::finite_stochastic_language::FiniteStochasticLanguage, event_log, trace
+        ActivityKey, NumberOfTraces, TranslateActivityKey,
+        ebi_objects::finite_stochastic_language::FiniteStochasticLanguage, event_log, trace,
     };
     use std::fs;
 

@@ -109,22 +109,14 @@ impl Display for StochasticLanguageOfAlignments {
                 match movee {
                     Move::LogMove { activity } => {
                         writeln!(f, "log move")?;
-                        writeln!(
-                            f,
-                            "label {}",
-                            self.activity_key.activity_to_label(activity)
-                        )?;
+                        writeln!(f, "label {}", self.activity_key.activity_to_label(activity))?;
                     }
                     Move::ModelMove {
                         activity,
                         transition,
                     } => {
                         writeln!(f, "model move")?;
-                        writeln!(
-                            f,
-                            "label {}",
-                            self.activity_key.activity_to_label(activity)
-                        )?;
+                        writeln!(f, "label {}", self.activity_key.activity_to_label(activity))?;
                         writeln!(f, "{}", transition)?;
                     }
                     Move::SynchronousMove {
@@ -132,11 +124,7 @@ impl Display for StochasticLanguageOfAlignments {
                         transition,
                     } => {
                         writeln!(f, "synchronous move")?;
-                        writeln!(
-                            f,
-                            "label {}",
-                            self.activity_key.activity_to_label(activity)
-                        )?;
+                        writeln!(f, "label {}", self.activity_key.activity_to_label(activity))?;
                         writeln!(f, "# transition\n{}", transition)?;
                     }
                     Move::SilentMove { transition } => {
@@ -266,7 +254,7 @@ impl Importable for StochasticLanguageOfAlignments {
                     })?;
                     let activity = if label_line.trim_start().starts_with("label ") {
                         let label = label_line.trim_start()[6..].to_string();
-                        
+
                         activity_key.process_activity(&label)
                     } else {
                         return Err(anyhow!("Line must have a label"));

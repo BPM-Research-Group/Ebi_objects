@@ -524,7 +524,7 @@ impl<'a, K, V> DoubleEndedIterator for ParallelVecTupleIteratorIterator<'a, K, V
 #[cfg(test)]
 mod tests {
     use fnv::FnvBuildHasher;
-use rayon::iter::ParallelIterator;
+    use rayon::iter::ParallelIterator;
     use std::collections::HashMap;
 
     use crate::iterators::parallel_ref_trace_iterator::{

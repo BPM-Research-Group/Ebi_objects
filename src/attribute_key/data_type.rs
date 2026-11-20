@@ -61,10 +61,8 @@ impl DataType {
                 max.max(&Fraction::from(*y)).clone(),
             ),
             (DataType::Numerical(min, max), AttributeValue::Float(y)) => Self::Numerical(
-                min.min(&y.to_string().parse::<Fraction>().unwrap())
-                    .clone(),
-                max.max(&y.to_string().parse::<Fraction>().unwrap())
-                    .clone(),
+                min.min(&y.to_string().parse::<Fraction>().unwrap()).clone(),
+                max.max(&y.to_string().parse::<Fraction>().unwrap()).clone(),
             ),
             (DataType::Numerical(_, _), AttributeValue::Boolean(_)) => Self::Undefined,
             (DataType::Numerical(_, _), AttributeValue::ID(_)) => Self::Undefined,

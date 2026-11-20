@@ -27,7 +27,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
     if tree.tree.is_empty() {
         return vec![];
     }
-    
+
     match tree.tree[node] {
         Node::Tau => vec![PowlNode::Activity {
             id: Some(format!("node {}", node)),

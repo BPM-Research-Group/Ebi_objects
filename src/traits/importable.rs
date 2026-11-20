@@ -47,7 +47,8 @@ macro_rules! from_string {
 }
 pub(crate) use from_string;
 
-pub type ImporterParameterValues = HashMap<ImporterParameter, (ImporterParameterValue, bool), FnvBuildHasher>;
+pub type ImporterParameterValues =
+    HashMap<ImporterParameter, (ImporterParameterValue, bool), FnvBuildHasher>;
 
 /// Parameters that can be given to an importer.
 /// It is a design decision that every parameter must have a default,

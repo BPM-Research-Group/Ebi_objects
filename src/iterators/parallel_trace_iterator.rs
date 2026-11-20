@@ -136,10 +136,7 @@ impl<'a> Iterator for ParallelIteratorCsv<'a> {
         for event in trace.iter() {
             let empty = String::new();
             let activity_label = event.get(self.log.activity_attribute).unwrap_or(&empty);
-            let activity = self
-                .log
-                .activity_key
-                .try_process_activity(activity_label)?;
+            let activity = self.log.activity_key.try_process_activity(activity_label)?;
             result.push(activity);
         }
 
@@ -162,10 +159,7 @@ impl<'a> DoubleEndedIterator for ParallelIteratorCsv<'a> {
             for event in trace.iter() {
                 let empty = String::new();
                 let activity_label = event.get(self.log.activity_attribute).unwrap_or(&empty);
-                let activity = self
-                    .log
-                    .activity_key
-                    .try_process_activity(activity_label)?;
+                let activity = self.log.activity_key.try_process_activity(activity_label)?;
                 result.push(activity);
             }
 

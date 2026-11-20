@@ -62,7 +62,7 @@ impl Exportable for CompressedEventLog {
                     .with_context(|| anyhow!("Cannot transform csv to xes."))?;
                 xes.export(f)
             }
-            _ => Err(anyhow!("Cannot export as compressed event log."))
+            _ => Err(anyhow!("Cannot export as compressed event log.")),
         }
     }
 

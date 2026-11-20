@@ -96,8 +96,7 @@ impl StochasticDeterministicFiniteAutomaton {
         self.ensure_states(source);
         self.ensure_states(target);
 
-        let (found, from) =
-            self.binary_search(source, self.activity_key.activity_to_id(activity));
+        let (found, from) = self.binary_search(source, self.activity_key.activity_to_id(activity));
         if found {
             //edge already present
             Err(anyhow!(
@@ -137,10 +136,8 @@ impl StochasticDeterministicFiniteAutomaton {
     ) -> AutomatonState {
         self.terminating_probabilities[source_state] -= &probability;
 
-        let (found, transition) = self.binary_search(
-            source_state,
-            self.activity_key.activity_to_id(activity),
-        );
+        let (found, transition) =
+            self.binary_search(source_state, self.activity_key.activity_to_id(activity));
         if found {
             self.probabilities[transition] += &probability;
             self.targets[transition]
@@ -157,7 +154,10 @@ impl StochasticDeterministicFiniteAutomaton {
     /**
      * Scales the outgoing probabilities of the state.
      */
-    pub fn scale_outgoing_probabilities(&mut self, state2scale: HashMap<AutomatonState, Fraction, FnvBuildHasher>) {
+    pub fn scale_outgoing_probabilities(
+        &mut self,
+        state2scale: HashMap<AutomatonState, Fraction, FnvBuildHasher>,
+    ) {
         let mut new_terminating_probabilities =
             vec![Fraction::one(); self.terminating_probabilities.len()];
         for (state, _, _, outgoing_probability) in &mut self.into_iter() {
@@ -263,8 +263,7 @@ impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
                 .zip(probabilities.into_iter().zip(activities)),
         ) {
             let activity = translator.translate_activity(&activity);
-            let (_, from) =
-                self.binary_search(source, self.activity_key.activity_to_id(activity));
+            let (_, from) = self.binary_search(source, self.activity_key.activity_to_id(activity));
 
             self.sources.insert(from, source);
             self.targets.insert(from, target);
@@ -369,11 +368,7 @@ impl Infoable for StochasticDeterministicFiniteAutomaton {
             self.terminating_probabilities.len()
         )?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key.len()
-        )?;
+        writeln!(f, "Number of activities\t{}", self.activity_key.len())?;
 
         writeln!(f)?;
         self.activity_key().info(f)?;

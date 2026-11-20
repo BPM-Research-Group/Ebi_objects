@@ -3,7 +3,8 @@ use crate::{
     ebi_objects::{
         event_log_python::EventLogPython,
         event_log_xes::{
-            EventLogXes, XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE, XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE,
+            EventLogXes, XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE,
+            XES_DEFAULT_PARAMETER_TIMESTAMP_ATTRIBUTE,
         },
     },
 };
@@ -36,9 +37,7 @@ impl TryFrom<EventLogCsv> for EventLogXes {
 
             //add events
             for event in trace {
-                let mut new_event = Event {
-                    attributes: vec![],
-                };
+                let mut new_event = Event { attributes: vec![] };
 
                 for (attribute_key, attribute_value) in event {
                     let attribute_name = value

@@ -71,8 +71,7 @@ impl DeterministicFiniteAutomaton {
         self.ensure_states(source);
         self.ensure_states(target);
 
-        let (found, from) =
-            self.binary_search(source, self.activity_key.activity_to_id(activity));
+        let (found, from) = self.binary_search(source, self.activity_key.activity_to_id(activity));
         if found {
             //edge already present
             Err(anyhow!(
@@ -95,10 +94,8 @@ impl DeterministicFiniteAutomaton {
         source_state: AutomatonState,
         activity: Activity,
     ) -> AutomatonState {
-        let (found, transition) = self.binary_search(
-            source_state,
-            self.activity_key.activity_to_id(activity),
-        );
+        let (found, transition) =
+            self.binary_search(source_state, self.activity_key.activity_to_id(activity));
         if found {
             self.targets[transition]
         } else {
@@ -291,11 +288,7 @@ impl Infoable for DeterministicFiniteAutomaton {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         writeln!(f, "Number of states\t{}", self.final_states.len())?;
         writeln!(f, "Number of transitions\t{}", self.sources.len())?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key.len()
-        )?;
+        writeln!(f, "Number of activities\t{}", self.activity_key.len())?;
 
         writeln!(f)?;
         self.activity_key().info(f)?;

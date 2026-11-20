@@ -40,8 +40,6 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
             })
             .collect();
 
-        
-
         Self {
             activity_key,
             node_2_activity: state_2_activity,

@@ -127,19 +127,15 @@ pub fn read_field_string_or_null(json: &Value, field: &str) -> Result<Option<Str
     }
 }
 
-pub fn read_field_time_or_null(
-    json: &Value,
-    field: &str,
-) -> Result<Option<DateTime<FixedOffset>>> {
+pub fn read_field_time_or_null(json: &Value, field: &str) -> Result<Option<DateTime<FixedOffset>>> {
     match &json[field] {
         Value::Null => Ok(None),
         Value::Bool(_) => Err(anyhow!("Field is a boolean, where a time was expected.")),
         Value::Number(_) => Err(anyhow!("Field is a number, where a time was expected.")),
         Value::String(s) => {
-            Ok(Some(
-                s.parse()
-                    .with_context(|| anyhow!("field cannot be parsed as a time."))?,
-            ))
+            Ok(Some(s.parse().with_context(|| {
+                anyhow!("field cannot be parsed as a time.")
+            })?))
         }
         Value::Array(_) => Err(anyhow!("Field is a list, where a time was expected.")),
         Value::Object(_) => Err(anyhow!("Field is an object, where a time was expected.")),

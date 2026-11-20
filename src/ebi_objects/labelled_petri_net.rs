@@ -546,11 +546,7 @@ impl Infoable for LabelledPetriNet {
             "Number of transitions\t\t{}",
             self.transition2input_places.len()
         )?;
-        writeln!(
-            f,
-            "Number of activities\t\t{}",
-            self.activity_key().len()
-        )?;
+        writeln!(f, "Number of activities\t\t{}", self.activity_key().len())?;
         writeln!(
             f,
             "Number of silent transitions\t{}",

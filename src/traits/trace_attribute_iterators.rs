@@ -1,10 +1,10 @@
 use crate::{
     Attribute,
     iterators::{
+        ref_trace_iterator::RefTraceIterator,
         trace_attribute_iterator::{
             CategoricalTraceAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
-        ref_trace_iterator::RefTraceIterator,
     },
 };
 

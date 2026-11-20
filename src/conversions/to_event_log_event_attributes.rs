@@ -270,12 +270,9 @@ impl From<EventLogCsv> for EventLogEventAttributes {
                     .map(|csv_attributes| {
                         //get the activity
                         let empty = String::new();
-                        let activity_label = csv_attributes
-                            .get(activity_attribute)
-                            .unwrap_or(&empty);
-                        activity_key
-                            .try_process_activity(activity_label)
-                            .unwrap()
+                        let activity_label =
+                            csv_attributes.get(activity_attribute).unwrap_or(&empty);
+                        activity_key.try_process_activity(activity_label).unwrap()
                     })
                     .collect();
 
