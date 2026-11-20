@@ -1,4 +1,4 @@
-// #![allow(warnings)]
+#![allow(warnings)]
 #![deny(
     clippy::needless_return,
     clippy::useless_format,
