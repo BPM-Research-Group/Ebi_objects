@@ -47,7 +47,7 @@ impl DirectlyFollowsGraph {
     pub fn new(activity_key: ActivityKey) -> Self {
         Self {
             empty_traces_weight: Fraction::zero(),
-            activity_key: activity_key,
+            activity_key,
             state_2_activity: vec![],
             activity_2_state: IntMap::new(),
             sources: vec![],
@@ -452,7 +452,7 @@ impl Importable for DirectlyFollowsGraph {
     {
         let json: Value = serde_json::from_reader(reader)?;
 
-        let mut result = DirectlyFollowsGraph::new(ActivityKey::new());
+        let mut result = DirectlyFollowsGraph::new(ActivityKey::default());
 
         let activities = json::read_field_object(&json, "activities")
             .with_context(|| "reading field `activities`".to_string())?;
@@ -666,15 +666,16 @@ impl Display for DirectlyFollowsGraph {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let activities = Value::Object(
             self.activity_key
-                .get_activities()
+                .activities()
                 .iter()
                 .filter_map(|activity| {
                     let cardinality = self.activity_cardinality(**activity);
                     if cardinality.is_positive() {
-                        Some((
-                            self.activity_key.get_activity_label(activity).to_string(),
-                            { Value::String(cardinality.to_string()) },
-                        ))
+                        Some(
+                            (self.activity_key.activity_to_label(activity).to_string(), {
+                                Value::String(cardinality.to_string())
+                            }),
+                        )
                     } else {
                         None
                     }
@@ -688,7 +689,7 @@ impl Display for DirectlyFollowsGraph {
                     if w.is_positive() {
                         Some(Value::String(
                             self.activity_key
-                                .get_activity_label(&self.state_2_activity[a.0])
+                                .activity_to_label(&self.state_2_activity[a.0])
                                 .to_string(),
                         ))
                     } else {
@@ -704,7 +705,7 @@ impl Display for DirectlyFollowsGraph {
                     if w.is_positive() {
                         Some(Value::String(
                             self.activity_key
-                                .get_activity_label(&self.state_2_activity[a.0])
+                                .activity_to_label(&self.state_2_activity[a.0])
                                 .to_string(),
                         ))
                     } else {
@@ -722,12 +723,12 @@ impl Display for DirectlyFollowsGraph {
                         Value::Array(vec![
                             Value::String(
                                 self.activity_key
-                                    .get_activity_label(&self.state_2_activity[source.0])
+                                    .activity_to_label(&self.state_2_activity[source.0])
                                     .to_string(),
                             ),
                             Value::String(
                                 self.activity_key
-                                    .get_activity_label(&self.state_2_activity[target.0])
+                                    .activity_to_label(&self.state_2_activity[target.0])
                                     .to_string(),
                             ),
                         ]),
@@ -768,14 +769,14 @@ impl Graphable for DirectlyFollowsGraph {
         }
 
         //nodes
-        let mut nodes = vec![sink; self.activity_key.get_number_of_activities()];
-        for activity in &self.activity_key.get_activities() {
-            let id = self.activity_key.get_id_from_activity(*activity);
+        let mut nodes = vec![sink; self.activity_key.len()];
+        for activity in &self.activity_key.activities() {
+            let id = self.activity_key.activity_to_id(*activity);
             let cardinality = self.activity_cardinality(**activity);
             if cardinality.is_positive() {
                 nodes[id] = graphable::create_transition(
                     &mut graph,
-                    self.activity_key.get_activity_label(activity),
+                    self.activity_key.activity_to_label(activity),
                     "",
                 );
             }
@@ -789,7 +790,7 @@ impl Graphable for DirectlyFollowsGraph {
                     &source,
                     &nodes[self
                         .activity_key
-                        .get_id_from_activity(self.state_2_activity[activity.0])],
+                        .activity_to_id(self.state_2_activity[activity.0])],
                     &format!("{}", weight),
                 );
             }
@@ -802,7 +803,7 @@ impl Graphable for DirectlyFollowsGraph {
                     &mut graph,
                     &nodes[self
                         .activity_key
-                        .get_id_from_activity(self.state_2_activity[activity.0])],
+                        .activity_to_id(self.state_2_activity[activity.0])],
                     &sink,
                     &format!("{}", weight),
                 );
@@ -819,10 +820,10 @@ impl Graphable for DirectlyFollowsGraph {
                 &mut graph,
                 &nodes[self
                     .activity_key
-                    .get_id_from_activity(self.state_2_activity[source.0])],
+                    .activity_to_id(self.state_2_activity[source.0])],
                 &nodes[self
                     .activity_key
-                    .get_id_from_activity(self.state_2_activity[target.0])],
+                    .activity_to_id(self.state_2_activity[target.0])],
                 &format!("{}", weight),
             );
         }

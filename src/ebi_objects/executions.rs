@@ -102,9 +102,9 @@ impl Importable for Executions {
         let json_executions = json::read_field_list(&json, JSON_KEY_EXECUTIONS)
             .with_context(|| anyhow!("Could not read list named `{}`.", JSON_KEY_EXECUTIONS))?;
 
-        let mut activity_key = ActivityKey::new();
-        let mut resource_key = ActivityKey::new();
-        let mut attribute_key = AttributeKey::new();
+        let mut activity_key = ActivityKey::default();
+        let mut resource_key = ActivityKey::default();
+        let mut attribute_key = AttributeKey::default();
         let mut executions = Vec::with_capacity(json_executions.len());
 
         for (execution_i, json_execution) in json_executions.iter().enumerate() {

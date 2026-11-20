@@ -48,7 +48,7 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
         
 
         Self {
-            activity_key: activity_key,
+            activity_key,
             empty_traces: empty_traces_weight.is_positive(),
             node_2_activity: state_2_activity,
             sources,

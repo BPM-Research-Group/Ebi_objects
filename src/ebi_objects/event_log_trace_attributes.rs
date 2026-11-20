@@ -191,7 +191,7 @@ impl Exportable for EventLogTraceAttributes {
                 writeln!(
                     f,
                     "<event><string key=\"concept:name\" value=\"{}\"/></event>",
-                    quick_xml::escape::escape(self.activity_key().get_activity_label(activity))
+                    quick_xml::escape::escape(self.activity_key().activity_to_label(activity))
                 )?;
             }
             writeln!(f, "</trace>")?;
@@ -393,7 +393,7 @@ mod tests {
         let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
         let mut log = fin.parse::<EventLogTraceAttributes>().unwrap();
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         log.translate_using_activity_key(&mut activity_key);
     }
 

@@ -297,7 +297,7 @@ fn transform_node(
             if let Some(child) = it.next() {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
-            while let Some(child) = it.next() {
+            for child in it {
                 transform_node(tree, child, sub_sink, sub_source, c, parent);
             }
             true

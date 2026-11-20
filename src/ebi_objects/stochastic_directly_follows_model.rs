@@ -42,7 +42,7 @@ impl StochasticDirectlyFollowsModel {
      */
     pub fn new(activity_key: ActivityKey) -> Self {
         Self {
-            activity_key: activity_key,
+            activity_key,
             node_2_activity: vec![],
             empty_traces_weight: Fraction::zero(),
             sources: vec![],
@@ -179,7 +179,7 @@ impl Importable for StochasticDirectlyFollowsModel {
         let number_of_nodes = lreader
             .next_line_index()
             .context("could not read the number of nodes")?;
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut node_2_activity = vec![];
         for activity in 0..number_of_nodes {
             let activity = lreader
@@ -402,7 +402,7 @@ impl Graphable for StochasticDirectlyFollowsModel {
         for node in &self.node_2_activity {
             nodes.push(graphable::create_transition(
                 &mut graph,
-                self.activity_key.get_activity_label(node),
+                self.activity_key.activity_to_label(node),
                 "",
             ));
         }
@@ -670,7 +670,8 @@ impl StochasticAutomatonSemantics for StochasticDirectlyFollowsModel {
             self.end_node_weights.get(state.0)
         } else if transition > self.sources.len() {
             //start transition
-            self.start_node_weights.get(transition - self.sources.len() - 1)
+            self.start_node_weights
+                .get(transition - self.sources.len() - 1)
         } else {
             self.weights.get(transition)
         }

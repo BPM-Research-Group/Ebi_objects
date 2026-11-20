@@ -214,7 +214,7 @@ impl Importable for PartiallyOrderedWorkflowLanguage {
         let json_root_model = json::read_object_from_object(json, "model")
             .with_context(|| anyhow!("Could not read root model."))?;
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut keys = Keys::default();
         let nodes = import_node(json_root_model, &mut activity_key, &mut keys, true)
             .with_context(|| anyhow!("Reading root model."))?;
@@ -740,11 +740,7 @@ impl TranslateActivityKey for PartiallyOrderedWorkflowLanguage {
 impl Infoable for PartiallyOrderedWorkflowLanguage {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
         writeln!(f, "Number of nodes\t\t{}", self.number_of_nodes())?;
-        writeln!(
-            f,
-            "Number of activities\t\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
+        writeln!(f, "Number of activities\t\t{}", self.activity_key().len())?;
 
         writeln!(f)?;
         self.activity_key().info(f)?;
@@ -1077,7 +1073,7 @@ impl PowlNode {
                 };
                 let t = graphable::create_transition(
                     graph,
-                    powl.activity_key.get_activity_label(activity),
+                    powl.activity_key.activity_to_label(activity),
                     cardinality,
                 );
                 (t, t)
@@ -1248,7 +1244,7 @@ impl<'a> PowlChildrenIterator<'a> {
     fn new(powl: &'a PartiallyOrderedWorkflowLanguage, node: usize) -> Self {
         Self {
             powl,
-            node: node,
+            node,
             now: None,
             next: node + 1,
             count: 0,
@@ -1270,21 +1266,11 @@ impl<'a> Iterator for PowlChildrenIterator<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Keys {
     lifecycle_key: ActivityKey,
     resource_key: ActivityKey,
     role_key: ActivityKey,
-}
-
-impl Default for Keys {
-    fn default() -> Self {
-        Self {
-            lifecycle_key: ActivityKey::new(),
-            resource_key: ActivityKey::new(),
-            role_key: ActivityKey::new(),
-        }
-    }
 }
 
 #[cfg(test)]

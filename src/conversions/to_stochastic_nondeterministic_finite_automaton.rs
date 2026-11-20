@@ -110,7 +110,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
         let initial_state = 0;
 
         //add states
-        for _ in value.activity_key().get_activities() {
+        for _ in value.activity_key().activities() {
             result.add_state(); //we do not keep a map, as we can predict the numbers: 0 = initial state, 1..=n = activity states, n+1 = final state.
         }
 
@@ -136,7 +136,7 @@ impl From<DirectlyFollowsGraph> for StochasticNondeterministicFiniteAutomaton {
 
         //edges
         {
-            for activity in value.activity_key().get_activities() {
+            for activity in value.activity_key().activities() {
                 if let Some(node) = value.activity_2_state.get(*activity) {
                     //gather the outgoing sum
                     let mut sum = Fraction::zero();
@@ -279,7 +279,7 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
         } else {
             //empty language
             return Self {
-                activity_key: ActivityKey::new(),
+                activity_key: ActivityKey::default(),
                 initial_state: None,
                 sources: vec![],
                 targets: vec![],

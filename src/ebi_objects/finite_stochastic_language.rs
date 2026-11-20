@@ -49,14 +49,14 @@ impl FiniteStochasticLanguage {
         activity_key: ActivityKey,
     ) -> Self {
         Self {
-            activity_key: activity_key,
-            traces: traces,
+            activity_key,
+            traces,
         }
     }
 
     pub fn empty() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             traces: Self::new_hashmap(),
         }
     }
@@ -297,7 +297,7 @@ impl Importable for FiniteStochasticLanguage {
 
         let mut traces = Self::new_hashmap();
         let mut sum = Fraction::zero();
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         for trace_i in 0..number_of_traces {
             let probability = lreader.next_line_weight().with_context(|| {
                 format!(
@@ -358,8 +358,8 @@ impl Importable for FiniteStochasticLanguage {
         }
 
         Ok(Self {
-            activity_key: activity_key,
-            traces: traces,
+            activity_key,
+            traces,
         })
     }
 }
@@ -390,11 +390,7 @@ impl Infoable for FiniteStochasticLanguage {
             "Number of events\t{}",
             self.traces.iter().map(|t| t.0.len()).sum::<usize>()
         )?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
+        writeln!(f, "Number of activities\t{}", self.activity_key().len())?;
         writeln!(
             f,
             "Sum of probabilities\t{:.4}",

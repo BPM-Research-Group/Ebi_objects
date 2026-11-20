@@ -139,7 +139,7 @@ impl<'a> Iterator for ParallelIteratorCsv<'a> {
             let activity = self
                 .log
                 .activity_key
-                .process_activity_attempt(activity_label)?;
+                .try_process_activity(activity_label)?;
             result.push(activity);
         }
 
@@ -165,7 +165,7 @@ impl<'a> DoubleEndedIterator for ParallelIteratorCsv<'a> {
                 let activity = self
                     .log
                     .activity_key
-                    .process_activity_attempt(activity_label)?;
+                    .try_process_activity(activity_label)?;
                 result.push(activity);
             }
 
@@ -246,7 +246,7 @@ impl<'a> Iterator for ParallelIteratorXes<'a> {
             let activity = self
                 .log
                 .activity_key
-                .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
+                .try_process_activity(&self.log.classifier.get_class_identity(event))?;
             result.push(activity);
         }
 
@@ -270,7 +270,7 @@ impl<'a> DoubleEndedIterator for ParallelIteratorXes<'a> {
                 let activity = self
                     .log
                     .activity_key
-                    .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
+                    .try_process_activity(&self.log.classifier.get_class_identity(event))?;
                 result.push(activity);
             }
 
@@ -366,7 +366,7 @@ impl<'a> Iterator for ParallelIteratorOcel<'a> {
                     .filter_map(|event| {
                         self.log
                             .activity_key()
-                            .process_activity_attempt(&event.event_type)
+                            .try_process_activity(&event.event_type)
                     })
                     .collect(),
             )
@@ -399,7 +399,7 @@ impl<'a> DoubleEndedIterator for ParallelIteratorOcel<'a> {
                     .filter_map(|event| {
                         self.log
                             .activity_key()
-                            .process_activity_attempt(&event.event_type)
+                            .try_process_activity(&event.event_type)
                     })
                     .collect(),
             )
@@ -482,7 +482,7 @@ impl<'a> Producer for ParallelTraceProbabilitiesIteratorProducer<'a> {
             iter.nth(self.min - 1);
         }
         ParallelTraceProbabilitiesIteratorIterator {
-            iter: iter,
+            iter,
             left: self.max - self.min,
         }
     }

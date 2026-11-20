@@ -25,21 +25,11 @@ use strum_macros::{EnumIs, EnumIter};
 
 pub const HEADER: &str = "process tree";
 
-#[derive(Debug, ActivityKey, Clone)]
+#[derive(Debug, ActivityKey, Clone, Default)]
 pub struct ProcessTree {
     pub activity_key: ActivityKey,
     pub tree: Vec<Node>,
     pub transition2node: Vec<usize>,
-}
-
-impl Default for ProcessTree {
-    fn default() -> Self {
-        Self {
-            activity_key: ActivityKey::new(),
-            tree: vec![],
-            transition2node: vec![],
-        }
-    }
 }
 
 impl ProcessTree {
@@ -72,7 +62,7 @@ impl ProcessTree {
                     f,
                     "{}activity {}",
                     id,
-                    self.activity_key.get_activity_label(activity)
+                    self.activity_key.activity_to_label(activity)
                 )?;
                 Ok(node + 1)
             }
@@ -107,7 +97,7 @@ impl ProcessTree {
             Node::Activity(activity) => {
                 let transition = graphable::create_transition(
                     graph,
-                    self.activity_key.get_activity_label(&activity),
+                    self.activity_key.activity_to_label(&activity),
                     "",
                 );
                 graphable::create_edge(graph, entry, &transition, "");
@@ -476,7 +466,7 @@ macro_rules! tree {
                 writeln!(
                     f,
                     "Number of activities\t\t{}",
-                    $t::activity_key(self).get_number_of_activities()
+                    $t::activity_key(self).len()
                 )?;
 
                 writeln!(f, "")?;
@@ -510,8 +500,8 @@ macro_rules! tree {
         impl<'a> $u<'a> {
             fn new(tree: &'a $t, node: usize) -> Self {
                 Self {
-                    tree: tree,
-                    node: node,
+                    tree,
+                    node,
                     now: None,
                     next: node + 1,
                     count: 0,
@@ -542,7 +532,7 @@ macro_rules! tree {
         impl<'a> $v<'a> {
             fn new(tree: &'a $t, node: usize) -> Self {
                 Self {
-                    tree: tree,
+                    tree,
                     node: tree.get_parent(node),
                 }
             }
@@ -630,7 +620,7 @@ impl Importable for ProcessTree {
             ));
         }
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         Self::string_to_tree(&mut lreader, &mut tree, &mut activity_key, true)?;
 

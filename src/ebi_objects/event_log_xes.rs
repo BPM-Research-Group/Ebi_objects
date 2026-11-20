@@ -278,7 +278,7 @@ impl StartEndActivities for EventLogXes {
         for trace in self.rust4pm_log.traces.iter() {
             if let Some(event) = trace.events.first() {
                 let activity_label = self.event_classifier().get_class_identity(event);
-                let activity = self.activity_key.process_activity_attempt(&activity_label);
+                let activity = self.activity_key.try_process_activity(&activity_label);
                 if let Some(activity) = activity {
                     match result.entry(activity) {
                         intmap::Entry::Occupied(mut occupied_entry) => {
@@ -299,7 +299,7 @@ impl StartEndActivities for EventLogXes {
         for trace in self.rust4pm_log.traces.iter() {
             if let Some(event) = trace.events.iter().last() {
                 let activity_label = self.event_classifier().get_class_identity(event);
-                let activity = self.activity_key.process_activity_attempt(&activity_label);
+                let activity = self.activity_key.try_process_activity(&activity_label);
                 if let Some(activity) = activity {
                     match result.entry(activity) {
                         intmap::Entry::Occupied(mut occupied_entry) => {

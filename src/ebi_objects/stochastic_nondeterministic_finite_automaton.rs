@@ -38,7 +38,7 @@ impl Default for StochasticNondeterministicFiniteAutomaton {
     /// Create an empty SNFA with a single initial / final state
     fn default() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_state: Some(AutomatonState::zero()),
             sources: vec![],
             targets: vec![],
@@ -530,7 +530,7 @@ impl Infoable for StochasticNondeterministicFiniteAutomaton {
         writeln!(
             f,
             "Number of activities\t{}",
-            self.activity_key.get_number_of_activities()
+            self.activity_key.len()
         )?;
 
         writeln!(f)?;
@@ -557,7 +557,7 @@ impl Graphable for StochasticNondeterministicFiniteAutomaton {
             let target = places[self.targets[transition]];
             let probability = &self.probabilities[transition];
             let activity = if let Some(activity) = self.activities[transition] {
-                self.activity_key.get_activity_label(&activity)
+                self.activity_key.activity_to_label(&activity)
             } else {
                 "τ"
             };

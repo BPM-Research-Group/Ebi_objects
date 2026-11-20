@@ -13,7 +13,7 @@ pub struct LineReader<'a> {
 impl<'a> LineReader<'a> {
     pub fn new(reader: &'a mut (dyn BufRead + 'a)) -> Self {
         LineReader::<'a> {
-            reader: reader,
+            reader,
             line_no: 0,
             line: String::new(),
         }
@@ -221,7 +221,7 @@ impl<'a> LineReader<'a> {
         activity_key: &ActivityKey,
     ) -> std::fmt::Result {
         if let Some(activity) = activity {
-            let activity_label = activity_key.get_activity_label(&activity);
+            let activity_label = activity_key.activity_to_label(&activity);
             if activity_label.contains("\n") {
                 let activity_label = (activity_label.to_owned() + "\n").replace("$\n", "$$\n");
                 writeln!(f, "multiline label\n{}multiline$", activity_label)
@@ -251,8 +251,8 @@ mod tests {
             .process_activity("a\nbcde\nfghi$$\nmultiline$");
         let act2 = slang.activity_key.process_activity("$multiline");
         println!("{:?}", slang.activity_key);
-        assert!(slang.activity_key.get_id_from_activity(act) < 2);
-        assert!(slang.activity_key.get_id_from_activity(act2) < 2);
+        assert!(slang.activity_key.activity_to_id(act) < 2);
+        assert!(slang.activity_key.activity_to_id(act2) < 2);
 
         let mut fout: Vec<u8> = vec![];
         slang.export(&mut fout).unwrap();
@@ -270,7 +270,7 @@ mod tests {
             let act = slang
                 .activity_key
                 .process_activity("Check easy claim\n(5 min)");
-            assert!(slang.activity_key.get_id_from_activity(act) < 3);
+            assert!(slang.activity_key.activity_to_id(act) < 3);
 
             let mut fout: Vec<u8> = vec![];
             slang.export(&mut fout).unwrap();

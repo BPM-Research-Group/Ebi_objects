@@ -7,7 +7,6 @@
     clippy::needless_borrow,
     clippy::writeln_empty_string,
     clippy::len_zero,
-    clippy::useless_format,
     clippy::needless_lifetimes,
     clippy::get_first,
     clippy::redundant_closure,
@@ -35,7 +34,7 @@
 
 pub mod attribute_key {
     pub mod attribute;
-    pub mod attribute_key;
+    pub mod attribute_key_struct;
     pub mod data_type;
     pub mod has_attribute_key;
 }
@@ -144,7 +143,7 @@ pub mod strongly_connected_components;
 pub mod tests;
 
 pub use crate::attribute_key::attribute::Attribute;
-pub use crate::attribute_key::attribute_key::AttributeKey;
+pub use crate::attribute_key::attribute_key_struct::AttributeKey;
 pub use crate::attribute_key::data_type::DataType;
 pub use crate::constants::ebi_object::EbiObject;
 pub use crate::constants::ebi_object_type::EbiObjectType;

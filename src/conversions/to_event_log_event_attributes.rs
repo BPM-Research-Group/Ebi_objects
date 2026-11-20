@@ -50,8 +50,8 @@ impl From<(process_mining::EventLog, EventLogClassifier, String, String)>
 {
     fn from(value: (process_mining::EventLog, EventLogClassifier, String, String)) -> Self {
         let (rust4pm_log, classifier, resource, time) = value;
-        let mut activity_key = ActivityKey::new();
-        let mut attribute_key = AttributeKey::new();
+        let mut activity_key = ActivityKey::default();
+        let mut attribute_key = AttributeKey::default();
         let traces = rust4pm_log
             .traces
             .into_iter()
@@ -122,7 +122,7 @@ impl From<EventLogOcel> for EventLogEventAttributes {
         } = rust4pm_log;
 
         //gather attributes
-        let mut attribute_key = AttributeKey::new();
+        let mut attribute_key = AttributeKey::default();
         let case_object_id_attribute = attribute_key.process_attribute_column(0, "a");
         let activity_attribute = attribute_key.process_attribute_column(1, "a");
         let resource_attribute = attribute_key.process_attribute_column(2, "a");
@@ -274,7 +274,7 @@ impl From<EventLogCsv> for EventLogEventAttributes {
                             .get(activity_attribute)
                             .unwrap_or(&empty);
                         activity_key
-                            .process_activity_attempt(activity_label)
+                            .try_process_activity(activity_label)
                             .unwrap()
                     })
                     .collect();

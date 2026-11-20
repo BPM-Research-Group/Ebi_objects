@@ -69,14 +69,14 @@ impl From<FiniteStochasticLanguage> for FiniteLanguage {
 
 impl From<HashSet<Vec<String>>> for FiniteLanguage {
     fn from(value: HashSet<Vec<String>>) -> Self {
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let traces = value
             .into_iter()
             .map(|trace| activity_key.process_trace(&trace))
             .collect();
         Self {
-            activity_key: activity_key,
-            traces: traces,
+            activity_key,
+            traces,
         }
     }
 }

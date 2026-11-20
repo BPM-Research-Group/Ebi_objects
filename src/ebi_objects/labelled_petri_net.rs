@@ -51,7 +51,7 @@ pub struct LabelledPetriNet {
 impl Default for LabelledPetriNet {
     fn default() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_marking: Some(Marking::new(0)),
             labels: vec![],
             place2output_transitions: vec![],
@@ -79,7 +79,7 @@ impl LabelledPetriNet {
 
     pub fn new_empty_language() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_marking: None,
             labels: vec![None],
             place2output_transitions: vec![],
@@ -549,7 +549,7 @@ impl Infoable for LabelledPetriNet {
         writeln!(
             f,
             "Number of activities\t\t{}",
-            self.activity_key().get_number_of_activities()
+            self.activity_key().len()
         )?;
         writeln!(
             f,
@@ -591,7 +591,7 @@ impl fmt::Display for LabelledPetriNet {
                     writeln!(
                         f,
                         "label {}",
-                        self.activity_key.get_activity_label(&activity)
+                        self.activity_key.activity_to_label(&activity)
                     )?;
                 } else {
                     writeln!(f, "silent")?;
@@ -671,7 +671,7 @@ impl Importable for LabelledPetriNet {
             ));
         }
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
 
         let number_of_places_line = lreader
             .next_line_string()
@@ -840,7 +840,7 @@ impl Graphable for LabelledPetriNet {
                 let node = if let Some(activity) = self.get_transition_label(transition) {
                     graphable::create_transition(
                         &mut graph,
-                        self.activity_key.get_activity_label(&activity),
+                        self.activity_key.activity_to_label(&activity),
                         "",
                     )
                 } else {

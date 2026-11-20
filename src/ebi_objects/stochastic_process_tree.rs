@@ -63,7 +63,7 @@ impl StochasticProcessTree {
                     f,
                     "{}activity {}\n{}# weight node {}\n{}{}",
                     id,
-                    self.activity_key.get_activity_label(activity),
+                    self.activity_key.activity_to_label(activity),
                     id,
                     node,
                     id,
@@ -199,7 +199,7 @@ impl StochasticProcessTree {
             Node::Activity(activity) => {
                 let transition = graphable::create_transition(
                     graph,
-                    self.activity_key.get_activity_label(&activity),
+                    self.activity_key.activity_to_label(&activity),
                     "",
                 );
                 graphable::create_edge(graph, entry, &transition, "");
@@ -365,7 +365,7 @@ impl Importable for StochasticProcessTree {
             ));
         }
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut weights = vec![];
         Self::string_to_tree(

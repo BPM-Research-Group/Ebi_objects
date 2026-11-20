@@ -45,11 +45,11 @@ impl From<(ActivityKey, Vec<Node>, Vec<Fraction>, Fraction)> for StochasticProce
         }
 
         Self {
-            activity_key: activity_key,
-            tree: tree,
-            transition2node: transition2node,
-            weights: weights,
-            termination_weight: termination_weight,
+            activity_key,
+            tree,
+            transition2node,
+            weights,
+            termination_weight,
         }
     }
 }

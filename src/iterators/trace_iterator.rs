@@ -46,7 +46,7 @@ impl<'a> Iterator for TraceIteratorCsv<'a> {
             let activity = self
                 .log
                 .activity_key
-                .process_activity_attempt(activity_label)?;
+                .try_process_activity(activity_label)?;
             result.push(activity);
         }
         Some(result)
@@ -79,7 +79,7 @@ impl<'a> Iterator for TraceIteratorXes<'a> {
             let activity = self
                 .log
                 .activity_key
-                .process_activity_attempt(&self.log.classifier.get_class_identity(event))?;
+                .try_process_activity(&self.log.classifier.get_class_identity(event))?;
             result.push(activity);
         }
         self.next += 1;
@@ -123,7 +123,7 @@ impl<'a> Iterator for TraceIteratorOcel<'a> {
                     .filter_map(|event| {
                         self.log
                             .activity_key()
-                            .process_activity_attempt(&event.event_type)
+                            .try_process_activity(&event.event_type)
                     })
                     .collect(),
             )

@@ -29,9 +29,7 @@ impl Marking {
     }
 
     pub fn from_vec(place2token: Vec<u64>) -> Self {
-        Marking {
-            place2token: place2token,
-        }
+        Marking { place2token }
     }
 
     pub fn increase(&mut self, place: usize, amount: u64) -> Result<()> {

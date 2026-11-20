@@ -14,7 +14,7 @@ use std::fmt::Display;
 
 pub const HEADER: &str = "stochastic language of alignments";
 
-#[derive(ActivityKey, Clone)]
+#[derive(ActivityKey, Clone, Default)]
 pub struct StochasticLanguageOfAlignments {
     pub activity_key: ActivityKey,
     pub alignments: Vec<Vec<Move>>,
@@ -24,7 +24,7 @@ pub struct StochasticLanguageOfAlignments {
 impl StochasticLanguageOfAlignments {
     pub fn new(activity_key: ActivityKey) -> Self {
         Self {
-            activity_key: activity_key,
+            activity_key,
             alignments: vec![],
             probabilities: vec![],
         }
@@ -112,7 +112,7 @@ impl Display for StochasticLanguageOfAlignments {
                         writeln!(
                             f,
                             "label {}",
-                            self.activity_key.get_activity_label(activity)
+                            self.activity_key.activity_to_label(activity)
                         )?;
                     }
                     Move::ModelMove {
@@ -123,7 +123,7 @@ impl Display for StochasticLanguageOfAlignments {
                         writeln!(
                             f,
                             "label {}",
-                            self.activity_key.get_activity_label(activity)
+                            self.activity_key.activity_to_label(activity)
                         )?;
                         writeln!(f, "{}", transition)?;
                     }
@@ -135,7 +135,7 @@ impl Display for StochasticLanguageOfAlignments {
                         writeln!(
                             f,
                             "label {}",
-                            self.activity_key.get_activity_label(activity)
+                            self.activity_key.activity_to_label(activity)
                         )?;
                         writeln!(f, "# transition\n{}", transition)?;
                     }
@@ -185,7 +185,7 @@ impl Importable for StochasticLanguageOfAlignments {
         Self: Sized,
     {
         let mut lreader = LineReader::new(reader);
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
 
         let head = lreader
             .next_line_string()
@@ -334,8 +334,8 @@ impl Importable for StochasticLanguageOfAlignments {
         }
 
         Ok(Self {
-            activity_key: activity_key,
-            alignments: alignments,
+            activity_key,
+            alignments,
             probabilities,
         })
     }

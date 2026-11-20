@@ -36,7 +36,7 @@ pub struct StochasticLabelledPetriNet {
 impl Default for StochasticLabelledPetriNet {
     fn default() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_marking: Some(Marking::new(0)),
             labels: vec![],
             place2output_transitions: vec![],
@@ -52,7 +52,7 @@ impl Default for StochasticLabelledPetriNet {
 impl StochasticLabelledPetriNet {
     pub fn new_empty_language() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_marking: None,
             labels: vec![None],
             place2output_transitions: vec![],
@@ -264,7 +264,7 @@ impl Infoable for StochasticLabelledPetriNet {
         writeln!(
             f,
             "Number of activities\t\t{}",
-            self.activity_key().get_number_of_activities()
+            self.activity_key().len()
         )?;
         writeln!(
             f,
@@ -306,7 +306,7 @@ impl fmt::Display for StochasticLabelledPetriNet {
                     writeln!(
                         f,
                         "label {}",
-                        self.activity_key.get_activity_label(&activity)
+                        self.activity_key.activity_to_label(&activity)
                     )?;
                 } else {
                     writeln!(f, "silent")?;
@@ -389,7 +389,7 @@ impl Importable for StochasticLabelledPetriNet {
             ));
         }
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
 
         let number_of_places_line = lreader
             .next_line_string()
@@ -583,7 +583,7 @@ impl Graphable for StochasticLabelledPetriNet {
                 let node = if let Some(activity) = self.get_transition_label(transition) {
                     graphable::create_transition(
                         &mut graph,
-                        self.activity_key.get_activity_label(&activity),
+                        self.activity_key.activity_to_label(&activity),
                         &self.weights[transition].to_string(),
                     )
                 } else {

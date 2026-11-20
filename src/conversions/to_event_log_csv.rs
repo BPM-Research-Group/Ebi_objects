@@ -21,7 +21,7 @@ impl TryFrom<EventLog> for EventLogCsv {
         } = value;
 
         //create the attribute key
-        let mut attribute_key = AttributeKey::new();
+        let mut attribute_key = AttributeKey::default();
         let trace_id_attribute = attribute_key.process_attribute_column(0, "0");
         let activity_attribute = attribute_key.process_attribute_column(1, "a");
 
@@ -40,7 +40,7 @@ impl TryFrom<EventLog> for EventLogCsv {
                 map.insert(trace_id_attribute, trace_id.to_string());
                 map.insert(
                     activity_attribute,
-                    activity_key.get_activity_label(&activity).to_string(),
+                    activity_key.activity_to_label(&activity).to_string(),
                 );
                 new_events.push(map);
             }
@@ -90,7 +90,7 @@ impl TryFrom<EventLogXes> for EventLogCsv {
         } = value;
 
         //create the attribute key
-        let mut attribute_key = AttributeKey::new();
+        let mut attribute_key = AttributeKey::default();
 
         //transform the traces and events
         let mut traces = Vec::with_capacity(rust4pm_log.traces.len());

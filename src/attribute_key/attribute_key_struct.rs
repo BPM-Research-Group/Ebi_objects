@@ -8,22 +8,14 @@ use process_mining::core::event_data::{
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator};
 use std::{borrow::Borrow, collections::HashMap};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AttributeKey {
     pub(crate) name2attribute: HashMap<String, Attribute, FnvBuildHasher>,
     pub(crate) attribute2name: Vec<String>,
     pub(crate) attribute2type: Vec<DataType>,
 }
 
-impl<'a> AttributeKey {
-    pub fn new() -> Self {
-        Self {
-            name2attribute: HashMap::default(),
-            attribute2name: vec![],
-            attribute2type: vec![],
-        }
-    }
-
+impl AttributeKey {
     pub fn attributes(&self) -> impl Iterator<Item = Attribute> {
         self.name2attribute.values().copied()
     }
@@ -54,7 +46,7 @@ impl<'a> AttributeKey {
             self.attribute2name[attribute.borrow().id] = label.to_string();
             self.name2attribute.remove(&old_label);
             self.name2attribute
-                .insert(label.to_string(), attribute.borrow().clone());
+                .insert(label.to_string(), *attribute.borrow());
         }
     }
 
@@ -174,6 +166,10 @@ impl<'a> AttributeKey {
 
     pub fn len(&self) -> usize {
         self.attribute2name.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.attribute2name.is_empty()
     }
 }
 

@@ -34,7 +34,7 @@ impl From<(ActivityKey, Vec<Node>)> for ProcessTree {
         Self {
             activity_key: value.0,
             tree: value.1,
-            transition2node: transition2node,
+            transition2node,
         }
     }
 }
@@ -42,7 +42,7 @@ impl From<(ActivityKey, Vec<Node>)> for ProcessTree {
 #[macro_export]
 macro_rules! tau {
     () => {
-        ProcessTree::from((ActivityKey::new(), vec![Node::Tau]))
+        ProcessTree::from((ActivityKey::default(), vec![Node::Tau]))
     };
 }
 pub use tau;
@@ -50,7 +50,7 @@ pub use tau;
 #[macro_export]
 macro_rules! activity {
     ($a:expr) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let act = activity_key.process_activity($a);
         ProcessTree::from((activity_key, vec![Node::Activity(act)]))
     }};
@@ -60,7 +60,7 @@ pub use activity;
 #[macro_export]
 macro_rules! xor {
     ($($opt:expr),+) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut len = 0;
         $(

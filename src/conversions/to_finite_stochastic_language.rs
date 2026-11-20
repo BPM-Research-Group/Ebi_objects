@@ -34,11 +34,9 @@ impl From<EventLog> for FiniteStochasticLanguage {
             match map.entry(trace) {
                 Entry::Occupied(mut e) => {
                     *e.get_mut() += &trace_weight;
-                    ()
                 }
                 Entry::Vacant(e) => {
                     e.insert(trace_weight.clone());
-                    ()
                 }
             }
         }
@@ -53,13 +51,13 @@ impl From<HashMap<Vec<String>, Fraction>> for FiniteStochasticLanguage {
      */
     fn from(mut value: HashMap<Vec<String>, Fraction>) -> Self {
         Self::normalise_before(&mut value);
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let a_traces = value
             .into_iter()
             .map(|(trace, probability)| (activity_key.process_trace(&trace), probability))
             .collect();
         Self {
-            activity_key: activity_key,
+            activity_key,
             traces: a_traces,
         }
     }

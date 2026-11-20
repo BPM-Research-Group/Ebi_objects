@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn tree_2_powl_int() {
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let a = activity_key.process_activity("a");
         let b = activity_key.process_activity("b");
         let c = activity_key.process_activity("c");
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn ptree_2_powl_empty() {
-        let activity_key = ActivityKey::new();
+        let activity_key = ActivityKey::default();
         let tree = vec![];
         let ptree = ProcessTree::from((activity_key, tree));
         let _powl = PartiallyOrderedWorkflowLanguage::from(ptree);

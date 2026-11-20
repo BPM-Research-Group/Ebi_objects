@@ -123,7 +123,7 @@ impl<T> IndexMut<&AutomatonState> for Vec<T> {
 #[macro_export]
 macro_rules! a {
     ($u:expr) => {
-        crate::AutomatonState::of($u)
+        $crate::AutomatonState::of($u)
     };
 }
 pub use a;

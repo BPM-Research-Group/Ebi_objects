@@ -63,7 +63,7 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
         let initial_state = 0;
 
         //add states
-        for _ in value.activity_key().get_activities() {
+        for _ in value.activity_key().activities() {
             result.add_state(); //we do not keep a map, as we can predict the numbers: 0 = initial state, 1..=n = activity states, n+1 = final state.
         }
 
@@ -89,7 +89,7 @@ impl From<DirectlyFollowsGraph> for StochasticDeterministicFiniteAutomaton {
 
         //edges
         {
-            for activity in value.activity_key().get_activities() {
+            for activity in value.activity_key().activities() {
                 if let Some(node) = value.activity_2_state.get(*activity) {
                     //gather the outgoing sum
                     let mut sum = Fraction::zero();

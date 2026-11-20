@@ -37,7 +37,7 @@ impl Default for StochasticDeterministicFiniteAutomaton {
      */
     fn default() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_state: Some(AutomatonState::zero()),
             sources: vec![],
             targets: vec![],
@@ -54,7 +54,7 @@ impl StochasticDeterministicFiniteAutomaton {
      */
     pub fn new_empty() -> Self {
         Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             initial_state: None,
             sources: vec![],
             targets: vec![],
@@ -97,7 +97,7 @@ impl StochasticDeterministicFiniteAutomaton {
         self.ensure_states(target);
 
         let (found, from) =
-            self.binary_search(source, self.activity_key.get_id_from_activity(activity));
+            self.binary_search(source, self.activity_key.activity_to_id(activity));
         if found {
             //edge already present
             Err(anyhow!(
@@ -139,7 +139,7 @@ impl StochasticDeterministicFiniteAutomaton {
 
         let (found, transition) = self.binary_search(
             source_state,
-            self.activity_key.get_id_from_activity(activity),
+            self.activity_key.activity_to_id(activity),
         );
         if found {
             self.probabilities[transition] += &probability;
@@ -264,7 +264,7 @@ impl TranslateActivityKey for StochasticDeterministicFiniteAutomaton {
         ) {
             let activity = translator.translate_activity(&activity);
             let (_, from) =
-                self.binary_search(source, self.activity_key.get_id_from_activity(activity));
+                self.binary_search(source, self.activity_key.activity_to_id(activity));
 
             self.sources.insert(from, source);
             self.targets.insert(from, target);
@@ -372,7 +372,7 @@ impl Infoable for StochasticDeterministicFiniteAutomaton {
         writeln!(
             f,
             "Number of activities\t{}",
-            self.activity_key.get_number_of_activities()
+            self.activity_key.len()
         )?;
 
         writeln!(f)?;
@@ -395,7 +395,7 @@ impl fmt::Display for StochasticDeterministicFiniteAutomaton {
                 "{{\"from\":{},\"to\":{},\"label\":\"{}\",\"prob\":\"{}\"}}",
                 self.sources[pos],
                 self.targets[pos],
-                self.activity_key.get_activity_label(&self.activities[pos]),
+                self.activity_key.activity_to_label(&self.activities[pos]),
                 self.probabilities[pos]
             )?;
             if pos + 1 == self.sources.len() {
@@ -427,7 +427,7 @@ impl Graphable for StochasticDeterministicFiniteAutomaton {
             let source = places[self.sources[pos]];
             let target = places[self.targets[pos]];
             let probability = &self.probabilities[pos];
-            let activity = self.activity_key.get_activity_label(&self.activities[pos]);
+            let activity = self.activity_key.activity_to_label(&self.activities[pos]);
 
             graphable::create_edge(
                 &mut graph,

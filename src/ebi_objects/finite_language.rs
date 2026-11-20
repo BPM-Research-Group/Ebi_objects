@@ -26,19 +26,10 @@ use std::{
 
 pub const HEADER: &str = "finite language";
 
-#[derive(ActivityKey, Clone, Debug)]
+#[derive(ActivityKey, Clone, Debug, Default)]
 pub struct FiniteLanguage {
     pub activity_key: ActivityKey,
     pub traces: HashSet<Vec<Activity>, FnvBuildHasher>,
-}
-
-impl Default for FiniteLanguage {
-    fn default() -> Self {
-        Self {
-            activity_key: ActivityKey::new(),
-            traces: Self::new_hashmap(),
-        }
-    }
 }
 
 impl FiniteLanguage {
@@ -139,11 +130,7 @@ impl Infoable for FiniteLanguage {
             "Number of events\t{}",
             self.traces.iter().map(|t| t.len()).sum::<usize>()
         )?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
+        writeln!(f, "Number of activities\t{}", self.activity_key().len())?;
 
         writeln!(f)?;
         self.activity_key().info(f)?;
@@ -215,7 +202,7 @@ impl Importable for FiniteLanguage {
             .context("failed to read number of places")?;
 
         let mut traces = HashSet::<Vec<Activity>, FnvBuildHasher>::default();
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         for trace_i in 0..number_of_traces {
             let number_of_events = lreader.next_line_index().with_context(|| {
                 format!(
@@ -244,8 +231,8 @@ impl Importable for FiniteLanguage {
         }
 
         Ok(Self {
-            activity_key: activity_key,
-            traces: traces,
+            activity_key,
+            traces,
         })
     }
 }

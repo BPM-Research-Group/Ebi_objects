@@ -206,7 +206,7 @@ impl Exportable for LolaNet {
                         f,
                         "{}.{}",
                         Self::escape_transition_label(
-                            self.0.activity_key().get_activity_label(&activity)
+                            self.0.activity_key().activity_to_label(&activity)
                         ),
                         transition
                     )?;

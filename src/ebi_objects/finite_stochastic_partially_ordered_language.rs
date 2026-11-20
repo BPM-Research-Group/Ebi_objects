@@ -87,7 +87,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
         let mut sum = Fraction::zero();
         let mut traces = Vec::with_capacity(number_of_traces);
         let mut probabilities = Vec::with_capacity(number_of_traces);
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
 
         for trace_i in 0..number_of_traces {
             let probability = lreader.next_line_weight().with_context(|| {
@@ -171,8 +171,8 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
             }
 
             traces.push(PartiallyOrderedTrace {
-                event_2_activity: event_2_activity,
-                event_2_predecessors: event_2_predecessors,
+                event_2_activity,
+                event_2_predecessors,
             });
             probabilities.push(probability);
         }
@@ -186,7 +186,7 @@ impl Importable for FiniteStochasticPartiallyOrderedLanguage {
         }
 
         Ok(Self {
-            activity_key: activity_key,
+            activity_key,
             traces,
             probabilities,
         })
@@ -264,11 +264,7 @@ impl Infoable for FiniteStochasticPartiallyOrderedLanguage {
                 .map(|t| t.number_of_edges())
                 .sum::<usize>()
         )?;
-        writeln!(
-            f,
-            "Number of activities\t{}",
-            self.activity_key().get_number_of_activities()
-        )?;
+        writeln!(f, "Number of activities\t{}", self.activity_key().len())?;
         writeln!(
             f,
             "Sum of probabilities\t{:.4}",

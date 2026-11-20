@@ -139,7 +139,7 @@ impl Infoable for BusinessProcessModelAndNotation {
         writeln!(
             f,
             "Number of activities\t\t{}",
-            self.activity_key().get_number_of_activities()
+            self.activity_key().len()
         )?;
 
         writeln!(f)?;

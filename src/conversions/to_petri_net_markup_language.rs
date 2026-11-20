@@ -41,7 +41,7 @@ impl TryFrom<&LabelledPetriNet> for process_mining::PetriNet {
             for transition in 0..lpn.transition2input_places.len() {
                 let new_transition = result.add_transition(
                     lpn.get_transition_label(transition)
-                        .map(|activity| lpn.activity_key.get_activity_label(&activity).to_string()),
+                        .map(|activity| lpn.activity_key.activity_to_label(&activity).to_string()),
                     None,
                 );
 

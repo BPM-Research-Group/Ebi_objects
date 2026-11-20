@@ -759,7 +759,7 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
 
         //transitions
         let mut transition2index = HashMap::<_, _, FnvBuildHasher>::default();
-        for (transition_id, transition) in &pnml.transitions {
+        for (transition_id, transition) in pnml.transitions {
             let label = transition
                 .label
                 .as_ref()
@@ -770,7 +770,7 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
         }
 
         //arcs
-        for arc in pnml.arcs.iter() {
+        for arc in pnml.arcs {
             match arc.from_to {
                 process_mining::core::process_models::petri_net::ArcType::PlaceTransition(
                     place_id,
@@ -809,7 +809,7 @@ impl TryFrom<process_mining::PetriNet> for LabelledPetriNet {
 
         //initial marking
         // for (place_id, cardinality) in pnml.net.initial_marking.as_ref().ok_or(anyhow!("The given net has no initial marking. Ebi requires an initial marking for its Petri nets."))?.iter() {
-        if let Some(marking) = pnml.initial_marking.as_ref() {
+        if let Some(marking) = &pnml.initial_marking {
             for (place_id, cardinality) in marking {
                 let new_place = place2index
                     .get(&place_id.get_uuid())

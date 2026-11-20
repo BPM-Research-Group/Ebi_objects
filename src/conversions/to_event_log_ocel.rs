@@ -6,7 +6,7 @@ impl From<(process_mining::OCEL, String, Option<String>, String)> for EventLogOc
     fn from(value: (process_mining::OCEL, String, Option<String>, String)) -> Self {
         let mut result = Self {
             rust4pm_log: value.0,
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             case_object_type: value.1,
             resource_object_type: value.2,
             time_attribute: value.3,

@@ -72,7 +72,7 @@ impl TryFrom<EventLogCsv> for EventLogXes {
         let resource = if let Some(att) = value.resource_attribute {
             value
                 .attribute_key
-                .attribute_to_label(&att)
+                .attribute_to_label(att)
                 .cloned()
                 .unwrap_or(XES_DEFAULT_PARAMETER_RESOURCE_ATTRIBUTE.to_string())
         } else {
@@ -97,7 +97,7 @@ impl From<(process_mining::EventLog, EventLogClassifier, String, String)> for Ev
         let mut result = Self {
             classifier: value.1,
             rust4pm_log: value.0,
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             resource_attribute: value.2,
             time_attribute: value.3,
         };

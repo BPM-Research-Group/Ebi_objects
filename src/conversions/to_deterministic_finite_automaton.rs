@@ -62,7 +62,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for DeterministicFiniteAutomat
             sources: value.sources,
             targets: value.targets,
             activities: value.activities,
-            final_states: final_states,
+            final_states,
         }
     }
 }
@@ -74,7 +74,7 @@ impl From<DirectlyFollowsModel> for DeterministicFiniteAutomaton {
         if value.node_2_activity.is_empty() && !value.empty_traces {
             //empty language
             return Self {
-                activity_key: ActivityKey::new(),
+                activity_key: ActivityKey::default(),
                 initial_state: None,
                 sources: vec![],
                 targets: vec![],
@@ -178,7 +178,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
         } else {
             //empty language
             return Self {
-                activity_key: ActivityKey::new(),
+                activity_key: ActivityKey::default(),
                 initial_state: None,
                 sources: vec![],
                 targets: vec![],
@@ -276,7 +276,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
         } else {
             //empty language
             return Self {
-                activity_key: ActivityKey::new(),
+                activity_key: ActivityKey::default(),
                 initial_state: None,
                 sources: vec![],
                 targets: vec![],

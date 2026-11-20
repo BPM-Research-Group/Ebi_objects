@@ -211,7 +211,7 @@ impl Importable for EventLogCsv {
         .from_reader(reader);
 
         //create the intermediate event structure
-        let mut attribute_key = AttributeKey::new();
+        let mut attribute_key = AttributeKey::default();
         let mut events = vec![];
         for record in csv.records() {
             let record = record?;
@@ -324,7 +324,7 @@ impl Importable for EventLogCsv {
 
         let mut result = Self {
             activity_attribute,
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             attribute_key,
             traces,
             separator,
@@ -443,7 +443,7 @@ impl StartEndActivities for EventLogCsv {
             if let Some(event) = trace.iter().next() {
                 let activity_label = event.get(self.activity_attribute);
                 if let Some(activity_label) = activity_label {
-                    let activity = self.activity_key.process_activity_attempt(activity_label);
+                    let activity = self.activity_key.try_process_activity(activity_label);
                     if let Some(activity) = activity {
                         match result.entry(activity) {
                             intmap::Entry::Occupied(mut occupied_entry) => {
@@ -466,7 +466,7 @@ impl StartEndActivities for EventLogCsv {
             if let Some(event) = trace.iter().last() {
                 let activity_label = event.get(self.activity_attribute);
                 if let Some(activity_label) = activity_label {
-                    let activity = self.activity_key.process_activity_attempt(activity_label);
+                    let activity = self.activity_key.try_process_activity(activity_label);
                     if let Some(activity) = activity {
                         match result.entry(activity) {
                             intmap::Entry::Occupied(mut occupied_entry) => {

@@ -118,7 +118,7 @@ impl Exportable for EventLog {
                 writeln!(
                     f,
                     "<event><string key=\"concept:name\" value=\"{}\"/></event>",
-                    quick_xml::escape::escape(self.activity_key().get_activity_label(activity))
+                    quick_xml::escape::escape(self.activity_key().activity_to_label(activity))
                 )?;
             }
             writeln!(f, "</trace>")?;
@@ -142,14 +142,14 @@ macro_rules! log_infoable_stats {
         writeln!(
             $f,
             "Number of activities\t\t\t{}",
-            $self.activity_key().get_number_of_activities()
+            $self.activity_key().len()
         )?;
         writeln!($f, "Number of traces\t\t\t{}", $self.number_of_traces())?;
         writeln!($f, "Number of events\t\t\t{}", $self.number_of_events())?;
         writeln!(
             $f,
             "Number of activities\t\t\t{}",
-            $self.activity_key().get_number_of_activities()
+            $self.activity_key().len()
         )?;
         writeln!(
             $f,
@@ -185,7 +185,7 @@ macro_rules! log_infoable_startend {
             writeln!(
                 $f,
                 "\t{}: {}",
-                $self.activity_key.get_activity_label(&activity),
+                $self.activity_key.activity_to_label(&activity),
                 cardinality
             )?;
         }
@@ -196,7 +196,7 @@ macro_rules! log_infoable_startend {
             writeln!(
                 $f,
                 "\t{}: {}",
-                $self.activity_key.get_activity_label(&activity),
+                $self.activity_key.activity_to_label(&activity),
                 cardinality
             )?;
         }
@@ -359,7 +359,7 @@ mod tests {
         let fin = fs::read_to_string("testfiles/a-b.xes").unwrap();
         let mut log = fin.parse::<EventLog>().unwrap();
 
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         log.translate_using_activity_key(&mut activity_key);
     }
 

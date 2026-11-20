@@ -23,7 +23,7 @@ pub struct LanguageOfAlignments {
 impl LanguageOfAlignments {
     pub fn new(activity_key: ActivityKey) -> Self {
         Self {
-            activity_key: activity_key,
+            activity_key,
             alignments: vec![],
         }
     }
@@ -100,22 +100,14 @@ impl Display for LanguageOfAlignments {
                 match movee {
                     Move::LogMove { activity } => {
                         writeln!(f, "log move")?;
-                        writeln!(
-                            f,
-                            "label {}",
-                            self.activity_key.get_activity_label(activity)
-                        )?;
+                        writeln!(f, "label {}", self.activity_key.activity_to_label(activity))?;
                     }
                     Move::ModelMove {
                         activity,
                         transition,
                     } => {
                         writeln!(f, "model move")?;
-                        writeln!(
-                            f,
-                            "label {}",
-                            self.activity_key.get_activity_label(activity)
-                        )?;
+                        writeln!(f, "label {}", self.activity_key.activity_to_label(activity))?;
                         writeln!(f, "# transition\n{}", transition)?;
                     }
                     Move::SynchronousMove {
@@ -123,11 +115,7 @@ impl Display for LanguageOfAlignments {
                         transition,
                     } => {
                         writeln!(f, "synchronous move")?;
-                        writeln!(
-                            f,
-                            "label {}",
-                            self.activity_key.get_activity_label(activity)
-                        )?;
+                        writeln!(f, "label {}", self.activity_key.activity_to_label(activity))?;
                         writeln!(f, "# transition\n{}", transition)?;
                     }
                     Move::SilentMove { transition, .. } => {
@@ -177,7 +165,7 @@ impl Importable for LanguageOfAlignments {
         Self: Sized,
     {
         let mut lreader = LineReader::new(reader);
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
 
         let head = lreader
             .next_line_string()
@@ -239,7 +227,7 @@ impl Importable for LanguageOfAlignments {
                     })?;
                     let activity = if label_line.trim_start().starts_with("label ") {
                         let label = label_line.trim_start()[6..].to_string();
-                        
+
                         activity_key.process_activity(&label)
                     } else {
                         return Err(anyhow!("Line must have a label"));
@@ -307,8 +295,8 @@ impl Importable for LanguageOfAlignments {
         }
 
         Ok(Self {
-            activity_key: activity_key,
-            alignments: alignments,
+            activity_key,
+            alignments,
         })
     }
 }

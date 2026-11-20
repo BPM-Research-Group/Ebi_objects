@@ -311,7 +311,7 @@ impl StartEndActivities for EventLogOcel {
                 if relevant_objects.contains(&relation.object_id) {
                     let activity = self
                         .activity_key()
-                        .process_activity_attempt(&event.event_type);
+                        .try_process_activity(&event.event_type);
                     if let Some(activity) = activity
                         && started_traces.insert(relation.object_id.clone())
                     {
@@ -342,7 +342,7 @@ impl StartEndActivities for EventLogOcel {
                 {
                     let activity = self
                         .activity_key()
-                        .process_activity_attempt(&event.event_type);
+                        .try_process_activity(&event.event_type);
                     if let Some(activity) = activity {
                         match result.entry(activity) {
                             intmap::Entry::Occupied(mut occupied_entry) => {

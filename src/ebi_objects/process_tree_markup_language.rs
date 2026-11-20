@@ -65,7 +65,7 @@ impl State {
             second_open_tag_is_process_tree: false,
             seen_ptml_tag: false,
             seen_process_tree_tag: false,
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             root: None,
             nodes: HashMap::default(),
             edges: HashMap::default(),

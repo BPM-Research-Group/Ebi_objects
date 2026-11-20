@@ -57,13 +57,13 @@ impl DataType {
             }
             (DataType::Numerical(_, _), AttributeValue::Date(_)) => Self::Undefined,
             (DataType::Numerical(min, max), AttributeValue::Int(y)) => Self::Numerical(
-                min.min(&mut Fraction::from(*y)).clone(),
-                max.max(&mut Fraction::from(*y)).clone(),
+                min.min(&Fraction::from(*y)).clone(),
+                max.max(&Fraction::from(*y)).clone(),
             ),
             (DataType::Numerical(min, max), AttributeValue::Float(y)) => Self::Numerical(
-                min.min(&mut y.to_string().parse::<Fraction>().unwrap())
+                min.min(&y.to_string().parse::<Fraction>().unwrap())
                     .clone(),
-                max.max(&mut y.to_string().parse::<Fraction>().unwrap())
+                max.max(&y.to_string().parse::<Fraction>().unwrap())
                     .clone(),
             ),
             (DataType::Numerical(_, _), AttributeValue::Boolean(_)) => Self::Undefined,

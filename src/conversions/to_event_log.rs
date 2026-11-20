@@ -126,7 +126,7 @@ impl From<EventLogEventAttributes> for EventLog {
 impl From<(process_mining::EventLog, EventLogClassifier)> for EventLog {
     fn from(value: (process_mining::EventLog, EventLogClassifier)) -> Self {
         let mut result = Self {
-            activity_key: ActivityKey::new(),
+            activity_key: ActivityKey::default(),
             traces: vec![],
         };
 
@@ -165,7 +165,7 @@ pub use trace;
 #[macro_export]
 macro_rules! event_log {
     ($($opt:expr),*) => {{
-        let mut result = EventLog{activity_key: ActivityKey::new(), traces: vec![]};
+        let mut result = EventLog{activity_key: ActivityKey::default(), traces: vec![]};
         $(
             let trace = result.activity_key.process_trace_ref(&$opt);
             result.traces.push(trace);

@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn poltrace_2_potrace() {
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let abc = activity_key.process_activity("abc");
         let def = activity_key.process_activity("def");
 
@@ -213,7 +213,7 @@ mod tests {
         let sbpmn = fin
             .parse::<StochasticBusinessProcessModelAndNotation>()
             .unwrap();
-        let a = sbpmn.activity_key().process_activity_attempt("a").unwrap();
+        let a = sbpmn.activity_key().try_process_activity("a").unwrap();
 
         let mut run = PartiallyOrderedRun::from_initial_marking(&sbpmn).unwrap();
         run.execute_free_transitions_exhaustively(&sbpmn).unwrap();

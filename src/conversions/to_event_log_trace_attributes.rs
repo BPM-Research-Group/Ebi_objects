@@ -49,7 +49,7 @@ impl From<EventLogOcel> for EventLogTraceAttributes {
         } = rust4pm_log;
 
         //gather attributes
-        let mut attribute_key = AttributeKey::new();
+        let mut attribute_key = AttributeKey::default();
         let mut object_id2attributes = HashMap::<_, _, FnvBuildHasher>::default();
         for object in objects.iter() {
             let mut attributes = IntMap::new();
@@ -129,8 +129,8 @@ impl From<EventLogOcel> for EventLogTraceAttributes {
 impl From<(process_mining::EventLog, EventLogClassifier)> for EventLogTraceAttributes {
     fn from(value: (process_mining::EventLog, EventLogClassifier)) -> Self {
         let (rust4pm_log, classifier) = value;
-        let mut activity_key = ActivityKey::new();
-        let mut attribute_key = AttributeKey::new();
+        let mut activity_key = ActivityKey::default();
+        let mut attribute_key = AttributeKey::default();
         let traces = rust4pm_log
             .traces
             .into_iter()
