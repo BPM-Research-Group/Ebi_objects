@@ -232,7 +232,7 @@ impl From<ProcessTree> for BusinessProcessModelAndNotation {
         let root = value.root();
         if !transform_node(&value, root, source, sink, &mut c, parent) {
             //empty model
-            BPMNCreator::new().to_bpmn().unwrap()
+            BPMNCreator::default().to_bpmn().unwrap()
         } else {
             c.to_bpmn().unwrap()
         }
