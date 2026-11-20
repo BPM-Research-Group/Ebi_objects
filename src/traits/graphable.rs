@@ -19,7 +19,7 @@ pub fn create_place(graph: &mut VisualGraph, label: &str) -> NodeHandle {
     let orientation = Orientation::LeftToRight;
     let size = get_shape_size(orientation, &shape, look.font_size, true);
     let node = Element::create(shape, look, orientation, size);
-    return graph.add_node(node);
+    graph.add_node(node)
 }
 
 pub fn create_transition(graph: &mut VisualGraph, label: &str, xlabel: &str) -> NodeHandle {
@@ -28,7 +28,7 @@ pub fn create_transition(graph: &mut VisualGraph, label: &str, xlabel: &str) -> 
     let orientation = Orientation::LeftToRight;
     let size = get_shape_size(orientation, &shape, look.font_size, false);
     let node = Element::create(shape, look, orientation, size);
-    return graph.add_node(node);
+    graph.add_node(node)
 }
 
 pub fn create_silent_transition(graph: &mut VisualGraph, xlabel: &str) -> NodeHandle {
@@ -38,7 +38,7 @@ pub fn create_silent_transition(graph: &mut VisualGraph, xlabel: &str) -> NodeHa
     let orientation = Orientation::LeftToRight;
     let size = Point::new(20., 30.);
     let node = Element::create(shape, look, orientation, size);
-    return graph.add_node(node);
+    graph.add_node(node)
 }
 
 pub fn create_gateway(graph: &mut VisualGraph, label: &str) -> NodeHandle {
@@ -48,7 +48,7 @@ pub fn create_gateway(graph: &mut VisualGraph, label: &str) -> NodeHandle {
     let orientation = Orientation::LeftToRight;
     let size = Point::new(20., 20.);
     let node = Element::create(shape, look, orientation, size);
-    return graph.add_node(node);
+    graph.add_node(node)
 }
 
 pub fn create_dot(graph: &mut VisualGraph) -> NodeHandle {
@@ -57,10 +57,10 @@ pub fn create_dot(graph: &mut VisualGraph) -> NodeHandle {
     let orientation = Orientation::LeftToRight;
     let size = Point::new(5., 5.);
     let node = Element::create(shape, look, orientation, size);
-    return graph.add_node(node);
+    graph.add_node(node)
 }
 
 pub fn create_edge(graph: &mut VisualGraph, from: &NodeHandle, to: &NodeHandle, label: &str) {
     let arrow = Arrow::simple(label);
-    return graph.add_edge(arrow, *from, *to);
+    graph.add_edge(arrow, *from, *to)
 }

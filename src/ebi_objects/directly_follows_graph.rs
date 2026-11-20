@@ -412,15 +412,15 @@ impl DirectlyFollowsGraph {
         activity2: AutomatonState,
     ) -> Ordering {
         if source1 < source2 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if source1 > source2 {
-            return Ordering::Less;
+            Ordering::Less
         } else if activity2 > activity1 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if activity2 < activity1 {
-            return Ordering::Less;
+            Ordering::Less
         } else {
-            return Ordering::Equal;
+            Ordering::Equal
         }
     }
 }
@@ -608,7 +608,7 @@ impl Importable for DirectlyFollowsGraph {
             .collect();
         err?;
 
-        return Ok(result);
+        Ok(result)
     }
 }
 from_string!(DirectlyFollowsGraph);

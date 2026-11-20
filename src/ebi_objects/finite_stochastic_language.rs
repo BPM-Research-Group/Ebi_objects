@@ -120,7 +120,7 @@ impl FiniteStochasticLanguage {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     /// Adds the trace to the language. Does not normalise, thus the total probability mass of all traces will increase.
@@ -243,7 +243,7 @@ impl PartialEq for FiniteStochasticLanguage {
             }
         }
 
-        return true;
+        true
     }
 }
 

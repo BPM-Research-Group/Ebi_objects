@@ -140,14 +140,14 @@ impl StochasticDeterministicFiniteAutomaton {
         );
         if found {
             self.probabilities[transition] += &probability;
-            return self.targets[transition];
+            self.targets[transition]
         } else {
             let target = self.add_state();
             self.sources.insert(transition, source_state);
             self.targets.insert(transition, target);
             self.activities.insert(transition, activity);
             self.probabilities.insert(transition, probability);
-            return target;
+            target
         }
     }
 
@@ -169,7 +169,7 @@ impl StochasticDeterministicFiniteAutomaton {
     pub fn add_state(&mut self) -> AutomatonState {
         let state = AutomatonState::of(self.terminating_probabilities.len());
         self.terminating_probabilities.push(Fraction::one());
-        return state;
+        state
     }
 
     fn compare(
@@ -179,15 +179,15 @@ impl StochasticDeterministicFiniteAutomaton {
         activity2: Activity,
     ) -> Ordering {
         if source1 < source2 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if source1 > source2 {
-            return Ordering::Less;
+            Ordering::Less
         } else if activity2 > activity1 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if activity2 < activity1 {
-            return Ordering::Less;
+            Ordering::Less
         } else {
-            return Ordering::Equal;
+            Ordering::Equal
         }
     }
 
@@ -331,7 +331,7 @@ impl Importable for StochasticDeterministicFiniteAutomaton {
             result.add_transition(from, activity, to, probability)?;
         }
 
-        return Ok(result);
+        Ok(result)
     }
 }
 from_string!(StochasticDeterministicFiniteAutomaton);
@@ -611,7 +611,7 @@ impl AutomatonSemantics for StochasticDeterministicFiniteAutomaton {
             result.push(self.sources.len())
         }
 
-        return result;
+        result
     }
 
     fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {

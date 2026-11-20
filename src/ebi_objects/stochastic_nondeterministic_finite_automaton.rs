@@ -121,7 +121,7 @@ impl StochasticNondeterministicFiniteAutomaton {
         {
             //there is already an edge (source, activity, target); add to its probability
             self.probabilities[transition] += &probability;
-            return self.targets[transition];
+            self.targets[transition]
         } else {
             //find the last position where our edge could be
             let (_, transition2) = self.binary_search(
@@ -136,14 +136,14 @@ impl StochasticNondeterministicFiniteAutomaton {
                 // Add the probability to that transition.
                 transition += 1;
                 self.probabilities[transition] += &probability;
-                return self.targets[transition];
+                self.targets[transition]
             } else {
                 let target = self.add_state();
                 self.sources.insert(transition, source_state);
                 self.targets.insert(transition, target);
                 self.activities.insert(transition, activity);
                 self.probabilities.insert(transition, probability);
-                return target;
+                target
             }
         }
     }
@@ -167,7 +167,7 @@ impl StochasticNondeterministicFiniteAutomaton {
     pub fn add_state(&mut self) -> AutomatonState {
         let state = self.termination_probabilities.len();
         self.termination_probabilities.push(Fraction::one());
-        return AutomatonState::of(state);
+        AutomatonState::of(state)
     }
 
     fn compare(
@@ -179,19 +179,19 @@ impl StochasticNondeterministicFiniteAutomaton {
         target2: AutomatonState,
     ) -> Ordering {
         if source1 < source2 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if source1 > source2 {
-            return Ordering::Less;
+            Ordering::Less
         } else if activity2 > activity1 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if activity2 < activity1 {
-            return Ordering::Less;
+            Ordering::Less
         } else if target1 < target2 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if target1 > target2 {
-            return Ordering::Less;
+            Ordering::Less
         } else {
-            return Ordering::Equal;
+            Ordering::Equal
         }
     }
 
@@ -778,7 +778,7 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
             result.push(self.sources.len())
         }
 
-        return result;
+        result
     }
 
     fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {

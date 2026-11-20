@@ -103,7 +103,7 @@ impl<'a> AttributeKey {
         match self.name2attribute.get(attribute_name) {
             Some(index) => {
                 self.attribute2type[index.id].update(attribute_value);
-                return *index;
+                *index
             }
             None => {
                 let result = Attribute { id: next_index };
@@ -111,7 +111,7 @@ impl<'a> AttributeKey {
                 self.name2attribute
                     .insert(attribute_name.to_string(), result);
                 self.attribute2type.push(DataType::init(&attribute_value));
-                return result;
+                result
             }
         }
     }

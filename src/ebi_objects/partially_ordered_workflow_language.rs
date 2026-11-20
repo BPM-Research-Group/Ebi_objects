@@ -90,7 +90,7 @@ impl PartiallyOrderedWorkflowLanguage {
         for _ in 0..child_rank {
             i = self.traverse(i);
         }
-        return i;
+        i
     }
 
     /// Returns the parent of node, and the child rank of `node`.
@@ -128,7 +128,7 @@ impl PartiallyOrderedWorkflowLanguage {
         if parent > child {
             return false;
         }
-        return self.traverse(parent) > child;
+        self.traverse(parent) > child
     }
 
     /// Create a json representation.
@@ -163,7 +163,7 @@ impl PartiallyOrderedWorkflowLanguage {
                 _ => {}
             }
         }
-        return true;
+        true
     }
 }
 
@@ -308,11 +308,11 @@ fn import_node(
             )
         }),
         x => {
-            return Err(anyhow!(
+            Err(anyhow!(
                 "{} has a type `{}`, but expected `activity`, `partial_order` or `choice_graph`.",
                 id_to_capitalised_string(&id),
                 x
-            ));
+            ))
         }
     }
 }

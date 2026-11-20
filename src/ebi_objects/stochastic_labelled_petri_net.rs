@@ -49,7 +49,7 @@ impl StochasticLabelledPetriNet {
     }
 
     pub fn new_empty_language() -> Self {
-        return Self {
+        Self {
             activity_key: ActivityKey::new(),
             initial_marking: None,
             labels: vec![None],
@@ -59,7 +59,7 @@ impl StochasticLabelledPetriNet {
             transition2input_places_cardinality: vec![vec![]],
             transition2output_places_cardinality: vec![vec![]],
             weights: vec![],
-        };
+        }
     }
 
     pub fn get_number_of_places(&self) -> usize {

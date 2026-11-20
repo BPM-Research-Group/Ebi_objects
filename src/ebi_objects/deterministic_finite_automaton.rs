@@ -93,13 +93,13 @@ impl DeterministicFiniteAutomaton {
             self.activity_key.get_id_from_activity(activity),
         );
         if found {
-            return self.targets[transition];
+            self.targets[transition]
         } else {
             let target = self.add_state();
             self.sources.insert(transition, source_state);
             self.targets.insert(transition, target);
             self.activities.insert(transition, activity);
-            return target;
+            target
         }
     }
 
@@ -120,15 +120,15 @@ impl DeterministicFiniteAutomaton {
         activity2: Activity,
     ) -> Ordering {
         if source1 < source2 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if source1 > source2 {
-            return Ordering::Less;
+            Ordering::Less
         } else if activity2 > activity1 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if activity2 < activity1 {
-            return Ordering::Less;
+            Ordering::Less
         } else {
-            return Ordering::Equal;
+            Ordering::Equal
         }
     }
 
@@ -246,7 +246,7 @@ impl Importable for DeterministicFiniteAutomaton {
             result.final_states[state] = true;
         }
 
-        return Ok(result);
+        Ok(result)
     }
 }
 from_string!(DeterministicFiniteAutomaton);
@@ -432,7 +432,7 @@ impl AutomatonSemantics for DeterministicFiniteAutomaton {
             result.push(self.sources.len())
         }
 
-        return result;
+        result
     }
 
     fn transition_2_target(&self, transition: TransitionIndex) -> Option<AutomatonState> {

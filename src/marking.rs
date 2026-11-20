@@ -94,7 +94,7 @@ impl Marking {
                 None => return false,
             }
         }
-        return true;
+        true
     }
 }
 

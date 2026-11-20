@@ -800,7 +800,7 @@ impl FromStr for Operator {
                 return Ok(op);
             }
         }
-        return Err(anyhow!("operator not recognised"));
+        Err(anyhow!("operator not recognised"))
     }
 }
 

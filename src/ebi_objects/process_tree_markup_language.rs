@@ -211,11 +211,11 @@ impl State {
         if let Some(tag) = self.in_tags.iter().next() {
             Err(anyhow!("file ended while tag `{}` was still open", &tag))
         } else if !self.seen_ptml_tag {
-            return Err(anyhow!("no `ptml` tag found at the top level"));
+            Err(anyhow!("no `ptml` tag found at the top level"))
         } else if !self.seen_process_tree_tag {
-            return Err(anyhow!(
+            Err(anyhow!(
                 "no `processTree` tag found within the top-level `ptml` tag"
-            ));
+            ))
         } else {
             Ok(())
         }
@@ -248,11 +248,11 @@ impl State {
         } else {
             //safety: an absent root is allowed, but then there should not be any nodes
             if !self.nodes.is_empty() {
-                return Err(anyhow!(
+                Err(anyhow!(
                     "no root was declared on the `ptml` tag, but there are nodes in the `ptml` tag"
-                ));
+                ))
             } else {
-                return Ok(ProcessTree::from_str("process tree")?);
+                Ok(ProcessTree::from_str("process tree")?)
             }
         }
     }

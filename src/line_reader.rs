@@ -31,7 +31,7 @@ impl<'a> LineReader<'a> {
         self.line.clear();
 
         match self.reader.read_line(&mut self.line) {
-            Ok(0) => return Err(anyhow!("premature end of file")),
+            Ok(0) => Err(anyhow!("premature end of file")),
             Ok(_n) => {
                 if self.line.ends_with('\n') {
                     self.line.pop();
@@ -40,7 +40,7 @@ impl<'a> LineReader<'a> {
                     }
                 }
                 self.line_no += 1;
-                return Ok(());
+                Ok(())
             }
             Err(e) => Err(e.into()),
         }
@@ -104,7 +104,7 @@ impl<'a> LineReader<'a> {
                     self.get_last_line()
                 )
             })?;
-        return Ok(result);
+        Ok(result)
     }
 
     pub fn next_line(&mut self) -> Result<()> {
@@ -148,7 +148,7 @@ impl<'a> LineReader<'a> {
 
             label.pop(); //remove the last \n
             let activity = activity_key.process_activity(&label);
-            return Ok(Some(activity));
+            Ok(Some(activity))
         } else {
             //silent
             Ok(None)

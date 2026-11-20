@@ -194,9 +194,9 @@ impl TryFrom<LabelledPetriNet> for BusinessProcessModelAndNotation {
 
             c.to_bpmn()
         } else {
-            return Err(anyhow!(
+            Err(anyhow!(
                 "The LPN has the empty language. BPMN cannot represent this model."
-            ));
+            ))
         }
     }
 }

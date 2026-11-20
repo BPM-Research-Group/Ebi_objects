@@ -112,15 +112,15 @@ impl StochasticDirectlyFollowsModel {
         target2: AutomatonState,
     ) -> Ordering {
         if source1 < source2 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if source1 > source2 {
-            return Ordering::Less;
+            Ordering::Less
         } else if target2 > target1 {
-            return Ordering::Greater;
+            Ordering::Greater
         } else if target2 < target1 {
-            return Ordering::Less;
+            Ordering::Less
         } else {
-            return Ordering::Equal;
+            Ordering::Equal
         }
     }
 }

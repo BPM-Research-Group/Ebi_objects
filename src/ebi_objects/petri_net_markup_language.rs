@@ -652,7 +652,7 @@ pub(crate) mod tag_pnml {
                 state.pnmls.push(pnml);
                 Ok(())
             } else {
-                return Err(anyhow!("Expected Pnml."));
+                Err(anyhow!("Expected Pnml."))
             }
         }
     }
@@ -728,7 +728,7 @@ pub(crate) mod tag_net {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected pnml."));
+                Err(anyhow!("Expected pnml."))
             }
         }
     }
@@ -871,7 +871,7 @@ mod tag_page {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected a net."));
+                Err(anyhow!("Expected a net."))
             }
         }
     }
@@ -948,7 +948,7 @@ mod tag_place {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected a page."));
+                Err(anyhow!("Expected a page."))
             }
         }
     }
@@ -1200,7 +1200,7 @@ pub(crate) mod tag_transition {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected a page."));
+                Err(anyhow!("Expected a page."))
             }
         }
     }
@@ -1258,7 +1258,7 @@ pub(crate) mod tag_name {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected a page."));
+                Err(anyhow!("Expected a page."))
             }
         }
     }
@@ -1327,7 +1327,7 @@ pub(crate) mod tag_tool_specific {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected a transition."));
+                Err(anyhow!("Expected a transition."))
             }
         }
     }
@@ -1417,7 +1417,7 @@ pub(crate) mod tag_arc {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected a transition."));
+                Err(anyhow!("Expected a transition."))
             }
         }
     }
@@ -1493,7 +1493,7 @@ pub(crate) mod tag_inscription {
                 }
                 Ok(())
             } else {
-                return Err(anyhow!("Expected an arc."));
+                Err(anyhow!("Expected an arc."))
             }
         }
     }

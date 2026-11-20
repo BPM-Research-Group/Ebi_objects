@@ -293,7 +293,7 @@ impl<'a> Tokeniser<'a> {
     fn next(&mut self) -> Option<&str> {
         if self.remainder.is_empty() {
             //no more tokens
-            return None;
+            None
         } else if let Some(mut index) = self.remainder.find(&[' ', '\t', '\n', '\r', ',', ';', ':'])
         {
             let mut token;
@@ -371,7 +371,7 @@ impl<'a> Tokeniser<'a> {
                 }
             }
         }
-        return Err(anyhow!("Expected ';' to close places."));
+        Err(anyhow!("Expected ';' to close places."))
     }
 
     fn read_initial_marking(
@@ -460,7 +460,7 @@ impl<'a> Tokeniser<'a> {
                 }
             }
         }
-        return Err(anyhow!("Expected ';' to close marking."));
+        Err(anyhow!("Expected ';' to close marking."))
     }
 
     fn read_transitions(

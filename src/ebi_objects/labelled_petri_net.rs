@@ -76,7 +76,7 @@ impl LabelledPetriNet {
     }
 
     pub fn new_empty_language() -> Self {
-        return Self {
+        Self {
             activity_key: ActivityKey::new(),
             initial_marking: None,
             labels: vec![None],
@@ -85,7 +85,7 @@ impl LabelledPetriNet {
             transition2output_places: vec![vec![]],
             transition2input_places_cardinality: vec![vec![]],
             transition2output_places_cardinality: vec![vec![]],
-        };
+        }
     }
 
     pub fn get_number_of_places(&self) -> usize {
