@@ -245,12 +245,11 @@ impl DirectlyFollowsGraph {
     }
 
     pub fn contains_edge(&self, source: Activity, target: Activity) -> bool {
-        if let Some(source_state) = self.activity_2_state.get(source) {
-            if let Some(target_state) = self.activity_2_state.get(target) {
+        if let Some(source_state) = self.activity_2_state.get(source)
+            && let Some(target_state) = self.activity_2_state.get(target) {
                 let (found, edge) = self.binary_search(*source_state, *target_state);
                 return found && self.weights[edge].is_positive();
             }
-        }
         false
     }
 

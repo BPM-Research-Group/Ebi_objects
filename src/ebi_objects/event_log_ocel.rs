@@ -311,8 +311,8 @@ impl StartEndActivities for EventLogOcel {
                     let activity = self
                         .activity_key()
                         .process_activity_attempt(&event.event_type);
-                    if let Some(activity) = activity {
-                        if started_traces.insert(relation.object_id.clone()) {
+                    if let Some(activity) = activity
+                        && started_traces.insert(relation.object_id.clone()) {
                             match result.entry(activity) {
                                 intmap::Entry::Occupied(mut occupied_entry) => {
                                     *occupied_entry.get_mut() += 1
@@ -322,7 +322,6 @@ impl StartEndActivities for EventLogOcel {
                                 }
                             }
                         }
-                    }
                 }
             }
         }
@@ -336,8 +335,8 @@ impl StartEndActivities for EventLogOcel {
         let mut result = IntMap::new();
         for event in self.rust4pm_log.events.iter().rev() {
             for relation in &event.relationships {
-                if relevant_objects.contains(&relation.object_id) {
-                    if started_traces.insert(relation.object_id.clone()) {
+                if relevant_objects.contains(&relation.object_id)
+                    && started_traces.insert(relation.object_id.clone()) {
                         let activity = self
                             .activity_key()
                             .process_activity_attempt(&event.event_type);
@@ -352,7 +351,6 @@ impl StartEndActivities for EventLogOcel {
                             }
                         }
                     }
-                }
             }
         }
         result
