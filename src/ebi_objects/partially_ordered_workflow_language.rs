@@ -137,7 +137,7 @@ impl PartiallyOrderedWorkflowLanguage {
             {
                 HEADER_FORMAT: HEADER_FORMAT_VALUE,
                 HEADER_FORMAT_VERSION: HEADER_FORMAT_VERSION_VALUE,
-                "model": if let Some(root) = self.tree.get(0) {
+                "model": if let Some(root) = self.tree.first() {
                     root.to_json(self, 0)
                 } else {
                     Value::Null
@@ -787,7 +787,7 @@ impl Display for PartiallyOrderedWorkflowLanguage {
 impl Graphable for PartiallyOrderedWorkflowLanguage {
     fn to_dot(&self) -> Result<VisualGraph> {
         let mut graph = VisualGraph::new(Orientation::LeftToRight);
-        if let Some(root) = self.tree.get(0) {
+        if let Some(root) = self.tree.first() {
             root.to_dot(self, &mut graph, 0);
         }
         Ok(graph)

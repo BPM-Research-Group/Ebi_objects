@@ -566,7 +566,7 @@ impl Graphable for StochasticNondeterministicFiniteAutomaton {
                 &mut graph,
                 &source,
                 &target,
-                &format!("{}, {}", activity, probability.to_string()),
+                &format!("{}, {}", activity, probability),
             );
         }
 
@@ -641,8 +641,8 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonIterator<'a> {
             let target = self.it_targets.next().unwrap();
             let activity = self.it_activities.next().unwrap();
             let probability = self.it_probabilities.next().unwrap();
-            let result = Some((source, target, activity, probability));
-            result
+            
+            Some((source, target, activity, probability))
         } else {
             None
         }
@@ -693,8 +693,8 @@ impl<'a> Iterator for StochasticNondeterministicFiniteAutomatonMutIterator<'a> {
             let target = self.it_targets.next().unwrap();
             let activity = self.it_activities.next().unwrap();
             let probability = self.it_probabilities.next().unwrap();
-            let result = Some((source, target, activity, probability));
-            result
+            
+            Some((source, target, activity, probability))
         } else {
             None
         }
@@ -721,7 +721,7 @@ impl AutomatonSemantics for StochasticNondeterministicFiniteAutomaton {
     }
 
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
-        (0..self.termination_probabilities.len() + 1).map(|x| AutomatonState::of(x))
+        (0..self.termination_probabilities.len() + 1).map(AutomatonState::of)
     }
 
     fn is_state_final(&self, state: AutomatonState) -> bool {

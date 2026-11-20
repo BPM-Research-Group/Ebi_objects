@@ -239,8 +239,8 @@ impl Importable for LanguageOfAlignments {
                     })?;
                     let activity = if label_line.trim_start().starts_with("label ") {
                         let label = label_line.trim_start()[6..].to_string();
-                        let activity = activity_key.process_activity(&label);
-                        activity
+                        
+                        activity_key.process_activity(&label)
                     } else {
                         return Err(anyhow!("Line must have a label"));
                     };

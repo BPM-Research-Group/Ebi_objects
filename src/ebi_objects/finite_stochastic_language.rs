@@ -130,7 +130,7 @@ impl FiniteStochasticLanguage {
             return Err(anyhow!("Cannot add a trace with a negative probability."));
         }
 
-        *self.traces.entry(trace).or_insert_with(|| Fraction::zero()) += probability;
+        *self.traces.entry(trace).or_insert_with(Fraction::zero) += probability;
 
         Ok(())
     }

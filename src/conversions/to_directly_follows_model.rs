@@ -45,7 +45,9 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
             .filter_map(|(s, (t, w))| if w.is_positive() { Some((s, t)) } else { None })
             .collect();
 
-        let result = Self {
+        
+
+        Self {
             activity_key: activity_key,
             empty_traces: empty_traces_weight.is_positive(),
             node_2_activity: state_2_activity,
@@ -53,9 +55,7 @@ impl From<DirectlyFollowsGraph> for DirectlyFollowsModel {
             targets,
             start_nodes,
             end_nodes,
-        };
-
-        result
+        }
     }
 }
 

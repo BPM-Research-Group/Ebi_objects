@@ -377,7 +377,7 @@ impl AutomatonSemantics for DeterministicFiniteAutomaton {
     }
 
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
-        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+        (0..self.number_of_states()).map(AutomatonState::of)
     }
 
     fn is_state_final(&self, state: AutomatonState) -> bool {

@@ -222,7 +222,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
                                 //labelled activity: insert into resulting map
                                 activity2markings
                                     .entry(translator.translate_activity(&activity))
-                                    .or_insert_with(|| BTreeSet::new())
+                                    .or_insert_with(BTreeSet::new)
                                     .insert(target_marking);
                             } else {
                                 //silent step: add to queue
@@ -317,7 +317,7 @@ impl From<StochasticNondeterministicFiniteAutomaton> for DeterministicFiniteAuto
                                 //labelled activity: insert into resulting map
                                 activity2markings
                                     .entry(translator.translate_activity(activity))
-                                    .or_insert_with(|| BTreeSet::new())
+                                    .or_insert_with(BTreeSet::new)
                                     .insert(*target_marking);
                             } else {
                                 //silent step: add to queue

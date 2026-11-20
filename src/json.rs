@@ -78,7 +78,7 @@ pub fn read_field_object_or_null<'a>(
     }
 }
 
-pub fn read_field_string<'a>(json: &'a Value, field: &str) -> Result<String> {
+pub fn read_field_string(json: &Value, field: &str) -> Result<String> {
     match &json[field] {
         Value::Null => Err(anyhow!("field not found")),
         Value::Bool(_) => Err(anyhow!("field is a boolean, where literal expected")),
@@ -116,7 +116,7 @@ pub fn read_field_fraction_or_null(json: &Value, field: &str) -> Result<Option<F
     }
 }
 
-pub fn read_field_string_or_null<'a>(json: &'a Value, field: &str) -> Result<Option<String>> {
+pub fn read_field_string_or_null(json: &Value, field: &str) -> Result<Option<String>> {
     match &json[field] {
         Value::Null => Ok(None),
         Value::Bool(_) => Err(anyhow!("field is a boolean, where literal expected")),

@@ -28,7 +28,7 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
                 start_activities
                     .get(AutomatonState::of(state))
                     .cloned()
-                    .unwrap_or_else(|| Fraction::zero())
+                    .unwrap_or_else(Fraction::zero)
             })
             .collect();
         let end_node_weights = (0..state_2_activity.len())
@@ -36,11 +36,13 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
                 end_activities
                     .get(AutomatonState::of(state))
                     .cloned()
-                    .unwrap_or_else(|| Fraction::zero())
+                    .unwrap_or_else(Fraction::zero)
             })
             .collect();
 
-        let result = Self {
+        
+
+        Self {
             activity_key,
             node_2_activity: state_2_activity,
             empty_traces_weight,
@@ -49,9 +51,7 @@ impl From<DirectlyFollowsGraph> for StochasticDirectlyFollowsModel {
             weights,
             start_node_weights,
             end_node_weights,
-        };
-
-        result
+        }
     }
 }
 

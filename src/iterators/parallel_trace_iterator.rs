@@ -131,7 +131,7 @@ impl<'a> Iterator for ParallelIteratorCsv<'a> {
     type Item = Vec<Activity>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (_, trace) = self.traces.get(0)?;
+        let (_, trace) = self.traces.first()?;
         let mut result = Vec::with_capacity(trace.len());
         for event in trace.iter() {
             let empty = String::new();
@@ -244,7 +244,7 @@ impl<'a> Iterator for ParallelIteratorXes<'a> {
     type Item = Vec<Activity>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let trace = self.traces.get(0)?;
+        let trace = self.traces.first()?;
         let mut result = Vec::with_capacity(trace.events.len());
         for event in trace.events.iter() {
             let activity = self

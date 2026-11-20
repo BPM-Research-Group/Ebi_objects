@@ -308,7 +308,7 @@ impl Exportable for StochasticDirectlyFollowsModel {
     }
 
     fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
-        Ok(write!(f, "{}", self.to_string())?)
+        Ok(write!(f, "{}", self)?)
     }
 }
 
@@ -506,7 +506,7 @@ impl AutomatonSemantics for StochasticDirectlyFollowsModel {
     }
 
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
-        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+        (0..self.number_of_states()).map(AutomatonState::of)
     }
 
     fn is_state_final(&self, state: AutomatonState) -> bool {

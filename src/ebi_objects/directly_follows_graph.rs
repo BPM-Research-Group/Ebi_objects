@@ -473,14 +473,12 @@ impl Importable for DirectlyFollowsGraph {
         for (i, edge) in edges.into_iter().enumerate() {
             let edge_list = json::read_list(edge).with_context(|| format!("reading edge {}", i))?;
             let sourcetarget = json::read_list(
-                edge_list
-                    .get(0)
+                edge_list.first()
                     .ok_or_else(|| anyhow!("could not read source and target of edge {}", i))?,
             )?;
 
             let source_act = json::read_string(
-                sourcetarget
-                    .get(0)
+                sourcetarget.first()
                     .ok_or_else(|| anyhow!("could not read source of edge {}", i))?,
             )
             .with_context(|| format!("reading source of edge {}", i))?;
@@ -862,7 +860,7 @@ impl AutomatonSemantics for DirectlyFollowsGraph {
     }
 
     fn states(&self) -> impl Iterator<Item = AutomatonState> {
-        (0..self.number_of_states()).map(|x| AutomatonState::of(x))
+        (0..self.number_of_states()).map(AutomatonState::of)
     }
 
     fn is_state_final(&self, state: AutomatonState) -> bool {

@@ -96,7 +96,7 @@ impl From<StochasticDeterministicFiniteAutomaton> for StochasticNondeterministic
             initial_state,
             sources,
             targets,
-            activities: activities.into_iter().map(|a| Some(a)).collect(),
+            activities: activities.into_iter().map(Some).collect(),
             probabilities,
             termination_probabilities: terminating_probabilities,
         }
