@@ -41,6 +41,7 @@ impl TranslateActivityKey for ProcessTreeMarkupLanguage {
     }
 }
 
+#[derive(Default)]
 struct State {
     in_tags: Vec<String>,
     open_ptml_tags: usize,
@@ -56,22 +57,6 @@ struct State {
 }
 
 impl State {
-    fn new() -> Self {
-        Self {
-            in_tags: vec![],
-            open_ptml_tags: 0,
-            open_process_tree_tags: 0,
-            first_open_tag_is_ptml: false,
-            second_open_tag_is_process_tree: false,
-            seen_ptml_tag: false,
-            seen_process_tree_tag: false,
-            activity_key: ActivityKey::default(),
-            root: None,
-            nodes: HashMap::default(),
-            edges: HashMap::default(),
-        }
-    }
-
     fn empty_tag(&mut self, e: BytesStart) -> Result<()> {
         self.open_tag(e.clone())?;
         self.close_tag(e.to_end())
@@ -336,7 +321,7 @@ For instance:
         let mut xml_reader = Reader::from_reader(reader);
         xml_reader.config_mut().trim_text(true);
 
-        let mut state = State::new();
+        let mut state = State::default();
         let mut buf = vec![];
         loop {
             buf.clear();

@@ -82,7 +82,7 @@ pub use xor;
 #[macro_export]
 macro_rules! seq {
     ($($opt:expr),+) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut len = 0;
         $(
@@ -100,7 +100,7 @@ pub use seq;
 #[macro_export]
 macro_rules! con {
     ($($opt:expr),+) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut len = 0;
         $(
@@ -118,7 +118,7 @@ pub use con;
 #[macro_export]
 macro_rules! or {
     ($($opt:expr),+) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut len = 0;
         $(
@@ -136,7 +136,7 @@ pub use or;
 #[macro_export]
 macro_rules! int {
     ($($opt:expr),+) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut len = 0;
         $(
@@ -154,7 +154,7 @@ pub use int;
 #[macro_export]
 macro_rules! tloop {
     ($($opt:expr),+) => {{
-        let mut activity_key = ActivityKey::new();
+        let mut activity_key = ActivityKey::default();
         let mut tree = vec![];
         let mut len = 0;
         $(

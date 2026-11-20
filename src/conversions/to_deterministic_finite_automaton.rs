@@ -193,7 +193,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
         let mut markingset2node = HashMap::<_, _, FnvBuildHasher>::default();
 
         //initial state
-        let source_node = result.initial_state.unwrap(); //exists by contract of new()
+        let source_node = result.initial_state.unwrap(); //exists by contract of default()
         let initial_markingset = BTreeSet::from([initial_marking]);
         markingset2node.insert(initial_markingset.clone(), source_node);
         let mut queue = VecDeque::new();
@@ -205,7 +205,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
             //gather activity -> marking set (for each activity, the set of markings that can be reached with that activity)
             let mut activity2markings = HashMap::<_, _, FnvBuildHasher>::default();
             {
-                let mut inner_queue = VecDeque::new();
+                let mut inner_queue = VecDeque::default();
                 let mut inner_visited = HashSet::new();
                 inner_queue.extend(markingset.clone());
                 inner_visited.extend(markingset);

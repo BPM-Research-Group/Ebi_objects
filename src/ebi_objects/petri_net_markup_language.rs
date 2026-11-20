@@ -49,7 +49,7 @@ impl Importable for PetriNetMarkupLanguage {
         xml_reader.config_mut().trim_text(true);
 
         let mut buf = vec![];
-        let mut state = ParserState::new();
+        let mut state = ParserState::default();
         loop {
             buf.clear();
             let (namespace, xml_event) = xml_reader
@@ -313,6 +313,7 @@ pub(crate) mod parser_state {
     use quick_xml::events::BytesStart;
     use std::collections::{HashMap, HashSet};
 
+    #[derive(Default)]
     pub(crate) struct ParserState {
         pub(crate) open_tag_names: Vec<String>,
         pub(crate) open_tags: Vec<OpenedTag>,
@@ -322,16 +323,6 @@ pub(crate) mod parser_state {
     }
 
     impl ParserState {
-        pub(crate) fn new() -> Self {
-            Self {
-                open_tag_names: vec![],
-                open_tags: vec![],
-                pnmls: vec![],
-                ids: HashSet::new(),
-                not_recognised_id_2_tag: HashMap::default(),
-            }
-        }
-
         pub(crate) fn read_id(&mut self, e: &BytesStart) -> Result<String> {
             if let Some(id) = parse_attribute(e, "id") {
                 if !self.ids.insert(id.clone()) {
