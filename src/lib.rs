@@ -167,7 +167,7 @@ pub use ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkfl
 pub use ebi_objects::petri_net_markup_language::PetriNetMarkupLanguage;
 pub use ebi_objects::portable_document_format::PortableDocumentFormat;
 pub use ebi_objects::portable_network_graphics::PortableNetworkGraphics;
-pub use ebi_objects::process_tree::{TreeNode, TreeOperator, ProcessTree};
+pub use ebi_objects::process_tree::{ProcessTree, TreeMarking, TreeNode, TreeOperator};
 pub use ebi_objects::process_tree_markup_language::ProcessTreeMarkupLanguage;
 pub use ebi_objects::scalable_vector_graphics::ScalableVectorGraphics;
 pub use ebi_objects::stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton;
