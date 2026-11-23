@@ -67,11 +67,16 @@ impl ProcessTree {
         self.tree.remove(node);
     }
 
-    #[deprecated(
-        note = "Internal access is discouraged, due to caches. If the tree is changed, ensure to call update_caches() afterwards."
-    )]
+    #[deprecated(note = "Ensure to call update_caches() afterwards. Use edit() instead.")]
     pub fn tree(&mut self) -> &mut Vec<TreeNode> {
         &mut self.tree
+    }
+
+    /// Change the process tree in a closure.
+    /// If the tree is kept consistent, the resulting tree will remain consistent, though this is not checked.
+    pub fn edit(&mut self, closure: impl Fn(&mut Vec<TreeNode>)) {
+        closure(&mut self.tree);
+        self.update_caches();
     }
 
     fn node_to_string(
