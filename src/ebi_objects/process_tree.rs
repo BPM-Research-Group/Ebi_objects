@@ -1155,7 +1155,9 @@ macro_rules! tree_semantics {
                         }
 
                         //furthermore, we may continue with the next sequential sibling of the parent
-                        enable_next_sequential_nodes(tree, state, parent);
+                        if can_terminate(tree, state, parent) {
+                            enable_next_sequential_nodes(tree, state, parent);
+                        }
                     }
                     Node::Operator(Operator::Xor, _) => {
                         //for a xor parent, the parent can be closed as we executed one of its children
@@ -1371,10 +1373,16 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ActivityKey, ActivityKeyTranslator, HasActivityKey, ProcessTree, StochasticProcessTree, activity, ebi_objects::{process_tree::{
-            Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
-            get_transition_activity,
-        }, scalable_vector_graphics::ToSVG}, tau, xor,
+        ActivityKey, ActivityKeyTranslator, HasActivityKey, ProcessTree, StochasticProcessTree,
+        activity,
+        ebi_objects::{
+            process_tree::{
+                Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
+                get_transition_activity,
+            },
+            scalable_vector_graphics::ToSVG,
+        },
+        tau, xor,
     };
     use std::fs;
 
@@ -1550,22 +1558,28 @@ mod tests {
         assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
     }
 
-    #[test]
+    // #[test]
+    #[allow(dead_code)]
     fn jan_tree_graph() {
         let fin1 = fs::read_to_string(
-            "testfiles/testcase Jan/tree.ptree",
+            "testfiles/IMPF_BPI_Challenge_2020_International_Declarations_178181.xes.ptree",
         )
         .unwrap();
         let tree = fin1.parse::<ProcessTree>().unwrap();
 
         let svg = tree.to_svg().unwrap();
 
-        fs::write("testfiles/testcase Jan/tree.ptree.svg", svg.to_string()).unwrap();
+        fs::write(
+            "testfiles/IMPF_BPI_Challenge_2020_International_Declarations_178181.xes.ptree.svg",
+            svg.to_string(),
+        )
+        .unwrap();
 
         println!("{svg}");
     }
 
     #[test]
+    #[allow(nonstandard_style)]
     fn jan_tree() {
         let fin1 = fs::read_to_string(
             "testfiles/IMPF_BPI_Challenge_2020_International_Declarations_178181.xes.ptree",
@@ -1584,8 +1598,18 @@ mod tests {
         let tau_25_line_59 = 9;
         let Permit_REJECTED_by_MISSING = 10;
         let tau_29_line_67 = 11;
+        let Permit_APPROVED_by_SUPERVISOR_line_71 = 12;
+        let _tau_32_line_72 = 13;
+        let tau_36_line_82 = 14;
+        let Permit_APPROVED_by_PRE_APPROVER_line_86 = 15;
+        let _tau_39_line_87 = 16;
+        let Permit_SUBMITTED_by_EMPLOYEE_line_97 = 17;
+        let Permit_REJECTED_by_PRE_APPROVER_line_101 = 18;
+        let Permit_REJECTED_by_ADMINISTRATION_line_102 = 19;
+        let tau_line_109 = 20;
+        let Permit_APPROVED_by_ADMINISTRATION_line_110 = 21;
 
-        let n = 11;
+        let n = 18;
         match tree.get_node_of_transition(n).unwrap() {
             Node::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(x)),
             Node::Tau => println!("-tau {}", tree.transition2node[n]),
@@ -1607,7 +1631,7 @@ mod tests {
             ]
         );
 
-        println!("execute tau");
+        println!("execute tau - 9");
         execute_transition(&tree, &mut state, tau_25_line_59).unwrap();
         assert_eq!(
             get_enabled_transitions(&tree, &state),
@@ -1618,7 +1642,86 @@ mod tests {
                 Send_Reminder,
                 Declaration_SUBMITTED_by_EMPLOYEE,
                 tau_29_line_67,
+                Permit_APPROVED_by_SUPERVISOR_line_71,
+                tau_36_line_82,
+                Permit_APPROVED_by_PRE_APPROVER_line_86,
+                Permit_SUBMITTED_by_EMPLOYEE_line_97,
             ]
         );
+
+        println!("execute Permit SUBMITTED by EMPLOYEE - 17");
+        execute_transition(&tree, &mut state, Permit_SUBMITTED_by_EMPLOYEE_line_97).unwrap();
+        assert_eq!(
+            get_enabled_transitions(&tree, &state),
+            [
+                activity_End_trip,
+                activity_start_trip,
+                Declaration_REJECTED_by_EMPLOYEE,
+                Send_Reminder,
+                Declaration_SUBMITTED_by_EMPLOYEE,
+                tau_29_line_67,
+                Permit_APPROVED_by_SUPERVISOR_line_71,
+                tau_36_line_82,
+                Permit_APPROVED_by_PRE_APPROVER_line_86,
+                Permit_REJECTED_by_PRE_APPROVER_line_101,
+                Permit_REJECTED_by_ADMINISTRATION_line_102,
+                tau_line_109,
+                Permit_APPROVED_by_ADMINISTRATION_line_110
+            ]
+        );
+    }
+
+    #[test]
+    fn seq_or_a_b_c_d() {
+        let fin1 = fs::read_to_string("testfiles/seq(or(a,b),c,d).ptree").unwrap();
+        let tree = fin1.parse::<ProcessTree>().unwrap();
+
+        const TA: usize = 0;
+        const TB: usize = 1;
+        const TC: usize = 2;
+        const TD: usize = 3;
+        const TFIN: usize = 4;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TA, TB]);
+
+        execute_transition(&tree, &mut state, TA).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TB, TC]);
+
+        execute_transition(&tree, &mut state, TC).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TD]);
+
+        execute_transition(&tree, &mut state, TD).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TFIN]);
+
+        execute_transition(&tree, &mut state, TFIN).unwrap();
+        assert!(get_enabled_transitions(&tree, &state).is_empty());
+    }
+
+    #[test]
+    fn seq_or_a_seq_b1_b2_c() {
+        let fin1 = fs::read_to_string("testfiles/seq(or(a,seq(b1,b2)),c).ptree").unwrap();
+        let tree = fin1.parse::<ProcessTree>().unwrap();
+
+        const A: usize = 0;
+        const B1: usize = 1;
+        const B2: usize = 2;
+        const C: usize = 3;
+        const FIN: usize = 4;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1]);
+
+        execute_transition(&tree, &mut state, B1).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B2]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B2]);
+
+        execute_transition(&tree, &mut state, B2).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
     }
 }

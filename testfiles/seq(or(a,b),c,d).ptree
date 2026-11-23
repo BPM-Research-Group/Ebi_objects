@@ -1,0 +1,9 @@
+process tree
+sequence
+3
+	or
+	2
+		activity a
+		activity a
+	activity c
+	activity d
