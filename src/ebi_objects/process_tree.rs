@@ -567,6 +567,14 @@ macro_rules! tree {
             }
         }
 
+        impl<'a> IntoIterator for &'a $t {
+            type Item = &'a Node;
+            type IntoIter = core::slice::Iter<'a, Node>;
+            fn into_iter(self) -> Self::IntoIter {
+                self.tree.iter()
+            }
+        }
+
         pub struct $u<'a> {
             //children iterator
             tree: &'a $t,

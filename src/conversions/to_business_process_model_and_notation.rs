@@ -247,7 +247,7 @@ fn transform_node(
     c: &mut BPMNCreator,
     parent: Container,
 ) -> bool {
-    match tree.get_node(node) {
+    match tree.get(node) {
         Some(Node::Tau) => {
             c.add_sequence_flow_unchecked(parent, source, sink);
             true
