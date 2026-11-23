@@ -2,7 +2,7 @@ use crate::{
     ProcessTree, StochasticProcessTree,
     ebi_objects::{
         partially_ordered_workflow_language::{Keys, PartiallyOrderedWorkflowLanguage, PowlNode},
-        process_tree::{Node, Operator},
+        process_tree::{TreeNode, TreeOperator},
     },
 };
 
@@ -29,7 +29,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
     }
 
     match tree[node] {
-        Node::Tau => vec![PowlNode::Activity {
+        TreeNode::Tau => vec![PowlNode::Activity {
             id: Some(format!("node {}", node)),
             activity: None,
             resource: None,
@@ -41,7 +41,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             name: None,
             description: None,
         }],
-        Node::Activity(activity) => vec![PowlNode::Activity {
+        TreeNode::Activity(activity) => vec![PowlNode::Activity {
             id: Some(format!("node {}", node)),
             activity: Some(activity),
             resource: None,
@@ -53,7 +53,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             name: None,
             description: None,
         }],
-        Node::Operator(Operator::Sequence, number_of_children) => {
+        TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
             let mut child_nodes = vec![];
             for child in tree.get_children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
@@ -73,7 +73,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             result.extend(child_nodes);
             result
         }
-        Node::Operator(Operator::Xor, number_of_children) => {
+        TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
             let mut child_nodes = vec![];
             for child in tree.get_children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
@@ -95,7 +95,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             result.extend(child_nodes);
             result
         }
-        Node::Operator(Operator::Concurrent, number_of_children) => {
+        TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
             let mut child_nodes = vec![];
             for child in tree.get_children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
@@ -115,7 +115,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             result.extend(child_nodes);
             result
         }
-        Node::Operator(Operator::Loop, number_of_children) => {
+        TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
             let mut child_nodes = vec![];
             for child in tree.get_children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
@@ -140,7 +140,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             result.extend(child_nodes);
             result
         }
-        Node::Operator(Operator::Or, number_of_children) => {
+        TreeNode::Operator(TreeOperator::Or, number_of_children) => {
             //OR(a, b, c) = XOR(AND(A, B?, C?), AND(A?, B, C?), AND(A?, B?, C))
 
             //recurse
@@ -192,7 +192,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
             result.extend(and_blocks);
             result
         }
-        Node::Operator(Operator::Interleaved, number_of_children) => {
+        TreeNode::Operator(TreeOperator::Interleaved, number_of_children) => {
             //creates a tree
 
             //recurse
@@ -263,7 +263,7 @@ mod tests {
     use crate::{
         PartiallyOrderedWorkflowLanguage, ProcessTree,
         ebi_objects::{
-            process_tree::{Node, Operator},
+            process_tree::{TreeNode, TreeOperator},
             scalable_vector_graphics::ToSVG,
         },
     };
@@ -278,16 +278,16 @@ mod tests {
         let d = activity_key.process_activity("d");
         let e = activity_key.process_activity("e");
         let tree = vec![
-            Node::Operator(Operator::Or, 3),
-            Node::Operator(Operator::Xor, 2),
-            Node::Activity(a),
-            Node::Tau,
-            Node::Operator(Operator::Sequence, 2),
-            Node::Activity(b),
-            Node::Activity(c),
-            Node::Operator(Operator::Interleaved, 2),
-            Node::Activity(d),
-            Node::Activity(e),
+            TreeNode::Operator(TreeOperator::Or, 3),
+            TreeNode::Operator(TreeOperator::Xor, 2),
+            TreeNode::Activity(a),
+            TreeNode::Tau,
+            TreeNode::Operator(TreeOperator::Sequence, 2),
+            TreeNode::Activity(b),
+            TreeNode::Activity(c),
+            TreeNode::Operator(TreeOperator::Interleaved, 2),
+            TreeNode::Activity(d),
+            TreeNode::Activity(e),
         ];
         let ptree = ProcessTree::from((activity_key, tree));
 

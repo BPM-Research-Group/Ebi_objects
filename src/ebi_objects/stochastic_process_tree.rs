@@ -1,4 +1,4 @@
-use super::process_tree::{Gateway, Node, NodeState, Operator, TreeMarking};
+use super::process_tree::{Gateway, TreeNode, NodeState, TreeOperator, TreeMarking};
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
     Infoable, TranslateActivityKey,
@@ -24,7 +24,7 @@ pub const HEADER: &str = "stochastic process tree";
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticProcessTree {
     pub(crate) activity_key: ActivityKey,
-    pub(crate) tree: Vec<Node>,
+    pub(crate) tree: Vec<TreeNode>,
     pub(crate) cache_transition_2_node: Vec<usize>,
     pub(crate) weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
     pub(crate) termination_weight: Fraction,
@@ -35,16 +35,16 @@ impl StochasticProcessTree {
         self.cache_transition_2_node.clear();
         for (node_index, node) in self.tree.iter().enumerate() {
             match node {
-                Node::Tau | Node::Activity(_) => {
+                TreeNode::Tau | TreeNode::Activity(_) => {
                     self.cache_transition_2_node.push(node_index);
                 }
-                Node::Operator(_, _) => {}
+                TreeNode::Operator(_, _) => {}
             }
         }
     }
 
     fn remove_internal_do(&mut self, node: usize) {
-        if matches!(self.get(node), Some(Node::Tau) | Some(Node::Activity(_))) {
+        if matches!(self.get(node), Some(TreeNode::Tau) | Some(TreeNode::Activity(_))) {
             self.weights.remove(node);
         }
         self.tree.remove(node);
@@ -58,7 +58,7 @@ impl StochasticProcessTree {
     ) -> Result<usize> {
         let id = "\t".repeat(indent);
         match &self.tree[node] {
-            Node::Tau => {
+            TreeNode::Tau => {
                 writeln!(
                     f,
                     "{}tau\n{}# weight node {}\n{}{}",
@@ -70,7 +70,7 @@ impl StochasticProcessTree {
                 )?;
                 Ok(node + 1)
             }
-            Node::Activity(activity) => {
+            TreeNode::Activity(activity) => {
                 writeln!(
                     f,
                     "{}activity {}\n{}# weight node {}\n{}{}",
@@ -83,7 +83,7 @@ impl StochasticProcessTree {
                 )?;
                 Ok(node + 1)
             }
-            Node::Operator(operator, number_of_children) => {
+            TreeNode::Operator(operator, number_of_children) => {
                 writeln!(f, "{}{}", id, operator.to_string())?;
                 writeln!(
                     f,
@@ -102,7 +102,7 @@ impl StochasticProcessTree {
     ///read one node, recursively
     fn string_to_tree(
         lreader: &mut LineReader<'_>,
-        tree: &mut Vec<Node>,
+        tree: &mut Vec<TreeNode>,
         weights: &mut Vec<Fraction>,
         activity_key: &mut ActivityKey,
         root: bool,
@@ -141,7 +141,7 @@ impl StochasticProcessTree {
                 ));
             }
             weights.push(weight);
-            tree.push(Node::Tau);
+            tree.push(TreeNode::Tau);
         } else if node_type_line.trim_start().starts_with("activity ") {
             let label = node_type_line.trim_start()[9..].to_string();
             let activity = activity_key.process_activity(&label);
@@ -162,8 +162,8 @@ impl StochasticProcessTree {
             }
             weights.push(weight);
 
-            tree.push(Node::Activity(activity));
-        } else if let Ok(operator) = node_type_line.trim_start().trim_end().parse::<Operator>() {
+            tree.push(TreeNode::Activity(activity));
+        } else if let Ok(operator) = node_type_line.trim_start().trim_end().parse::<TreeOperator>() {
             let number_of_children = lreader.next_line_index().with_context(|| {
                 format!(
                     "failed to read number of children for node {} at line {}",
@@ -178,7 +178,7 @@ impl StochasticProcessTree {
                     lreader.get_last_line_number()
                 ));
             }
-            tree.push(Node::Operator(operator, number_of_children));
+            tree.push(TreeNode::Operator(operator, number_of_children));
             for _ in 0..number_of_children {
                 Self::string_to_tree(lreader, tree, weights, activity_key, false)?;
             }
@@ -204,11 +204,11 @@ impl StochasticProcessTree {
         exit: &Gateway,
     ) -> usize {
         match self.tree[node] {
-            Node::Tau => {
+            TreeNode::Tau => {
                 graphable::create_edge(graph, entry.handle(), exit.handle(), "");
                 node + 1
             }
-            Node::Activity(activity) => {
+            TreeNode::Activity(activity) => {
                 let transition = graphable::create_transition(
                     graph,
                     self.activity_key.activity_to_label(&activity),
@@ -218,7 +218,7 @@ impl StochasticProcessTree {
                 graphable::create_edge(graph, &transition, exit.handle(), "");
                 node + 1
             }
-            Node::Operator(Operator::Xor, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
                 let mut child = node + 1;
                 let child_entry = if !entry.is_xor() {
                     let x = Gateway::Xor(graphable::create_dot(graph));
@@ -245,7 +245,7 @@ impl StochasticProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Sequence, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                 let intermediate_nodes = (0..(number_of_children - 1))
                     .map(|_| Gateway::Xor(graphable::create_dot(graph)))
                     .collect::<Vec<_>>();
@@ -273,7 +273,7 @@ impl StochasticProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Concurrent, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
                 let split = Gateway::And(graphable::create_gateway(graph, "+"));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::And(graphable::create_gateway(graph, "+"));
@@ -285,7 +285,7 @@ impl StochasticProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Or, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Or, number_of_children) => {
                 let split = Gateway::Or(graphable::create_gateway(graph, "o"));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::Or(graphable::create_gateway(graph, "o"));
@@ -297,7 +297,7 @@ impl StochasticProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Interleaved, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Interleaved, number_of_children) => {
                 let split = Gateway::Int(graphable::create_gateway(graph, "↔"));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::Int(graphable::create_gateway(graph, "↔"));
@@ -309,7 +309,7 @@ impl StochasticProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Loop, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                 let split = Gateway::Xor(graphable::create_dot(graph));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::Xor(graphable::create_dot(graph));
@@ -482,7 +482,7 @@ pub fn get_total_weight_of_enabled_transitions(
 impl TestActivityKey for StochasticProcessTree {
     fn test_activity_key(&self) {
         self.tree.iter().for_each(|node| {
-            if let Node::Activity(a) = node {
+            if let TreeNode::Activity(a) = node {
                 use crate::HasActivityKey;
 
                 self.activity_key().assert_activity_is_of_key(a);

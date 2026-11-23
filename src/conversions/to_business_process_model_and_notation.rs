@@ -7,7 +7,7 @@ use crate::{
     StochasticLabelledPetriNet, StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::{
         partially_ordered_workflow_language::{PartiallyOrderedWorkflowLanguage, PowlNode},
-        process_tree::{Node, Operator},
+        process_tree::{TreeNode, TreeOperator},
     },
 };
 use ebi_activity_key::{Activity, HasActivityKey};
@@ -248,17 +248,17 @@ fn transform_node(
     parent: Container,
 ) -> bool {
     match tree.get(node) {
-        Some(Node::Tau) => {
+        Some(TreeNode::Tau) => {
             c.add_sequence_flow_unchecked(parent, source, sink);
             true
         }
-        Some(Node::Activity(activity)) => {
+        Some(TreeNode::Activity(activity)) => {
             let task = c.add_task_unchecked(parent, *activity);
             c.add_sequence_flow_unchecked(parent, source, task);
             c.add_sequence_flow_unchecked(parent, task, sink);
             true
         }
-        Some(Node::Operator(Operator::Concurrent, _)) => {
+        Some(TreeNode::Operator(TreeOperator::Concurrent, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Parallel);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Parallel);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -268,7 +268,7 @@ fn transform_node(
             }
             true
         }
-        Some(Node::Operator(Operator::Xor, _)) => {
+        Some(TreeNode::Operator(TreeOperator::Xor, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -278,7 +278,7 @@ fn transform_node(
             }
             true
         }
-        Some(Node::Operator(Operator::Or, _)) => {
+        Some(TreeNode::Operator(TreeOperator::Or, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -288,7 +288,7 @@ fn transform_node(
             }
             true
         }
-        Some(Node::Operator(Operator::Loop, _)) => {
+        Some(TreeNode::Operator(TreeOperator::Loop, _)) => {
             let sub_source = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
@@ -302,7 +302,7 @@ fn transform_node(
             }
             true
         }
-        Some(Node::Operator(Operator::Sequence, _)) => {
+        Some(TreeNode::Operator(TreeOperator::Sequence, _)) => {
             let mut it = tree.get_children(node);
             let mut sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             if let Some(child) = it.next() {
@@ -316,7 +316,7 @@ fn transform_node(
             c.add_sequence_flow_unchecked(parent, sub_sink, sink);
             true
         }
-        Some(Node::Operator(Operator::Interleaved, _)) => {
+        Some(TreeNode::Operator(TreeOperator::Interleaved, _)) => {
             let children = tree.get_children(node).collect::<Vec<_>>();
             let mut children_left_2_gateway = HashMap::<_, _, FnvBuildHasher>::default();
             children_left_2_gateway.insert(vec![], sink);

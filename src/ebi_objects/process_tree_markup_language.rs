@@ -2,7 +2,7 @@ use super::{labelled_petri_net::LabelledPetriNet, process_tree::ProcessTree};
 use crate::{
     Activity, ActivityKey, Exportable, Graphable, HasActivityKey, Importable, TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    ebi_objects::process_tree::{Node, Operator},
+    ebi_objects::process_tree::{TreeNode, TreeOperator},
     traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
 };
 #[cfg(any(test, feature = "testactivities"))]
@@ -52,7 +52,7 @@ struct State {
     seen_process_tree_tag: bool,
     activity_key: ActivityKey,
     root: Option<String>,
-    nodes: HashMap<String, Node, FnvBuildHasher>,
+    nodes: HashMap<String, TreeNode, FnvBuildHasher>,
     edges: HashMap<String, Vec<String>, FnvBuildHasher>,
 }
 
@@ -241,9 +241,9 @@ impl State {
     }
 
     fn to_tree_node(
-        nodes: &mut HashMap<String, Node, FnvBuildHasher>,
+        nodes: &mut HashMap<String, TreeNode, FnvBuildHasher>,
         edges: &mut HashMap<String, Vec<String>, FnvBuildHasher>,
-        tree: &mut Vec<Node>,
+        tree: &mut Vec<TreeNode>,
         node_id: &str,
     ) -> Result<()> {
         log::debug!("tree {:?}", tree);
@@ -257,15 +257,15 @@ impl State {
                     return Err(anyhow!("a leaf node cannot have children"));
                 }
 
-                if let Node::Operator(Operator::Loop, _) = node {
+                if let TreeNode::Operator(TreeOperator::Loop, _) = node {
                     //loop nodes in PTML are 3-ary, whereas process trees have n-ary ones
                     //translate it to seq(loop(., .), .)
                     if children.len() != 3 {
                         return Err(anyhow!("a loop in PTML should have 3 children"));
                     }
 
-                    tree.push(Node::Operator(Operator::Sequence, 2));
-                    tree.push(Node::Operator(Operator::Loop, 2));
+                    tree.push(TreeNode::Operator(TreeOperator::Sequence, 2));
+                    tree.push(TreeNode::Operator(TreeOperator::Loop, 2));
                     for child_id in children {
                         Self::to_tree_node(nodes, edges, tree, &child_id)?;
                     }
@@ -381,8 +381,8 @@ impl Exportable for ProcessTreeMarkupLanguage {
         //nodes
         for (node_id, node) in self.tree.tree.iter().enumerate() {
             match node {
-                Node::Tau => writeln!(f, "<automaticTask id=\"{}\" name=\"tau\"/>", node_id)?,
-                Node::Activity(activity) => writeln!(
+                TreeNode::Tau => writeln!(f, "<automaticTask id=\"{}\" name=\"tau\"/>", node_id)?,
+                TreeNode::Activity(activity) => writeln!(
                     f,
                     "<manualTask id=\"{}\" name=\"{}\"/>",
                     node_id,
@@ -390,12 +390,12 @@ impl Exportable for ProcessTreeMarkupLanguage {
                         self.tree.activity_key().deprocess_activity(activity)
                     )
                 )?,
-                Node::Operator(Operator::Loop, 1) => {
+                TreeNode::Operator(TreeOperator::Loop, 1) => {
                     //special case: loop with 1 child gets a second "redo tau child and a third "exit" tau child
                     writeln!(
                         f,
                         "<{} id=\"{}\"/>",
-                        PTMLTag::from(&Operator::Loop),
+                        PTMLTag::from(&TreeOperator::Loop),
                         node_id
                     )?;
                     //edges
@@ -423,12 +423,12 @@ impl Exportable for ProcessTreeMarkupLanguage {
                         node_id, node_id
                     )?
                 }
-                Node::Operator(Operator::Loop, 2) => {
+                TreeNode::Operator(TreeOperator::Loop, 2) => {
                     //special case: loop with 2 children gets a third "exit" tau child
                     writeln!(
                         f,
                         "<{} id=\"{}\"/>",
-                        PTMLTag::from(&Operator::Loop),
+                        PTMLTag::from(&TreeOperator::Loop),
                         node_id
                     )?;
                     //edges
@@ -448,18 +448,18 @@ impl Exportable for ProcessTreeMarkupLanguage {
                         node_id, node_id
                     )?
                 }
-                Node::Operator(Operator::Loop, _) => {
+                TreeNode::Operator(TreeOperator::Loop, _) => {
                     //special case: loop with more than 2 children gets an xor-child
                     writeln!(
                         f,
                         "<{} id=\"{}\"/>",
-                        PTMLTag::from(&Operator::Loop),
+                        PTMLTag::from(&TreeOperator::Loop),
                         node_id
                     )?;
                     writeln!(
                         f,
                         "<{} id=\"{}redo\"/>",
-                        PTMLTag::from(&Operator::Xor),
+                        PTMLTag::from(&TreeOperator::Xor),
                         node_id
                     )?;
 
@@ -489,7 +489,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                         node_id, node_id
                     )?
                 }
-                Node::Operator(operator, _) => {
+                TreeNode::Operator(operator, _) => {
                     //other operators
                     writeln!(f, "<{} id=\"{}\"/>", PTMLTag::from(operator), node_id)?;
 
@@ -554,31 +554,31 @@ impl PTMLTag {
         }
     }
 
-    fn to_node(self) -> Node {
+    fn to_node(self) -> TreeNode {
         match self {
-            PTMLTag::And => Node::Operator(Operator::Concurrent, 0),
-            PTMLTag::Sequence => Node::Operator(Operator::Sequence, 0),
-            PTMLTag::ManualTask(activity) => Node::Activity(activity),
-            PTMLTag::AutomaticTask => Node::Tau,
-            PTMLTag::Xor => Node::Operator(Operator::Xor, 0),
-            PTMLTag::XorLoop => Node::Operator(Operator::Loop, 0),
-            PTMLTag::Or => Node::Operator(Operator::Or, 0),
-            PTMLTag::Interleaved => Node::Operator(Operator::Interleaved, 0),
-            PTMLTag::Def => Node::Operator(Operator::Xor, 0),
-            PTMLTag::DefLoop => Node::Operator(Operator::Loop, 0),
+            PTMLTag::And => TreeNode::Operator(TreeOperator::Concurrent, 0),
+            PTMLTag::Sequence => TreeNode::Operator(TreeOperator::Sequence, 0),
+            PTMLTag::ManualTask(activity) => TreeNode::Activity(activity),
+            PTMLTag::AutomaticTask => TreeNode::Tau,
+            PTMLTag::Xor => TreeNode::Operator(TreeOperator::Xor, 0),
+            PTMLTag::XorLoop => TreeNode::Operator(TreeOperator::Loop, 0),
+            PTMLTag::Or => TreeNode::Operator(TreeOperator::Or, 0),
+            PTMLTag::Interleaved => TreeNode::Operator(TreeOperator::Interleaved, 0),
+            PTMLTag::Def => TreeNode::Operator(TreeOperator::Xor, 0),
+            PTMLTag::DefLoop => TreeNode::Operator(TreeOperator::Loop, 0),
         }
     }
 }
 
-impl From<&Operator> for PTMLTag {
-    fn from(value: &Operator) -> Self {
+impl From<&TreeOperator> for PTMLTag {
+    fn from(value: &TreeOperator) -> Self {
         match value {
-            Operator::Xor => PTMLTag::Xor,
-            Operator::Sequence => PTMLTag::Sequence,
-            Operator::Interleaved => PTMLTag::Interleaved,
-            Operator::Concurrent => PTMLTag::And,
-            Operator::Or => PTMLTag::Or,
-            Operator::Loop => PTMLTag::XorLoop,
+            TreeOperator::Xor => PTMLTag::Xor,
+            TreeOperator::Sequence => PTMLTag::Sequence,
+            TreeOperator::Interleaved => PTMLTag::Interleaved,
+            TreeOperator::Concurrent => PTMLTag::And,
+            TreeOperator::Or => PTMLTag::Or,
+            TreeOperator::Loop => PTMLTag::XorLoop,
         }
     }
 }

@@ -28,12 +28,12 @@ pub const HEADER: &str = "process tree";
 #[derive(Debug, ActivityKey, Clone, Default)]
 pub struct ProcessTree {
     pub(crate) activity_key: ActivityKey,
-    pub(crate) tree: Vec<Node>,
+    pub(crate) tree: Vec<TreeNode>,
     pub(crate) cache_transition_2_node: Vec<usize>,
 }
 
 impl ProcessTree {
-    pub fn new(activity_key: ActivityKey, tree: Vec<Node>) -> Self {
+    pub fn new(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Self {
         let mut result = Self {
             activity_key,
             tree,
@@ -55,10 +55,10 @@ impl ProcessTree {
         self.cache_transition_2_node.clear();
         for (node_index, node) in self.tree.iter().enumerate() {
             match node {
-                Node::Tau | Node::Activity(_) => {
+                TreeNode::Tau | TreeNode::Activity(_) => {
                     self.cache_transition_2_node.push(node_index);
                 }
-                Node::Operator(_, _) => {}
+                TreeNode::Operator(_, _) => {}
             }
         }
     }
@@ -70,7 +70,7 @@ impl ProcessTree {
     #[deprecated(
         note = "Internal access is discouraged, due to caches. If the tree is changed, ensure to call update_caches() afterwards."
     )]
-    pub fn tree(&mut self) -> &mut Vec<Node> {
+    pub fn tree(&mut self) -> &mut Vec<TreeNode> {
         &mut self.tree
     }
 
@@ -82,11 +82,11 @@ impl ProcessTree {
     ) -> Result<usize> {
         let id = "\t".repeat(indent);
         match &self.tree[node] {
-            Node::Tau => {
+            TreeNode::Tau => {
                 writeln!(f, "{}tau", id)?;
                 Ok(node + 1)
             }
-            Node::Activity(activity) => {
+            TreeNode::Activity(activity) => {
                 writeln!(
                     f,
                     "{}activity {}",
@@ -95,7 +95,7 @@ impl ProcessTree {
                 )?;
                 Ok(node + 1)
             }
-            Node::Operator(operator, number_of_children) => {
+            TreeNode::Operator(operator, number_of_children) => {
                 writeln!(f, "{}{}", id, operator.to_string())?;
                 writeln!(
                     f,
@@ -119,11 +119,11 @@ impl ProcessTree {
         exit: &Gateway,
     ) -> usize {
         match self.tree[node] {
-            Node::Tau => {
+            TreeNode::Tau => {
                 graphable::create_edge(graph, entry.handle(), exit.handle(), "");
                 node + 1
             }
-            Node::Activity(activity) => {
+            TreeNode::Activity(activity) => {
                 let transition = graphable::create_transition(
                     graph,
                     self.activity_key.activity_to_label(&activity),
@@ -133,7 +133,7 @@ impl ProcessTree {
                 graphable::create_edge(graph, &transition, exit.handle(), "");
                 node + 1
             }
-            Node::Operator(Operator::Xor, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
                 let mut child = node + 1;
                 let child_entry = if !entry.is_xor() {
                     let x = Gateway::Xor(graphable::create_dot(graph));
@@ -154,7 +154,7 @@ impl ProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Sequence, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                 let intermediate_nodes = (0..(number_of_children - 1))
                     .map(|_| Gateway::Xor(graphable::create_dot(graph)))
                     .collect::<Vec<_>>();
@@ -176,7 +176,7 @@ impl ProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Concurrent, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
                 let split = Gateway::And(graphable::create_gateway(graph, "+"));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::And(graphable::create_gateway(graph, "+"));
@@ -188,7 +188,7 @@ impl ProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Or, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Or, number_of_children) => {
                 let split = Gateway::Or(graphable::create_gateway(graph, "o"));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::Or(graphable::create_gateway(graph, "o"));
@@ -200,7 +200,7 @@ impl ProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Interleaved, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Interleaved, number_of_children) => {
                 let split = Gateway::Int(graphable::create_gateway(graph, "↔"));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::Int(graphable::create_gateway(graph, "↔"));
@@ -212,7 +212,7 @@ impl ProcessTree {
                 }
                 child
             }
-            Node::Operator(Operator::Loop, number_of_children) => {
+            TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                 let split = Gateway::Xor(graphable::create_dot(graph));
                 graphable::create_edge(graph, entry.handle(), split.handle(), "");
                 let join = Gateway::Xor(graphable::create_dot(graph));
@@ -237,7 +237,7 @@ impl ProcessTree {
     ///read one node, recursively
     fn string_to_tree(
         lreader: &mut LineReader<'_>,
-        tree: &mut Vec<Node>,
+        tree: &mut Vec<TreeNode>,
         activity_key: &mut ActivityKey,
         root: bool,
     ) -> Result<()> {
@@ -260,12 +260,16 @@ impl ProcessTree {
         };
 
         if node_type_line.trim_start().starts_with("tau") {
-            tree.push(Node::Tau);
+            tree.push(TreeNode::Tau);
         } else if node_type_line.trim_start().starts_with("activity ") {
             let label = node_type_line.trim_start()[9..].to_string();
             let activity = activity_key.process_activity(&label);
-            tree.push(Node::Activity(activity));
-        } else if let Ok(operator) = node_type_line.trim_start().trim_end().parse::<Operator>() {
+            tree.push(TreeNode::Activity(activity));
+        } else if let Ok(operator) = node_type_line
+            .trim_start()
+            .trim_end()
+            .parse::<TreeOperator>()
+        {
             let number_of_children = lreader.next_line_index().with_context(|| {
                 format!(
                     "failed to read number of children for node {} at line {}",
@@ -281,7 +285,7 @@ impl ProcessTree {
                     lreader.get_last_line_number()
                 ));
             }
-            tree.push(Node::Operator(operator, number_of_children));
+            tree.push(TreeNode::Operator(operator, number_of_children));
             for _ in 0..number_of_children {
                 Self::string_to_tree(lreader, tree, activity_key, false)?;
             }
@@ -309,28 +313,28 @@ impl ProcessTree {
 
     fn node_to_hash_string(&self, node: usize) -> String {
         match self.tree[node] {
-            Node::Tau => "tau".to_string(),
-            Node::Activity(activity) => format!(
+            TreeNode::Tau => "tau".to_string(),
+            TreeNode::Activity(activity) => format!(
                 "activity {}",
                 self.activity_key.deprocess_activity(&activity)
             ),
-            Node::Operator(Operator::Concurrent, _)
-            | Node::Operator(Operator::Xor, _)
-            | Node::Operator(Operator::Or, _)
-            | Node::Operator(Operator::Interleaved, _) => format!(
+            TreeNode::Operator(TreeOperator::Concurrent, _)
+            | TreeNode::Operator(TreeOperator::Xor, _)
+            | TreeNode::Operator(TreeOperator::Or, _)
+            | TreeNode::Operator(TreeOperator::Interleaved, _) => format!(
                 "node {:?} [{:?}]",
                 self.node_to_operator(node).unwrap(),
                 self.get_children(node)
                     .map(|child| self.node_to_hash_string(child))
                     .sorted()
             ),
-            Node::Operator(Operator::Sequence, _) => format!(
+            TreeNode::Operator(TreeOperator::Sequence, _) => format!(
                 "node sequence [{:?}]",
                 self.get_children(node)
                     .map(|child| self.node_to_hash_string(child))
                     .collect::<Vec<_>>()
             ),
-            Node::Operator(Operator::Loop, _) => {
+            TreeNode::Operator(TreeOperator::Loop, _) => {
                 format!(
                     "node loop {} [{:?}]",
                     self.node_to_hash_string(node + 1),
@@ -347,9 +351,9 @@ impl ProcessTree {
     /// Remove the node from the tree (recursively) and replace it with another node (recursively).
     /// Returns an error if the node does not exist.
     /// Returns the removed node (recursively) if successful.
-    pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<Node>>
+    pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<TreeNode>>
     where
-        W: IntoIterator<Item = Node>,
+        W: IntoIterator<Item = TreeNode>,
     {
         if node >= self.len() {
             return Err(anyhow!("Node does not exist."));
@@ -363,18 +367,18 @@ impl ProcessTree {
     /// Removes and returns the node and all of its children from the tree.
     /// Returns an error if the node does not exist.
     /// If an error is returned, the tree may be left in an inconsistent state.
-    pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<Node>> {
+    pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
         let drain = self.remove_recursive_internal(node)?.collect_vec();
         self.update_caches();
         Ok(drain)
     }
 
-    fn remove_recursive_internal_do(&mut self, node: usize) -> std::vec::Drain<'_, Node> {
+    fn remove_recursive_internal_do(&mut self, node: usize) -> std::vec::Drain<'_, TreeNode> {
         let node_after_child_tree = self.traverse(node);
         self.tree.drain(node..node_after_child_tree)
     }
 
-    fn remove_recursive_internal(&mut self, node: usize) -> Result<std::vec::Drain<'_, Node>> {
+    fn remove_recursive_internal(&mut self, node: usize) -> Result<std::vec::Drain<'_, TreeNode>> {
         if node > self.len() {
             return Err(anyhow!("Node {node} does not exist."));
         }
@@ -455,7 +459,7 @@ macro_rules! tree {
             }
 
             /// Returns the node if it exists.
-            pub fn get(&self, node: usize) -> Option<&Node> {
+            pub fn get(&self, node: usize) -> Option<&TreeNode> {
                 self.tree.get(node)
             }
 
@@ -469,14 +473,14 @@ macro_rules! tree {
             }
 
             /// Returns the operator of the node, or None if the node is not an operator.
-            pub fn node_to_operator(&self, node: usize) -> Option<Operator> {
+            pub fn node_to_operator(&self, node: usize) -> Option<TreeOperator> {
                 match self.tree.get(node)? {
-                    Node::Tau | Node::Activity(_) => None,
-                    Node::Operator(operator, _) => Some(*operator),
+                    TreeNode::Tau | TreeNode::Activity(_) => None,
+                    TreeNode::Operator(operator, _) => Some(*operator),
                 }
             }
 
-            pub fn get_node_of_transition(&self, transition: TransitionIndex) -> Result<&Node> {
+            pub fn get_node_of_transition(&self, transition: TransitionIndex) -> Result<&TreeNode> {
                 self.tree
                     .get(
                         *self
@@ -539,7 +543,7 @@ macro_rules! tree {
                 $v::new(self, node)
             }
 
-            pub fn get_descendants(&self, node: usize) -> &[Node] {
+            pub fn get_descendants(&self, node: usize) -> &[TreeNode] {
                 let next = self.traverse(node);
                 &self.tree[node..next]
             }
@@ -563,9 +567,9 @@ macro_rules! tree {
              */
             pub fn traverse(&self, node: usize) -> usize {
                 match self.tree[node] {
-                    Node::Tau => node + 1,
-                    Node::Activity(_) => node + 1,
-                    Node::Operator(_, number_of_children) => {
+                    TreeNode::Tau => node + 1,
+                    TreeNode::Activity(_) => node + 1,
+                    TreeNode::Operator(_, number_of_children) => {
                         let mut n = node + 1;
                         for _ in 0..number_of_children {
                             n = self.traverse(n);
@@ -585,8 +589,8 @@ macro_rules! tree {
 
             /// If the node is an operator, set it to the given operator type.
             /// Otherwise, has no effect.
-            pub fn set_operator(&mut self, node: usize, operator: Operator) {
-                if let Some(Node::Operator(op, _)) = self.tree.get_mut(node) {
+            pub fn set_operator(&mut self, node: usize, operator: TreeOperator) {
+                if let Some(TreeNode::Operator(op, _)) = self.tree.get_mut(node) {
                     *op = operator;
                     self.update_caches();
                 }
@@ -594,9 +598,9 @@ macro_rules! tree {
 
             pub fn get_number_of_children(&self, parent: usize) -> Option<usize> {
                 match self.tree.get(parent)? {
-                    Node::Tau => Some(0),
-                    Node::Activity(_) => Some(0),
-                    Node::Operator(_, number_of_children) => Some(*number_of_children),
+                    TreeNode::Tau => Some(0),
+                    TreeNode::Activity(_) => Some(0),
+                    TreeNode::Operator(_, number_of_children) => Some(*number_of_children),
                 }
             }
 
@@ -605,7 +609,7 @@ macro_rules! tree {
                 let mut last = false;
                 for node in self.tree.iter().take(node + 1) {
                     match node {
-                        Node::Activity(_) | Node::Tau => {
+                        TreeNode::Activity(_) | TreeNode::Tau => {
                             transitions += 1;
                             last = true
                         }
@@ -683,7 +687,7 @@ macro_rules! tree {
         }
 
         impl std::ops::Index<usize> for $t {
-            type Output = Node;
+            type Output = TreeNode;
 
             fn index(&self, index: usize) -> &Self::Output {
                 &self.tree[index]
@@ -691,7 +695,7 @@ macro_rules! tree {
         }
 
         impl std::ops::Index<core::ops::Range<usize>> for $t {
-            type Output = [Node];
+            type Output = [TreeNode];
 
             fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
                 self.tree.index(index)
@@ -702,7 +706,7 @@ macro_rules! tree {
             fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
                 let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
                 self.tree.iter_mut().for_each(|node| {
-                    if let Node::Activity(a) = node {
+                    if let TreeNode::Activity(a) = node {
                         *a = translator.translate_activity(&a)
                     }
                 });
@@ -739,8 +743,8 @@ macro_rules! tree {
         }
 
         impl<'a> IntoIterator for &'a $t {
-            type Item = &'a Node;
-            type IntoIter = core::slice::Iter<'a, Node>;
+            type Item = &'a TreeNode;
+            type IntoIter = core::slice::Iter<'a, TreeNode>;
             fn into_iter(self) -> Self::IntoIter {
                 self.tree.iter()
             }
@@ -915,14 +919,14 @@ impl Exportable for ProcessTree {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Node {
+pub enum TreeNode {
     Tau,
     Activity(Activity),
     ///type, number of children
-    Operator(Operator, usize),
+    Operator(TreeOperator, usize),
 }
 
-impl Node {
+impl TreeNode {
     pub fn is_leaf(&self) -> bool {
         match self {
             Self::Tau | Self::Activity(_) => true,
@@ -954,57 +958,57 @@ impl Node {
 
     pub fn number_of_children(&self) -> usize {
         match self {
-            Node::Tau => 0,
-            Node::Activity(_) => 0,
-            Node::Operator(_, number_of_children) => *number_of_children,
+            TreeNode::Tau => 0,
+            TreeNode::Activity(_) => 0,
+            TreeNode::Operator(_, number_of_children) => *number_of_children,
         }
     }
 
-    pub fn is_operator_of_type(&self, operator: Operator) -> bool {
+    pub fn is_operator_of_type(&self, operator: TreeOperator) -> bool {
         match self {
-            Node::Tau => false,
-            Node::Activity(_) => false,
-            Node::Operator(op, _) => *op == operator,
+            TreeNode::Tau => false,
+            TreeNode::Activity(_) => false,
+            TreeNode::Operator(op, _) => *op == operator,
         }
     }
 
-    pub fn is_operator_and_matches(&self, other: &Node) -> bool {
+    pub fn is_operator_and_matches(&self, other: &TreeNode) -> bool {
         match (self, other) {
-            (Node::Tau, _) => false,
-            (Node::Activity(_), _) => false,
-            (_, Node::Tau) => false,
-            (_, Node::Activity(_)) => false,
-            (Node::Operator(op, _), Node::Operator(op2, _)) => op == op2,
+            (TreeNode::Tau, _) => false,
+            (TreeNode::Activity(_), _) => false,
+            (_, TreeNode::Tau) => false,
+            (_, TreeNode::Activity(_)) => false,
+            (TreeNode::Operator(op, _), TreeNode::Operator(op2, _)) => op == op2,
         }
     }
 
     pub fn is_operator_xor(&self) -> bool {
-        matches!(self, Node::Operator(Operator::Xor, _))
+        matches!(self, TreeNode::Operator(TreeOperator::Xor, _))
     }
 
     pub fn is_operator_or(&self) -> bool {
-        matches!(self, Node::Operator(Operator::Or, _))
+        matches!(self, TreeNode::Operator(TreeOperator::Or, _))
     }
 
     pub fn is_operator_interleaved(&self) -> bool {
-        matches!(self, Node::Operator(Operator::Interleaved, _))
+        matches!(self, TreeNode::Operator(TreeOperator::Interleaved, _))
     }
 
     pub fn is_operator_concurrent(&self) -> bool {
-        matches!(self, Node::Operator(Operator::Concurrent, _))
+        matches!(self, TreeNode::Operator(TreeOperator::Concurrent, _))
     }
 
     pub fn is_operator_loop(&self) -> bool {
-        matches!(self, Node::Operator(Operator::Loop, _))
+        matches!(self, TreeNode::Operator(TreeOperator::Loop, _))
     }
 
     pub fn is_operator_sequence(&self) -> bool {
-        matches!(self, Node::Operator(Operator::Sequence, _))
+        matches!(self, TreeNode::Operator(TreeOperator::Sequence, _))
     }
 }
 
 #[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Operator {
+pub enum TreeOperator {
     Xor,
     Sequence,
     Interleaved,
@@ -1013,24 +1017,24 @@ pub enum Operator {
     Loop,
 }
 
-impl Operator {
+impl TreeOperator {
     pub fn to_string(&self) -> &str {
         match self {
-            Operator::Xor => "xor",
-            Operator::Sequence => "sequence",
-            Operator::Interleaved => "interleaved",
-            Operator::Concurrent => "concurrent",
-            Operator::Or => "or",
-            Operator::Loop => "loop",
+            TreeOperator::Xor => "xor",
+            TreeOperator::Sequence => "sequence",
+            TreeOperator::Interleaved => "interleaved",
+            TreeOperator::Concurrent => "concurrent",
+            TreeOperator::Or => "or",
+            TreeOperator::Loop => "loop",
         }
     }
 }
 
-impl FromStr for Operator {
+impl FromStr for TreeOperator {
     type Err = Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        for op in Operator::iter() {
+        for op in TreeOperator::iter() {
             if s == op.to_string() {
                 return Ok(op);
             }
@@ -1115,17 +1119,17 @@ macro_rules! tree_semantics {
 
         /// Returns whether it is possible that this node now terminates (true), or that a leaf has to be executed first (false).
         pub(crate) fn can_terminate(tree: &$t, state: &TreeMarking, node: usize) -> bool {
-            match tree.tree[node] {
-                Node::Tau => state[node] == NodeState::Closed,
-                Node::Activity(_) => state[node] == NodeState::Closed,
-                Node::Operator(Operator::Concurrent, _)
-                | Node::Operator(Operator::Interleaved, _) => {
+            match tree[node] {
+                TreeNode::Tau => state[node] == NodeState::Closed,
+                TreeNode::Activity(_) => state[node] == NodeState::Closed,
+                TreeNode::Operator(TreeOperator::Concurrent, _)
+                | TreeNode::Operator(TreeOperator::Interleaved, _) => {
                     //these nodes can terminate if all of their children are either closed or can terminate
                     tree.get_children(node).all(|child| {
                         state[child] == NodeState::Closed || can_terminate(tree, state, child)
                     })
                 }
-                Node::Operator(Operator::Or, _) => {
+                TreeNode::Operator(TreeOperator::Or, _) => {
                     //an or can terminate if at least one child can terminate, and the others can be withdrawn
                     let mut one_child_closed = false;
                     for child in tree.get_children(node) {
@@ -1139,7 +1143,7 @@ macro_rules! tree_semantics {
 
                     one_child_closed
                 }
-                Node::Operator(Operator::Loop, number_of_children) => {
+                TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                     let body_child = tree.get_child(node, 0);
                     if state[node] == NodeState::Closed {
                         //if the loop is closed, it can terminate
@@ -1160,7 +1164,7 @@ macro_rules! tree_semantics {
 
                     return true;
                 }
-                Node::Operator(Operator::Sequence, number_of_children) => {
+                TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                     //a sequence node can terminate if all its non-last children are closed and the last child can terminate
                     for child_rank in 0..number_of_children - 1 {
                         if state[tree.get_child(node, child_rank)] != NodeState::Closed {
@@ -1169,7 +1173,7 @@ macro_rules! tree_semantics {
                     }
                     can_terminate(tree, state, tree.get_child(node, number_of_children - 1))
                 }
-                Node::Operator(Operator::Xor, _) => {
+                TreeNode::Operator(TreeOperator::Xor, _) => {
                     //an xor can terminate if all of its children are closed or can terminate
                     tree.get_children(node).all(|child| {
                         state[child] == NodeState::Closed || can_terminate(tree, state, child)
@@ -1186,9 +1190,9 @@ macro_rules! tree_semantics {
         }
 
         pub(crate) fn can_execute(tree: &$t, state: &TreeMarking, node: usize) -> bool {
-            match tree.tree.get(node) {
-                Some(Node::Activity(_)) => {}
-                Some(Node::Tau) => {}
+            match tree.get(node) {
+                Some(TreeNode::Activity(_)) => {}
+                Some(TreeNode::Tau) => {}
                 _ => return false,
             }
 
@@ -1202,7 +1206,9 @@ macro_rules! tree_semantics {
             //for every interleaved parent, check whether we're not executing two nodes concurrently
             let mut previous_parent = node;
             for (parent, _) in tree.get_parents(node) {
-                if let Some(Node::Operator(Operator::Interleaved, _)) = tree.tree.get(parent) {
+                if let Some(TreeNode::Operator(TreeOperator::Interleaved, _)) =
+                    tree.tree.get(parent)
+                {
                     //count the number of started children
                     let started_children = tree.get_children(parent).fold(0, |count, child| {
                         if state[child] == NodeState::Started && !can_terminate(tree, state, child)
@@ -1236,18 +1242,19 @@ macro_rules! tree_semantics {
             state[node] = NodeState::Enabled;
 
             match tree.tree[node] {
-                Node::Tau => {}
-                Node::Activity(_) => {}
-                Node::Operator(Operator::Concurrent, _)
-                | Node::Operator(Operator::Interleaved, _)
-                | Node::Operator(Operator::Or, _)
-                | Node::Operator(Operator::Xor, _) => {
+                TreeNode::Tau => {}
+                TreeNode::Activity(_) => {}
+                TreeNode::Operator(TreeOperator::Concurrent, _)
+                | TreeNode::Operator(TreeOperator::Interleaved, _)
+                | TreeNode::Operator(TreeOperator::Or, _)
+                | TreeNode::Operator(TreeOperator::Xor, _) => {
                     //enable all children
                     for child in tree.get_children(node) {
                         enable_node(tree, state, child);
                     }
                 }
-                Node::Operator(Operator::Sequence, _) | Node::Operator(Operator::Loop, _) => {
+                TreeNode::Operator(TreeOperator::Sequence, _)
+                | TreeNode::Operator(TreeOperator::Loop, _) => {
                     //enable the first child
                     enable_node(tree, state, tree.get_child(node, 0));
                 }
@@ -1258,16 +1265,16 @@ macro_rules! tree_semantics {
         fn enable_next_sequential_nodes(tree: &$t, state: &mut TreeMarking, node: usize) {
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau | Node::Activity(_) => {
+                    TreeNode::Tau | TreeNode::Activity(_) => {
                         unreachable!("Taus and activities cannot have children.")
                     }
-                    Node::Operator(Operator::Xor, _) => {
+                    TreeNode::Operator(TreeOperator::Xor, _) => {
                         //propagate to parent
                         enable_next_sequential_nodes(tree, state, parent);
                     }
-                    Node::Operator(Operator::Concurrent, _)
-                    | Node::Operator(Operator::Or, _)
-                    | Node::Operator(Operator::Interleaved, _) => {
+                    TreeNode::Operator(TreeOperator::Concurrent, _)
+                    | TreeNode::Operator(TreeOperator::Or, _)
+                    | TreeNode::Operator(TreeOperator::Interleaved, _) => {
                         if can_terminate(tree, state, parent) {
                             //this parent can terminate, so we propagate to parent
                             enable_next_sequential_nodes(tree, state, parent);
@@ -1275,7 +1282,7 @@ macro_rules! tree_semantics {
                             //this parent cannot yet terminate, so there is nothing to enable
                         }
                     }
-                    Node::Operator(Operator::Loop, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                         if child_rank == 0 {
                             //enable the redo children and the next sequential node
                             for child_rank in 1..number_of_children {
@@ -1287,7 +1294,7 @@ macro_rules! tree_semantics {
                             enable_node(tree, state, tree.get_child(parent, 0));
                         }
                     }
-                    Node::Operator(Operator::Sequence, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                         if child_rank == number_of_children - 1 {
                             //this was the last child, the sequence would end here; propagate to parent
                             enable_next_sequential_nodes(tree, state, parent);
@@ -1309,10 +1316,10 @@ macro_rules! tree_semantics {
             // println!("\t\twithdraw enablement next sequential nodes node {node}");
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau | Node::Activity(_) => {
+                    TreeNode::Tau | TreeNode::Activity(_) => {
                         unreachable!("Taus and activities cannot have children.")
                     }
-                    Node::Operator(Operator::Sequence, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                         if child_rank < number_of_children - 1 {
                             //we were a non-last child; withdraw the enablement of our next sibling
                             withdraw_enablement(
@@ -1325,14 +1332,14 @@ macro_rules! tree_semantics {
                             withdraw_enablement_next_sequential_nodes(tree, state, parent);
                         }
                     }
-                    Node::Operator(Operator::Concurrent, _)
-                    | Node::Operator(Operator::Or, _)
-                    | Node::Operator(Operator::Interleaved, _)
-                    | Node::Operator(Operator::Xor, _) => {
+                    TreeNode::Operator(TreeOperator::Concurrent, _)
+                    | TreeNode::Operator(TreeOperator::Or, _)
+                    | TreeNode::Operator(TreeOperator::Interleaved, _)
+                    | TreeNode::Operator(TreeOperator::Xor, _) => {
                         //propagate to parent
                         withdraw_enablement_next_sequential_nodes(tree, state, parent);
                     }
-                    Node::Operator(Operator::Loop, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                         if child_rank == 0 {
                             //we were the body child, withdraw redo children
                             for child_rank in 1..number_of_children {
@@ -1365,10 +1372,10 @@ macro_rules! tree_semantics {
             //this may open another node, based on the operator of the parent
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau | Node::Activity(_) => {
+                    TreeNode::Tau | TreeNode::Activity(_) => {
                         unreachable!("Taus and activities cannot have children.")
                     }
-                    Node::Operator(Operator::Sequence, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                         //for a sequence parent, we enable the next child
                         // log::debug!("close node {}, parent is sequence node {}", node, parent);
                         if child_rank < number_of_children - 1 {
@@ -1379,8 +1386,8 @@ macro_rules! tree_semantics {
                             close_node(tree, state, parent);
                         }
                     }
-                    Node::Operator(Operator::Concurrent, _)
-                    | Node::Operator(Operator::Interleaved, _) => {
+                    TreeNode::Operator(TreeOperator::Concurrent, _)
+                    | TreeNode::Operator(TreeOperator::Interleaved, _) => {
                         //for a concurrent parent, the parent can be closed if all of its children have been closed
                         if tree
                             .get_children(parent)
@@ -1390,7 +1397,7 @@ macro_rules! tree_semantics {
                             close_node(tree, state, parent);
                         }
                     }
-                    Node::Operator(Operator::Or, _) => {
+                    TreeNode::Operator(TreeOperator::Or, _) => {
                         //for an or parent, the parent can be closed if all of its children have been closed
                         if tree
                             .get_children(parent)
@@ -1405,11 +1412,11 @@ macro_rules! tree_semantics {
                             enable_next_sequential_nodes(tree, state, parent);
                         }
                     }
-                    Node::Operator(Operator::Xor, _) => {
+                    TreeNode::Operator(TreeOperator::Xor, _) => {
                         //for a xor parent, the parent can be closed as we executed one of its children
                         close_node(tree, state, parent);
                     }
-                    Node::Operator(Operator::Loop, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                         //for a loop parent, we open the next child(ren)
                         if child_rank == 0 {
                             //enable the siblings
@@ -1438,7 +1445,9 @@ macro_rules! tree_semantics {
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
             // println!("\tstart node {node}, child {:?} state {state}", child);
             match tree.tree[node] {
-                Node::Tau | Node::Activity(_) | Node::Operator(Operator::Concurrent, _) => {
+                TreeNode::Tau
+                | TreeNode::Activity(_)
+                | TreeNode::Operator(TreeOperator::Concurrent, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
 
@@ -1448,7 +1457,7 @@ macro_rules! tree_semantics {
                         }
                     }
                 }
-                Node::Operator(Operator::Sequence, _) => {
+                TreeNode::Operator(TreeOperator::Sequence, _) => {
                     //for a sequence parent, we withdraw the enablement of the previous child
                     if let Some(child) = child
                         && let Some(child_rank) = tree.get_child_rank_with(node, child)
@@ -1466,7 +1475,7 @@ macro_rules! tree_semantics {
                         }
                     }
                 }
-                Node::Operator(Operator::Interleaved, _) => {
+                TreeNode::Operator(TreeOperator::Interleaved, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
 
@@ -1489,7 +1498,7 @@ macro_rules! tree_semantics {
                         )
                     }
                 }
-                Node::Operator(Operator::Loop, number_of_children) => {
+                TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
 
@@ -1525,7 +1534,7 @@ macro_rules! tree_semantics {
                         }
                     }
                 }
-                Node::Operator(Operator::Xor, _) => {
+                TreeNode::Operator(TreeOperator::Xor, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
 
@@ -1543,7 +1552,7 @@ macro_rules! tree_semantics {
                         }
                     }
                 }
-                Node::Operator(Operator::Or, _) => {
+                TreeNode::Operator(TreeOperator::Or, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
                         if let Some((parent, _)) = tree.get_parent(node) {
@@ -1585,9 +1594,9 @@ macro_rules! tree_semantics {
         pub fn get_transition_activity(tree: &$t, transition: TransitionIndex) -> Option<Activity> {
             let node = tree.cache_transition_2_node.get(transition)?;
             match tree.tree[*node] {
-                Node::Tau => None,
-                Node::Activity(activity) => Some(activity),
-                Node::Operator(_, _) => None,
+                TreeNode::Tau => None,
+                TreeNode::Activity(activity) => Some(activity),
+                TreeNode::Operator(_, _) => None,
             }
         }
 
@@ -1616,7 +1625,7 @@ tree_semantics!(ProcessTree);
 impl TestActivityKey for ProcessTree {
     fn test_activity_key(&self) {
         self.tree.iter().for_each(|node| {
-            if let Node::Activity(a) = node {
+            if let TreeNode::Activity(a) = node {
                 self.activity_key().assert_activity_is_of_key(a);
             }
         });
@@ -1626,11 +1635,10 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ActivityKey, ActivityKeyTranslator, HasActivityKey, ProcessTree, StochasticProcessTree,
-        activity,
+        HasActivityKey, ProcessTree, StochasticProcessTree, activity,
         ebi_objects::{
             process_tree::{
-                Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
+                TreeNode, execute_transition, get_enabled_transitions, get_initial_state,
                 get_transition_activity,
             },
             scalable_vector_graphics::ToSVG,
@@ -1869,8 +1877,8 @@ mod tests {
 
         let n = Permit_FINAL_APPROVED_by_DIRECTOR_line_144;
         match tree.get_node_of_transition(n).unwrap() {
-            Node::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(x)),
-            Node::Tau => println!("-tau {}", tree.cache_transition_2_node[n]),
+            TreeNode::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(x)),
+            TreeNode::Tau => println!("-tau {}", tree.cache_transition_2_node[n]),
             _ => {}
         }
 

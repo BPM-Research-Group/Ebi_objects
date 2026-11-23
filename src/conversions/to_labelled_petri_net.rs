@@ -8,7 +8,7 @@ use crate::{
         labelled_petri_net::LabelledPetriNet,
         lola_net::LolaNet,
         partially_ordered_workflow_language::{PartiallyOrderedWorkflowLanguage, PowlNode},
-        process_tree::{Node, Operator, ProcessTree},
+        process_tree::{TreeNode, TreeOperator, ProcessTree},
         process_tree_markup_language::ProcessTreeMarkupLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
@@ -62,20 +62,20 @@ macro_rules! tree {
                 sink: usize,
             ) -> Result<usize> {
                 match self[node] {
-                    Node::Tau => {
+                    TreeNode::Tau => {
                         let transition = net.add_transition(None);
                         net.add_place_transition_arc(source, transition, 1)?;
                         net.add_transition_place_arc(transition, sink, 1)?;
                         Ok(node + 1)
                     }
-                    Node::Activity(activity) => {
+                    TreeNode::Activity(activity) => {
                         let transition =
                             net.add_transition(Some(translator.translate_activity(&activity)));
                         net.add_place_transition_arc(source, transition, 1)?;
                         net.add_transition_place_arc(transition, sink, 1)?;
                         Ok(node + 1)
                     }
-                    Node::Operator(Operator::Concurrent, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
                         let split = net.add_transition(None);
                         net.add_place_transition_arc(source, split, 1)?;
                         let join = net.add_transition(None);
@@ -92,7 +92,7 @@ macro_rules! tree {
                         }
                         Ok(child)
                     }
-                    Node::Operator(Operator::Interleaved, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Interleaved, number_of_children) => {
                         let split = net.add_transition(None);
                         net.add_place_transition_arc(source, split, 1)?;
                         let join = net.add_transition(None);
@@ -133,7 +133,7 @@ macro_rules! tree {
                         }
                         Ok(child)
                     }
-                    Node::Operator(Operator::Loop, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                         let start = net.add_transition(None);
                         net.add_place_transition_arc(source, start, 1)?;
 
@@ -160,7 +160,7 @@ macro_rules! tree {
 
                         Ok(child)
                     }
-                    Node::Operator(Operator::Or, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Or, number_of_children) => {
                         let start = net.add_transition(None);
                         net.add_place_transition_arc(source, start, 1)?;
 
@@ -207,7 +207,7 @@ macro_rules! tree {
 
                         Ok(child)
                     }
-                    Node::Operator(Operator::Sequence, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
                         let intermediate_nodes = (0..(number_of_children - 1))
                             .map(|_| net.add_place())
                             .collect::<Vec<_>>();
@@ -236,7 +236,7 @@ macro_rules! tree {
                         }
                         Ok(child)
                     }
-                    Node::Operator(Operator::Xor, number_of_children) => {
+                    TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
                         let mut child = node + 1;
                         for _ in 0..number_of_children {
                             child = $t::node_to_lpn(&self, child, net, translator, source, sink)?;

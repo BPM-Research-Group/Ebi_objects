@@ -1,7 +1,7 @@
 use crate::{
     ActivityKey,
     ebi_objects::{
-        process_tree::{Node, ProcessTree},
+        process_tree::{TreeNode, ProcessTree},
         stochastic_process_tree::StochasticProcessTree,
     },
 };
@@ -30,17 +30,17 @@ impl TryFrom<(ProcessTree, Vec<Fraction>, Fraction)> for StochasticProcessTree {
     }
 }
 
-impl From<(ActivityKey, Vec<Node>, Vec<Fraction>, Fraction)> for StochasticProcessTree {
-    fn from(value: (ActivityKey, Vec<Node>, Vec<Fraction>, Fraction)) -> Self {
+impl From<(ActivityKey, Vec<TreeNode>, Vec<Fraction>, Fraction)> for StochasticProcessTree {
+    fn from(value: (ActivityKey, Vec<TreeNode>, Vec<Fraction>, Fraction)) -> Self {
         let (activity_key, tree, weights, termination_weight) = value;
 
         let mut transition2node = vec![];
         for (node_index, node) in tree.iter().enumerate() {
             match node {
-                Node::Tau | Node::Activity(_) => {
+                TreeNode::Tau | TreeNode::Activity(_) => {
                     transition2node.push(node_index);
                 }
-                Node::Operator(_, _) => {}
+                TreeNode::Operator(_, _) => {}
             }
         }
 
