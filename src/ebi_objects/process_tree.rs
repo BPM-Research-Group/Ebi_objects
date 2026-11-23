@@ -70,7 +70,7 @@ impl ProcessTree {
     #[deprecated(
         note = "Internal access is discouraged, due to caches. If the tree is changed, ensure to call update_caches() afterwards."
     )]
-    pub fn tree(&mut self) -> &Vec<Node> {
+    pub fn tree(&mut self) -> &mut Vec<Node> {
         &mut self.tree
     }
 
