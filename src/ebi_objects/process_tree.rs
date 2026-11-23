@@ -519,6 +519,14 @@ macro_rules! tree {
             }
         }
 
+        impl std::ops::Index<usize> for $t {
+            type Output = Node;
+
+            fn index(&self, index: usize) -> &Self::Output {
+                &self.tree[index]
+            }
+        }
+
         impl TranslateActivityKey for $t {
             fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
                 let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
