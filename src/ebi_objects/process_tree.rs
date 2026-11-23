@@ -347,7 +347,10 @@ impl ProcessTree {
     /// Remove the node from the tree (recursively) and replace it with another node (recursively).
     /// Returns an error if the node does not exist.
     /// Returns the removed node (recursively) if successful.
-    pub fn replace(&mut self, node: usize, with: Vec<Node>) -> Result<Vec<Node>> {
+    pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<Node>>
+    where
+        W: IntoIterator<Item = Node>,
+    {
         if node >= self.len() {
             return Err(anyhow!("Node does not exist."));
         }
