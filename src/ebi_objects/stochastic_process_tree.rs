@@ -23,16 +23,31 @@ pub const HEADER: &str = "stochastic process tree";
 
 #[derive(Debug, ActivityKey, Clone)]
 pub struct StochasticProcessTree {
-    pub activity_key: ActivityKey,
-    pub tree: Vec<Node>,
-    pub cache_transition_2_node: Vec<usize>,
-    pub weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
-    pub termination_weight: Fraction,
+    pub(crate) activity_key: ActivityKey,
+    pub(crate) tree: Vec<Node>,
+    pub(crate) cache_transition_2_node: Vec<usize>,
+    pub(crate) weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
+    pub(crate) termination_weight: Fraction,
 }
 
 impl StochasticProcessTree {
-    pub fn number_of_leaves(&self) -> usize {
-        self.tree.iter().filter(|node| node.is_leaf()).count() + 1
+    pub fn update_caches(&mut self) {
+        self.cache_transition_2_node.clear();
+        for (node_index, node) in self.tree.iter().enumerate() {
+            match node {
+                Node::Tau | Node::Activity(_) => {
+                    self.cache_transition_2_node.push(node_index);
+                }
+                Node::Operator(_, _) => {}
+            }
+        }
+    }
+
+    fn remove_internal_do(&mut self, node: usize) {
+        if matches!(self.get(node), Some(Node::Tau) | Some(Node::Activity(_))) {
+            self.weights.remove(node);
+        }
+        self.tree.remove(node);
     }
 
     pub fn node_to_string(
@@ -877,7 +892,11 @@ pub mod tests {
     macro_rules! assert_execute_expect {
         ($tree:ident, $state:ident, $t:expr, $e:expr) => {
             println!("execute {} {}", ::std::stringify!($t), $t);
-            assert!(can_execute(&$tree, &$state, $tree.cache_transition_2_node[$t]));
+            assert!(can_execute(
+                &$tree,
+                &$state,
+                $tree.cache_transition_2_node[$t]
+            ));
             execute_transition(&$tree, &mut $state, $t).unwrap();
             println!("{}\n", $state);
             assert_eq!(get_enabled_transitions(&$tree, &$state), $e);

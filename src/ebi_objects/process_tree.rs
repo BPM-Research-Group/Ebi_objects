@@ -63,73 +63,8 @@ impl ProcessTree {
         }
     }
 
-    /**
-     * Removes a node from the tree.
-     * If the node has children, these will be added to the parent of the removed node (return an error if there is no such parent.).
-     * If the parent has no children left, it will be removed as well.
-     * Returns an error if the node does not exist.
-     * If an error is returned, the tree may be left in an inconsistent state.
-     */
-    pub fn remove(&mut self, node: usize) -> Result<()> {
-        self.remove_internal(node)?;
-        self.update_caches();
-        Ok(())
-    }
-
-    fn remove_internal(&mut self, node: usize) -> Result<()> {
-        if node > self.len() {
-            return Err(anyhow!("Node {node} does not exist."));
-        }
-
-        if let Some((parent, _)) = self.get_parent(node) {
-            //node had a parent
-            let children_of_node = self.get_number_of_children(node).unwrap_or_default();
-            let children_of_parent = self.get_number_of_children(parent).unwrap();
-            self.tree.remove(node);
-            match (children_of_node, children_of_parent) {
-                (_, 0) => unreachable!("Invalid tree."),
-                (0, 1) => {
-                    //p(n) -> p() -> recurse
-                    self.tree[parent] = Node::Tau;
-                    //parent won't have any children left; recurse
-                    self.remove_internal(parent)?;
-                }
-                (0, _) => {
-                    //p(n, ..) -> p(..)
-                    self.tree[parent].set_number_of_children(children_of_parent - 1)?;
-                }
-                (1, _) => {
-                    //p(n(c), ..) -> p(c, ..)
-                }
-                (_, 1) => {
-                    //p(n(c, ..)) -> p(c, ..)
-                    self.tree[parent].set_number_of_children(children_of_node)?;
-                }
-                (_, _) => {
-                    //p(n(c, ..), ..) -> p(c, .., ..)
-                    self.tree[parent]
-                        .set_number_of_children(children_of_parent + children_of_node - 1)?;
-                }
-            }
-        } else {
-            //node is the root
-            if self
-                .get_number_of_children(node)
-                .ok_or_else(|| anyhow!("Node does not exist."))?
-                > 1
-            {
-                return Err(anyhow!(
-                    "Cannot remove the root as it has multiple children."
-                ));
-            }
-            self.tree.remove(node);
-        };
-
-        Ok(())
-    }
-
-    pub fn number_of_leaves(&self) -> usize {
-        self.tree.iter().filter(|node| node.is_leaf()).count()
+    fn remove_internal_do(&mut self, node: usize) {
+        self.tree.remove(node);
     }
 
     fn node_to_string(
@@ -377,7 +312,7 @@ impl ProcessTree {
             | Node::Operator(Operator::Or, _)
             | Node::Operator(Operator::Interleaved, _) => format!(
                 "node {:?} [{:?}]",
-                self.operator(node).unwrap(),
+                self.node_to_operator(node).unwrap(),
                 self.get_children(node)
                     .map(|child| self.node_to_hash_string(child))
                     .sorted()
@@ -442,7 +377,13 @@ macro_rules! tree {
                 0
             }
 
-            pub fn operator(&self, node: usize) -> Option<Operator> {
+            /// Returns the number of tau and activity nodes in the tree.
+            pub fn number_of_leaves(&self) -> usize {
+                self.tree.iter().filter(|node| node.is_leaf()).count()
+            }
+
+            /// Returns the operator of the node, or None if the node is not an operator.
+            pub fn node_to_operator(&self, node: usize) -> Option<Operator> {
                 match self.tree.get(node)? {
                     Node::Tau | Node::Activity(_) => None,
                     Node::Operator(operator, _) => Some(*operator),
@@ -574,6 +515,71 @@ macro_rules! tree {
                 }
 
                 if last { Some(transitions - 1) } else { None }
+            }
+
+            /**
+             * Removes a node from the tree.
+             * If the node has children, these will be moved to the parent of the removed node (return an error if there is no such parent.).
+             * If the parent has no children left, it will be removed as well.
+             * Returns an error if the node does not exist.
+             * If an error is returned, the tree may be left in an inconsistent state.
+             */
+            pub fn remove(&mut self, node: usize) -> Result<()> {
+                self.remove_internal(node)?;
+                self.update_caches();
+                Ok(())
+            }
+
+            fn remove_internal(&mut self, node: usize) -> Result<()> {
+                if node > self.len() {
+                    return Err(anyhow!("Node {node} does not exist."));
+                }
+
+                if let Some((parent, _)) = self.get_parent(node) {
+                    //node had a parent
+                    let children_of_node = self.get_number_of_children(node).unwrap_or_default();
+                    let children_of_parent = self.get_number_of_children(parent).unwrap();
+                    self.remove_internal_do(node);
+                    match (children_of_node, children_of_parent) {
+                        (_, 0) => unreachable!("Invalid tree."),
+                        (0, 1) => {
+                            //p(n) -> p() -> recurse
+                            //parent won't have any children left; recurse
+                            self.remove_internal(parent)?;
+                        }
+                        (0, _) => {
+                            //p(n, ..) -> p(..)
+                            self.tree[parent].set_number_of_children(children_of_parent - 1)?;
+                        }
+                        (1, _) => {
+                            //p(n(c), ..) -> p(c, ..)
+                        }
+                        (_, 1) => {
+                            //p(n(c, ..)) -> p(c, ..)
+                            self.tree[parent].set_number_of_children(children_of_node)?;
+                        }
+                        (_, _) => {
+                            //p(n(c, ..), ..) -> p(c, .., ..)
+                            self.tree[parent].set_number_of_children(
+                                children_of_parent + children_of_node - 1,
+                            )?;
+                        }
+                    }
+                } else {
+                    //node is the root
+                    if self
+                        .get_number_of_children(node)
+                        .ok_or_else(|| anyhow!("Node does not exist."))?
+                        > 1
+                    {
+                        return Err(anyhow!(
+                            "Cannot remove the root as it has multiple children."
+                        ));
+                    }
+                    self.remove_internal_do(node);
+                };
+
+                Ok(())
             }
         }
 

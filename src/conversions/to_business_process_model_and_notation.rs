@@ -10,7 +10,7 @@ use crate::{
         process_tree::{Node, Operator},
     },
 };
-use ebi_activity_key::Activity;
+use ebi_activity_key::{Activity, HasActivityKey};
 use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
 use ebi_bpmn::{
     BPMNCreator, BusinessProcessModelAndNotation, Container, EndEventType, GatewayType,
@@ -224,7 +224,7 @@ via_lpn!(StochasticNondeterministicFiniteAutomaton);
 
 impl From<ProcessTree> for BusinessProcessModelAndNotation {
     fn from(value: ProcessTree) -> Self {
-        let mut c = BPMNCreator::new_with_activity_key(value.activity_key.clone());
+        let mut c = BPMNCreator::new_with_activity_key(value.activity_key().clone());
         let parent = c.add_process(None);
 
         let source = c.add_start_event_unchecked(parent, StartEventType::None);

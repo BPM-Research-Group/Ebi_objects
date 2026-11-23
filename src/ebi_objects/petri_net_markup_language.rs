@@ -196,6 +196,10 @@ impl HasActivityKey for PetriNetMarkupLanguage {
     fn activity_key_mut(&mut self) -> &mut crate::ActivityKey {
         &mut self.0.activity_key
     }
+
+    fn take_activity_key(self) -> crate::ActivityKey {
+        self.0.activity_key
+    }
 }
 
 impl TranslateActivityKey for PetriNetMarkupLanguage {

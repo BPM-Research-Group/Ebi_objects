@@ -28,7 +28,7 @@ macro_rules! tree {
             fn from(value: $t) -> Self {
                 log::info!("convert (stochastic) process tree to LPN");
 
-                if value.tree.is_empty() {
+                if value.is_empty() {
                     return Self::new_empty_language();
                 }
 
@@ -61,7 +61,7 @@ macro_rules! tree {
                 source: usize,
                 sink: usize,
             ) -> Result<usize> {
-                match self.tree[node] {
+                match self[node] {
                     Node::Tau => {
                         let transition = net.add_transition(None);
                         net.add_place_transition_arc(source, transition, 1)?;

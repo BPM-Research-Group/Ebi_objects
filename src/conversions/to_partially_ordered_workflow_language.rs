@@ -1,3 +1,5 @@
+use ebi_activity_key::HasActivityKey;
+
 use crate::{
     ProcessTree, StochasticProcessTree,
     ebi_objects::{
@@ -16,7 +18,7 @@ impl From<ProcessTree> for PartiallyOrderedWorkflowLanguage {
     fn from(value: ProcessTree) -> Self {
         let tree = tree_2_powl(&value, 0);
         Self {
-            activity_key: value.activity_key,
+            activity_key: value.take_activity_key(),
             tree,
             keys: Keys::default(),
         }
@@ -24,11 +26,11 @@ impl From<ProcessTree> for PartiallyOrderedWorkflowLanguage {
 }
 
 fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
-    if tree.tree.is_empty() {
+    if tree.is_empty() {
         return vec![];
     }
 
-    match tree.tree[node] {
+    match tree[node] {
         Node::Tau => vec![PowlNode::Activity {
             id: Some(format!("node {}", node)),
             activity: None,

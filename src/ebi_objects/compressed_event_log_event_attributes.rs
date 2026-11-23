@@ -66,6 +66,10 @@ impl HasActivityKey for CompressedEventLogEventAttributes {
     fn activity_key_mut(&mut self) -> &mut crate::ActivityKey {
         self.log.activity_key_mut()
     }
+
+    fn take_activity_key(self) -> crate::ActivityKey {
+        self.log.activity_key
+    }
 }
 
 impl TranslateActivityKey for CompressedEventLogEventAttributes {
