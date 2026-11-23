@@ -376,7 +376,7 @@ macro_rules! tree {
                 return self.tree.len();
             }
 
-            pub fn get_node(&self, node: usize) -> Option<&Node> {
+            pub fn get(&self, node: usize) -> Option<&Node> {
                 self.tree.get(node)
             }
 
