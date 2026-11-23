@@ -2151,4 +2151,30 @@ mod tests {
         execute_transition(&tree, &mut state, FIN).unwrap();
         assert!(get_enabled_transitions(&tree, &state).is_empty());
     }
+
+    #[test]
+    fn concurrent_loop_exit_enabled_when_loop_finishes_last() {
+        let tree = seq!(
+            con!(tloop!(activity!("a"), tau!()), activity!("b")),
+            activity!("c")
+        );
+
+        const A: usize = 0;
+        const TAU: usize = 1;
+        const B: usize = 2;
+        const C: usize = 3;
+        const FIN: usize = 4;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B]);
+
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TAU, C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+    }
 }

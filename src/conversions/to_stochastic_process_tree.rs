@@ -1,7 +1,7 @@
 use crate::{
     ActivityKey,
     ebi_objects::{
-        process_tree::{TreeNode, ProcessTree},
+        process_tree::{ProcessTree, TreeNode},
         stochastic_process_tree::StochasticProcessTree,
     },
 };

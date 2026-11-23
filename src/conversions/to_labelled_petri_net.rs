@@ -8,7 +8,7 @@ use crate::{
         labelled_petri_net::LabelledPetriNet,
         lola_net::LolaNet,
         partially_ordered_workflow_language::{PartiallyOrderedWorkflowLanguage, PowlNode},
-        process_tree::{TreeNode, TreeOperator, ProcessTree},
+        process_tree::{ProcessTree, TreeNode, TreeOperator},
         process_tree_markup_language::ProcessTreeMarkupLanguage,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,

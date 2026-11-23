@@ -1,4 +1,4 @@
-use super::process_tree::{Gateway, TreeNode, NodeState, TreeOperator, TreeMarking};
+use super::process_tree::{Gateway, NodeState, TreeMarking, TreeNode, TreeOperator};
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
     Infoable, TranslateActivityKey,
@@ -44,7 +44,10 @@ impl StochasticProcessTree {
     }
 
     fn remove_internal_do(&mut self, node: usize) {
-        if matches!(self.get(node), Some(TreeNode::Tau) | Some(TreeNode::Activity(_))) {
+        if matches!(
+            self.get(node),
+            Some(TreeNode::Tau) | Some(TreeNode::Activity(_))
+        ) {
             self.weights.remove(node);
         }
         self.tree.remove(node);
@@ -163,7 +166,11 @@ impl StochasticProcessTree {
             weights.push(weight);
 
             tree.push(TreeNode::Activity(activity));
-        } else if let Ok(operator) = node_type_line.trim_start().trim_end().parse::<TreeOperator>() {
+        } else if let Ok(operator) = node_type_line
+            .trim_start()
+            .trim_end()
+            .parse::<TreeOperator>()
+        {
             let number_of_children = lreader.next_line_index().with_context(|| {
                 format!(
                     "failed to read number of children for node {} at line {}",
