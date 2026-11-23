@@ -16,7 +16,9 @@ use std::collections::{HashMap, HashSet};
  */
 pub enum ParallelRefTraceIterator<'a> {
     Vec(rayon::slice::Iter<'a, Vec<Activity>>),
-    VecTupleHashMap(ParallelVecTupleIterator<'a, Vec<Activity>, HashMap<String, u64, FnvBuildHasher>>),
+    VecTupleHashMap(
+        ParallelVecTupleIterator<'a, Vec<Activity>, HashMap<String, u64, FnvBuildHasher>>,
+    ),
     VecTupleIntMap(ParallelVecTupleIterator<'a, Vec<Activity>, IntMap<Attribute, AttributeValue>>),
     VecTupleVecIntMap(
         ParallelVecTupleIterator<'a, Vec<Activity>, Vec<IntMap<Attribute, AttributeValue>>>,

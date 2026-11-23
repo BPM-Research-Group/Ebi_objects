@@ -27,17 +27,39 @@ pub const HEADER: &str = "process tree";
 
 #[derive(Debug, ActivityKey, Clone, Default)]
 pub struct ProcessTree {
-    pub activity_key: ActivityKey,
-    pub tree: Vec<Node>,
-    pub transition2node: Vec<usize>,
+    pub(crate) activity_key: ActivityKey,
+    pub(crate) tree: Vec<Node>,
+    pub(crate) cache_transition_2_node: Vec<usize>,
 }
 
 impl ProcessTree {
+    pub fn new(activity_key: ActivityKey, tree: Vec<Node>) -> Self {
+        let mut result = Self {
+            activity_key,
+            tree,
+            cache_transition_2_node: vec![],
+        };
+        result.update_caches();
+        result
+    }
+
     pub fn new_with_activity_key(activity_key: ActivityKey) -> ProcessTree {
         Self {
             activity_key,
             tree: vec![],
-            transition2node: vec![],
+            cache_transition_2_node: vec![],
+        }
+    }
+
+    pub fn update_caches(&mut self) {
+        self.cache_transition_2_node.clear();
+        for (node_index, node) in self.tree.iter().enumerate() {
+            match node {
+                Node::Tau | Node::Activity(_) => {
+                    self.cache_transition_2_node.push(node_index);
+                }
+                Node::Operator(_, _) => {}
+            }
         }
     }
 
@@ -113,7 +135,7 @@ impl ProcessTree {
                 } else {
                     *entry
                 };
-                let child_exit = if !entry.is_xor() {
+                let child_exit = if !exit.is_xor() {
                     let x = Gateway::Xor(graphable::create_dot(graph));
                     graphable::create_edge(graph, x.handle(), exit.handle(), "");
                     x
@@ -246,7 +268,8 @@ impl ProcessTree {
             })?;
             if number_of_children < 1 {
                 return Err(anyhow!(
-                    "loop node ending at node {} at line {} has no children",
+                    "{:?} node ending at node {} at line {} has no children",
+                    operator,
                     tree.len(),
                     lreader.get_last_line_number()
                 ));
@@ -270,7 +293,11 @@ impl ProcessTree {
     }
 
     pub fn to_hash_string(&self) -> String {
-        self.node_to_hash_string(0)
+        if self.tree.is_empty() {
+            String::new()
+        } else {
+            self.node_to_hash_string(0)
+        }
     }
 
     fn node_to_hash_string(&self, node: usize) -> String {
@@ -354,7 +381,7 @@ macro_rules! tree {
                 self.tree
                     .get(
                         *self
-                            .transition2node
+                            .cache_transition_2_node
                             .get(transition)
                             .ok_or_else(|| anyhow!("Transition does not exist."))?,
                     )
@@ -590,7 +617,7 @@ impl Display for ProcessTree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", HEADER)?;
         if !self.tree.is_empty() {
-            let _ = self.node_to_string(0, 0, f);
+            let _ = self.node_to_string(0, 0, f).map_err(|_| std::fmt::Error);
         };
         write!(f, "")
     }
@@ -654,6 +681,13 @@ impl Importable for ProcessTree {
         let mut tree = vec![];
         Self::string_to_tree(&mut lreader, &mut tree, &mut activity_key, true)?;
 
+        if lreader.next_line().is_ok() {
+            return Err(anyhow!(
+                "The tree parsed correctly, however there is additional text after it, from line {}.",
+                lreader.get_last_line_number()
+            ));
+        }
+
         Ok((activity_key, tree).into())
     }
 }
@@ -705,11 +739,14 @@ impl Node {
 
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
         if let Self::Operator(_, old_number_of_children) = self {
+            if number_of_children == 0 {
+                return Err(anyhow!("Cannot set a node to zero children."));
+            }
             *old_number_of_children = number_of_children;
             Ok(())
         } else {
             Err(anyhow!(
-                "attempted to alter the number of children of an activity or a tau"
+                "Attempted to alter the number of children of an activity or a tau."
             ))
         }
     }
@@ -810,9 +847,13 @@ impl FromStr for Operator {
     Copy, Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, EnumIs,
 )]
 pub enum NodeState {
+    /// Indicates that the node can be executed (for a leaf), or that one of its children can be executed (for an operator)
     Enabled,
+    /// Indicates that the node has started.
     Started,
-    NotYetExecuted, //used in interleaved to indicate must-be-executed-but-not-now
+    /// Used in POWL models, not in process trees
+    NotYetExecuted,
+    /// Indicates that a node is currently inactive and has completed or not started yet.
     Closed,
 }
 
@@ -980,9 +1021,7 @@ macro_rules! tree_semantics {
                             return false;
                         }
                     } else {
-                        // println!("{state}");
-                        // println!("Custom backtrace: {}", Backtrace::force_capture());
-                        unreachable!()
+                        unreachable!("Cannot have more than one child open in an interleaved node.")
                     }
                 }
 
@@ -1018,7 +1057,9 @@ macro_rules! tree_semantics {
         fn enable_next_sequential_nodes(tree: &$t, state: &mut TreeMarking, node: usize) {
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau | Node::Activity(_) => unreachable!(),
+                    Node::Tau | Node::Activity(_) => {
+                        unreachable!("Taus and activities cannot have children.")
+                    }
                     Node::Operator(Operator::Xor, _) => {
                         //propagate to parent
                         enable_next_sequential_nodes(tree, state, parent);
@@ -1067,7 +1108,9 @@ macro_rules! tree_semantics {
             // println!("\t\twithdraw enablement next sequential nodes node {node}");
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau | Node::Activity(_) => unreachable!(),
+                    Node::Tau | Node::Activity(_) => {
+                        unreachable!("Taus and activities cannot have children.")
+                    }
                     Node::Operator(Operator::Sequence, number_of_children) => {
                         if child_rank < number_of_children - 1 {
                             //we were a non-last child; withdraw the enablement of our next sibling
@@ -1121,7 +1164,9 @@ macro_rules! tree_semantics {
             //this may open another node, based on the operator of the parent
             if let Some((parent, child_rank)) = tree.get_parent(node) {
                 match tree.tree[parent] {
-                    Node::Tau | Node::Activity(_) => unreachable!(),
+                    Node::Tau | Node::Activity(_) => {
+                        unreachable!("Taus and activities cannot have children.")
+                    }
                     Node::Operator(Operator::Sequence, number_of_children) => {
                         //for a sequence parent, we enable the next child
                         // log::debug!("close node {}, parent is sequence node {}", node, parent);
@@ -1238,7 +1283,9 @@ macro_rules! tree_semantics {
                             }
                         }
                     } else {
-                        unreachable!()
+                        unreachable!(
+                            "An interleaved node must either start anew or be started from a child."
+                        )
                     }
                 }
                 Node::Operator(Operator::Loop, number_of_children) => {
@@ -1317,14 +1364,14 @@ macro_rules! tree_semantics {
         pub fn get_enabled_transitions(tree: &$t, state: &TreeMarking) -> Vec<TransitionIndex> {
             let mut result = vec![];
 
-            for (transition_index, node) in tree.transition2node.iter().enumerate() {
+            for (transition_index, node) in tree.cache_transition_2_node.iter().enumerate() {
                 if can_execute(tree, state, *node) {
                     result.push(transition_index);
                 }
             }
 
             if !state.terminated && can_terminate(tree, state, tree.root()) {
-                result.push(tree.transition2node.len());
+                result.push(tree.cache_transition_2_node.len());
             }
 
             result
@@ -1335,7 +1382,7 @@ macro_rules! tree_semantics {
         }
 
         pub fn get_transition_activity(tree: &$t, transition: TransitionIndex) -> Option<Activity> {
-            let node = tree.transition2node.get(transition)?;
+            let node = tree.cache_transition_2_node.get(transition)?;
             match tree.tree[*node] {
                 Node::Tau => None,
                 Node::Activity(activity) => Some(activity),
@@ -1348,16 +1395,13 @@ macro_rules! tree_semantics {
             state: &mut TreeMarking,
             transition: TransitionIndex,
         ) -> Result<()> {
-            if transition >= tree.transition2node.len() {
+            if transition >= tree.cache_transition_2_node.len() {
                 state.terminated = true;
                 state.states.fill(NodeState::Closed);
             } else {
-                let node = tree
-                    .transition2node
-                    .get(transition)
-                    .ok_or_else(|| anyhow!("transition does not exist"))?;
-                start_node(tree, state, *node, None);
-                close_node(tree, state, *node);
+                let node = tree.cache_transition_2_node[transition];
+                start_node(tree, state, node, None);
+                close_node(tree, state, node);
             }
             // println!("state after executing transition {transition}: {}", state);
             Ok(())
@@ -1616,11 +1660,16 @@ mod tests {
         let Permit_REJECTED_by_ADMINISTRATION_line_102 = 19;
         let tau_line_109 = 20;
         let Permit_APPROVED_by_ADMINISTRATION_line_110 = 21;
+        let Permit_APPROVED_by_BUDGET_OWNER_line_121 = 23;
+        let tau_line_125 = 24;
+        let tau_line_132 = 28;
+        let tau_line_138 = 31;
+        let Permit_FINAL_APPROVED_by_DIRECTOR_line_144 = 34;
 
-        let n = 18;
+        let n = Permit_FINAL_APPROVED_by_DIRECTOR_line_144;
         match tree.get_node_of_transition(n).unwrap() {
             Node::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(x)),
-            Node::Tau => println!("-tau {}", tree.transition2node[n]),
+            Node::Tau => println!("-tau {}", tree.cache_transition_2_node[n]),
             _ => {}
         }
 
@@ -1677,6 +1726,59 @@ mod tests {
                 Permit_APPROVED_by_ADMINISTRATION_line_110
             ]
         );
+
+        println!("execute Permit APPROVED by ADMINISTRATION - 21");
+        assert!(
+            get_enabled_transitions(&tree, &state)
+                .contains(&Permit_APPROVED_by_ADMINISTRATION_line_110)
+        );
+        execute_transition(
+            &tree,
+            &mut state,
+            Permit_APPROVED_by_ADMINISTRATION_line_110,
+        )
+        .unwrap();
+
+        println!("execute Permit APPROVED by BUDGET OWNER - 23");
+        assert!(
+            get_enabled_transitions(&tree, &state)
+                .contains(&Permit_APPROVED_by_BUDGET_OWNER_line_121)
+        );
+        execute_transition(&tree, &mut state, Permit_APPROVED_by_BUDGET_OWNER_line_121).unwrap();
+
+        println!("execute tau - 24");
+        assert!(get_enabled_transitions(&tree, &state).contains(&tau_line_125));
+        execute_transition(&tree, &mut state, tau_line_125).unwrap();
+
+        println!("execute tau - 28");
+        assert!(get_enabled_transitions(&tree, &state).contains(&tau_line_132));
+        execute_transition(&tree, &mut state, tau_line_132).unwrap();
+
+        println!("execute tau - 14");
+        assert!(get_enabled_transitions(&tree, &state).contains(&tau_36_line_82));
+        execute_transition(&tree, &mut state, tau_36_line_82).unwrap();
+
+        println!("execute tau - 31");
+        assert!(get_enabled_transitions(&tree, &state).contains(&tau_line_138));
+        execute_transition(&tree, &mut state, tau_line_138).unwrap();
+
+        println!("execute Permit APPROVED by SUPERVISOR - 12");
+        assert!(
+            get_enabled_transitions(&tree, &state).contains(&Permit_APPROVED_by_SUPERVISOR_line_71)
+        );
+        execute_transition(&tree, &mut state, Permit_APPROVED_by_SUPERVISOR_line_71).unwrap();
+
+        println!("execute Permit_FINAL_APPROVED_by_DIRECTOR - 34");
+        assert!(
+            get_enabled_transitions(&tree, &state)
+                .contains(&Permit_FINAL_APPROVED_by_DIRECTOR_line_144)
+        );
+        execute_transition(
+            &tree,
+            &mut state,
+            Permit_FINAL_APPROVED_by_DIRECTOR_line_144,
+        )
+        .unwrap();
     }
 
     #[test]
@@ -1772,5 +1874,11 @@ mod tests {
 
         execute_transition(&tree, &mut state, B2).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), [C]);
+    }
+
+    #[test]
+    fn parse_invalid() {
+        let fin1 = fs::read_to_string("testfiles/invalid-tree.ptree").unwrap();
+        _ = fin1.parse::<ProcessTree>().unwrap_err();
     }
 }

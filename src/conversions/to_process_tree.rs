@@ -15,31 +15,13 @@ impl From<ProcessTreeMarkupLanguage> for ProcessTree {
 
 impl From<StochasticProcessTree> for ProcessTree {
     fn from(value: StochasticProcessTree) -> Self {
-        Self {
-            activity_key: value.activity_key,
-            tree: value.tree,
-            transition2node: value.transition2node,
-        }
+        Self::new(value.activity_key, value.tree)
     }
 }
 
 impl From<(ActivityKey, Vec<Node>)> for ProcessTree {
     fn from(value: (ActivityKey, Vec<Node>)) -> Self {
-        let mut transition2node = vec![];
-        for (node_index, node) in value.1.iter().enumerate() {
-            match node {
-                Node::Tau | Node::Activity(_) => {
-                    transition2node.push(node_index);
-                }
-                Node::Operator(_, _) => {}
-            }
-        }
-
-        Self {
-            activity_key: value.0,
-            tree: value.1,
-            transition2node,
-        }
+        Self::new(value.0, value.1)
     }
 }
 

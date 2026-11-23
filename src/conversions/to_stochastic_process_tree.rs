@@ -23,7 +23,7 @@ impl TryFrom<(ProcessTree, Vec<Fraction>, Fraction)> for StochasticProcessTree {
         Ok(Self {
             activity_key: value.0.activity_key,
             tree: value.0.tree,
-            transition2node: value.0.transition2node,
+            cache_transition_2_node: value.0.cache_transition_2_node,
             termination_weight: value.2,
             weights: value.1,
         })
@@ -47,7 +47,7 @@ impl From<(ActivityKey, Vec<Node>, Vec<Fraction>, Fraction)> for StochasticProce
         Self {
             activity_key,
             tree,
-            transition2node,
+            cache_transition_2_node: transition2node,
             weights,
             termination_weight,
         }

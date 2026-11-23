@@ -107,6 +107,9 @@ impl<'a> LineReader<'a> {
         Ok(result)
     }
 
+    /**
+     * Read the next line, while skipping comment lines.
+     */
     pub fn next_line(&mut self) -> Result<()> {
         //read line and unpack
         self.next_line_raw()?;

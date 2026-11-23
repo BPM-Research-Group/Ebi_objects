@@ -1,11 +1,8 @@
-use super::process_tree::{Node, Operator};
+use super::process_tree::{Gateway, Node, NodeState, Operator, TreeMarking};
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
     Infoable, TranslateActivityKey,
-    ebi_objects::{
-        labelled_petri_net::TransitionIndex,
-        process_tree::{Gateway, NodeState, TreeMarking},
-    },
+    ebi_objects::labelled_petri_net::TransitionIndex,
     line_reader::LineReader,
     traits::{
         graphable,
@@ -28,7 +25,7 @@ pub const HEADER: &str = "stochastic process tree";
 pub struct StochasticProcessTree {
     pub activity_key: ActivityKey,
     pub tree: Vec<Node>,
-    pub transition2node: Vec<usize>,
+    pub cache_transition_2_node: Vec<usize>,
     pub weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
     pub termination_weight: Fraction,
 }
@@ -223,7 +220,13 @@ impl StochasticProcessTree {
                     *exit
                 };
                 for _ in 0..number_of_children {
-                    child = StochasticProcessTree::node_to_dot(self, graph, child, &child_entry, &child_exit);
+                    child = StochasticProcessTree::node_to_dot(
+                        self,
+                        graph,
+                        child,
+                        &child_entry,
+                        &child_exit,
+                    );
                 }
                 child
             }
@@ -434,7 +437,7 @@ pub fn get_transition_weight<'a>(
     _state: &TreeMarking,
     transition: TransitionIndex,
 ) -> Option<&'a Fraction> {
-    if transition < tree.transition2node.len() {
+    if transition < tree.cache_transition_2_node.len() {
         tree.weights.get(transition)
     } else {
         Some(&tree.termination_weight)
@@ -451,7 +454,7 @@ pub fn get_total_weight_of_enabled_transitions(
         Fraction::zero()
     };
 
-    for (transition, node) in tree.transition2node.iter().enumerate() {
+    for (transition, node) in tree.cache_transition_2_node.iter().enumerate() {
         if can_execute(tree, state, *node) {
             sum += &tree.weights[transition];
         }
@@ -874,7 +877,7 @@ pub mod tests {
     macro_rules! assert_execute_expect {
         ($tree:ident, $state:ident, $t:expr, $e:expr) => {
             println!("execute {} {}", ::std::stringify!($t), $t);
-            assert!(can_execute(&$tree, &$state, $tree.transition2node[$t]));
+            assert!(can_execute(&$tree, &$state, $tree.cache_transition_2_node[$t]));
             execute_transition(&$tree, &mut $state, $t).unwrap();
             println!("{}\n", $state);
             assert_eq!(get_enabled_transitions(&$tree, &$state), $e);
