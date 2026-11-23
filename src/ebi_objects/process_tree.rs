@@ -67,7 +67,9 @@ impl ProcessTree {
         self.tree.remove(node);
     }
 
-    #[deprecated(note = "Internal access is discouraged, due to caches. If the tree is changed, ensure to call update_caches() afterwards.")]
+    #[deprecated(
+        note = "Internal access is discouraged, due to caches. If the tree is changed, ensure to call update_caches() afterwards."
+    )]
     pub fn tree(&mut self) -> &Vec<Node> {
         &mut self.tree
     }
@@ -340,6 +342,19 @@ impl ProcessTree {
                 )
             }
         }
+    }
+
+    /// Remove the node from the tree (recursively) and replace it with another node (recursively).
+    /// Returns an error if the node does not exist.
+    /// Returns the removed node (recursively) if successful.
+    pub fn replace(&mut self, node: usize, with: Vec<Node>) -> Result<Vec<Node>> {
+        if node >= self.len() {
+            return Err(anyhow!("Node does not exist."));
+        }
+        let subtree_ends = self.traverse(node);
+        let result = self.tree.splice(node..subtree_ends, with).collect_vec();
+        self.update_caches();
+        Ok(result)
     }
 
     /// Removes and returns the node and all of its children from the tree.
