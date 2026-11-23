@@ -1401,6 +1401,10 @@ macro_rules! tree_semantics {
                             //close the parent
                             close_node(tree, state, parent);
                         }
+
+                        if can_terminate(tree, state, parent) {
+                            enable_next_sequential_nodes(tree, state, parent);
+                        }
                     }
                     TreeNode::Operator(TreeOperator::Or, _) => {
                         //for an or parent, the parent can be closed if all of its children have been closed
@@ -1640,7 +1644,7 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        HasActivityKey, ProcessTree, StochasticProcessTree, activity,
+        HasActivityKey, ProcessTree, StochasticProcessTree, activity, con,
         ebi_objects::{
             process_tree::{
                 TreeNode, execute_transition, get_enabled_transitions, get_initial_state,
@@ -1648,7 +1652,7 @@ mod tests {
             },
             scalable_vector_graphics::ToSVG,
         },
-        tau, xor,
+        seq, tau, tloop, xor,
     };
     use std::fs;
 
@@ -2116,5 +2120,35 @@ mod tests {
         assert_eq!(tree1, tree4);
 
         tree1.remove(0).unwrap_err();
+    }
+
+    #[test]
+    fn sequence_concurrent_loop_a_tau_b_c() {
+        let tree = seq!(
+            con!(tloop!(activity!("a"), tau!()), activity!("b")),
+            activity!("c")
+        );
+
+        const A: usize = 0;
+        const TAU: usize = 1;
+        const B: usize = 2;
+        const C: usize = 3;
+        const FIN: usize = 4;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TAU, B]);
+
+        // b finishes last: the concurrent node can now terminate
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TAU, C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert!(get_enabled_transitions(&tree, &state).is_empty());
     }
 }
