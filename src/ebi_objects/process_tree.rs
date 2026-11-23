@@ -63,6 +63,20 @@ impl ProcessTree {
         }
     }
 
+    /**
+     * Returns the number of nodes in the tree.
+     */
+    pub fn len(&self) -> usize {
+        self.tree.len()
+    }
+
+    /**
+     * Returns whether the tree has any nodes.
+     */
+    pub fn is_empty(&self) -> bool {
+        self.tree.is_empty()
+    }
+
     pub fn number_of_leaves(&self) -> usize {
         self.tree.iter().filter(|node| node.is_leaf()).count()
     }
