@@ -556,6 +556,15 @@ macro_rules! tree {
                 return i;
             }
 
+            /// If the node is an operator, set it to the given operator type.
+            /// Otherwise, has no effect.
+            pub fn set_operator(&mut self, node: usize, operator: Operator) {
+                if let Some(Node::Operator(op, _)) = self.tree.get_mut(node) {
+                    *op = operator;
+                    self.update_caches();
+                }
+            }
+
             pub fn get_number_of_children(&self, parent: usize) -> Option<usize> {
                 match self.tree.get(parent)? {
                     Node::Tau => Some(0),
@@ -659,12 +668,6 @@ macro_rules! tree {
 
             fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
                 self.tree.index(index)
-            }
-        }
-
-        impl std::ops::IndexMut<usize> for $t {
-            fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-                &mut self.tree[index]
             }
         }
 
