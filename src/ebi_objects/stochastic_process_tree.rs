@@ -4,7 +4,7 @@ use crate::{
     Infoable, TranslateActivityKey,
     ebi_objects::{
         labelled_petri_net::TransitionIndex,
-        process_tree::{NodeState, TreeMarking},
+        process_tree::{Gateway, NodeState, TreeMarking},
     },
     line_reader::LineReader,
     traits::{
@@ -19,7 +19,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
-use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
+use layout::topo::layout::VisualGraph;
 use std::fmt::Display;
 
 pub const HEADER: &str = "stochastic process tree";
@@ -188,12 +188,12 @@ impl StochasticProcessTree {
         &self,
         graph: &mut VisualGraph,
         node: usize,
-        entry: &NodeHandle,
-        exit: &NodeHandle,
+        entry: &Gateway,
+        exit: &Gateway,
     ) -> usize {
         match self.tree[node] {
             Node::Tau => {
-                graphable::create_edge(graph, entry, exit, "");
+                graphable::create_edge(graph, entry.handle(), exit.handle(), "");
                 node + 1
             }
             Node::Activity(activity) => {
@@ -202,20 +202,34 @@ impl StochasticProcessTree {
                     self.activity_key.activity_to_label(&activity),
                     "",
                 );
-                graphable::create_edge(graph, entry, &transition, "");
-                graphable::create_edge(graph, &transition, exit, "");
+                graphable::create_edge(graph, entry.handle(), &transition, "");
+                graphable::create_edge(graph, &transition, exit.handle(), "");
                 node + 1
             }
             Node::Operator(Operator::Xor, number_of_children) => {
                 let mut child = node + 1;
+                let child_entry = if !entry.is_xor() {
+                    let x = Gateway::Xor(graphable::create_dot(graph));
+                    graphable::create_edge(graph, entry.handle(), x.handle(), "");
+                    x
+                } else {
+                    *entry
+                };
+                let child_exit = if !entry.is_xor() {
+                    let x = Gateway::Xor(graphable::create_dot(graph));
+                    graphable::create_edge(graph, x.handle(), exit.handle(), "");
+                    x
+                } else {
+                    *exit
+                };
                 for _ in 0..number_of_children {
-                    child = StochasticProcessTree::node_to_dot(self, graph, child, entry, exit);
+                    child = StochasticProcessTree::node_to_dot(self, graph, child, &child_entry, &child_exit);
                 }
                 child
             }
             Node::Operator(Operator::Sequence, number_of_children) => {
                 let intermediate_nodes = (0..(number_of_children - 1))
-                    .map(|_| graphable::create_dot(graph))
+                    .map(|_| Gateway::Xor(graphable::create_dot(graph)))
                     .collect::<Vec<_>>();
 
                 let mut child = node + 1;
@@ -242,10 +256,10 @@ impl StochasticProcessTree {
                 child
             }
             Node::Operator(Operator::Concurrent, number_of_children) => {
-                let split = graphable::create_gateway(graph, "+");
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_gateway(graph, "+");
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::And(graphable::create_gateway(graph, "+"));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::And(graphable::create_gateway(graph, "+"));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -254,10 +268,10 @@ impl StochasticProcessTree {
                 child
             }
             Node::Operator(Operator::Or, number_of_children) => {
-                let split = graphable::create_gateway(graph, "o");
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_gateway(graph, "o");
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::Or(graphable::create_gateway(graph, "o"));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::Or(graphable::create_gateway(graph, "o"));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -266,10 +280,10 @@ impl StochasticProcessTree {
                 child
             }
             Node::Operator(Operator::Interleaved, number_of_children) => {
-                let split = graphable::create_gateway(graph, "↔");
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_gateway(graph, "↔");
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::Int(graphable::create_gateway(graph, "↔"));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::Int(graphable::create_gateway(graph, "↔"));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -278,17 +292,17 @@ impl StochasticProcessTree {
                 child
             }
             Node::Operator(Operator::Loop, number_of_children) => {
-                let split = graphable::create_dot(graph);
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_dot(graph);
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::Xor(graphable::create_dot(graph));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::Xor(graphable::create_dot(graph));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
 
                 child = StochasticProcessTree::node_to_dot(self, graph, child, &split, &join);
 
                 if number_of_children == 1 {
-                    graphable::create_edge(graph, &join, &split, "");
+                    graphable::create_edge(graph, join.handle(), split.handle(), "");
                 } else {
                     for _ in 1..number_of_children {
                         child =

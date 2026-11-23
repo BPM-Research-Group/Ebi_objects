@@ -86,12 +86,12 @@ impl ProcessTree {
         &self,
         graph: &mut VisualGraph,
         node: usize,
-        entry: &NodeHandle,
-        exit: &NodeHandle,
+        entry: &Gateway,
+        exit: &Gateway,
     ) -> usize {
         match self.tree[node] {
             Node::Tau => {
-                graphable::create_edge(graph, entry, exit, "");
+                graphable::create_edge(graph, entry.handle(), exit.handle(), "");
                 node + 1
             }
             Node::Activity(activity) => {
@@ -100,20 +100,34 @@ impl ProcessTree {
                     self.activity_key.activity_to_label(&activity),
                     "",
                 );
-                graphable::create_edge(graph, entry, &transition, "");
-                graphable::create_edge(graph, &transition, exit, "");
+                graphable::create_edge(graph, entry.handle(), &transition, "");
+                graphable::create_edge(graph, &transition, exit.handle(), "");
                 node + 1
             }
             Node::Operator(Operator::Xor, number_of_children) => {
                 let mut child = node + 1;
+                let child_entry = if !entry.is_xor() {
+                    let x = Gateway::Xor(graphable::create_dot(graph));
+                    graphable::create_edge(graph, entry.handle(), x.handle(), "");
+                    x
+                } else {
+                    *entry
+                };
+                let child_exit = if !entry.is_xor() {
+                    let x = Gateway::Xor(graphable::create_dot(graph));
+                    graphable::create_edge(graph, x.handle(), exit.handle(), "");
+                    x
+                } else {
+                    *exit
+                };
                 for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(self, graph, child, entry, exit);
+                    child = ProcessTree::node_to_dot(self, graph, child, &child_entry, &child_exit);
                 }
                 child
             }
             Node::Operator(Operator::Sequence, number_of_children) => {
                 let intermediate_nodes = (0..(number_of_children - 1))
-                    .map(|_| graphable::create_dot(graph))
+                    .map(|_| Gateway::Xor(graphable::create_dot(graph)))
                     .collect::<Vec<_>>();
 
                 let mut child = node + 1;
@@ -134,10 +148,10 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Concurrent, number_of_children) => {
-                let split = graphable::create_gateway(graph, "+");
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_gateway(graph, "+");
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::And(graphable::create_gateway(graph, "+"));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::And(graphable::create_gateway(graph, "+"));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -146,10 +160,10 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Or, number_of_children) => {
-                let split = graphable::create_gateway(graph, "o");
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_gateway(graph, "o");
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::Or(graphable::create_gateway(graph, "o"));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::Or(graphable::create_gateway(graph, "o"));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -158,10 +172,10 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Interleaved, number_of_children) => {
-                let split = graphable::create_gateway(graph, "↔");
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_gateway(graph, "↔");
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::Int(graphable::create_gateway(graph, "↔"));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::Int(graphable::create_gateway(graph, "↔"));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
                 for _ in 0..number_of_children {
@@ -170,17 +184,17 @@ impl ProcessTree {
                 child
             }
             Node::Operator(Operator::Loop, number_of_children) => {
-                let split = graphable::create_dot(graph);
-                graphable::create_edge(graph, entry, &split, "");
-                let join = graphable::create_dot(graph);
-                graphable::create_edge(graph, &join, exit, "");
+                let split = Gateway::Xor(graphable::create_dot(graph));
+                graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                let join = Gateway::Xor(graphable::create_dot(graph));
+                graphable::create_edge(graph, join.handle(), exit.handle(), "");
 
                 let mut child = node + 1;
 
                 child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
 
                 if number_of_children == 1 {
-                    graphable::create_edge(graph, &join, &split, "");
+                    graphable::create_edge(graph, join.handle(), split.handle(), "");
                 } else {
                     for _ in 1..number_of_children {
                         child = ProcessTree::node_to_dot(self, graph, child, &join, &split);
@@ -293,6 +307,22 @@ impl ProcessTree {
                         .collect::<Vec<_>>()
                 )
             }
+        }
+    }
+}
+
+#[derive(EnumIs, Copy, Clone)]
+pub enum Gateway {
+    Xor(NodeHandle),
+    And(NodeHandle),
+    Or(NodeHandle),
+    Int(NodeHandle),
+}
+
+impl Gateway {
+    pub(crate) fn handle(&self) -> &NodeHandle {
+        match self {
+            Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
         }
     }
 }
@@ -479,8 +509,8 @@ macro_rules! tree {
         impl Graphable for $t {
             fn to_dot(&self) -> Result<layout::topo::layout::VisualGraph> {
                 let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
-                let source = graphable::create_place(&mut graph, "");
-                let sink = graphable::create_place(&mut graph, "");
+                let source = Gateway::Xor(graphable::create_place(&mut graph, ""));
+                let sink = Gateway::Xor(graphable::create_place(&mut graph, ""));
                 if !self.tree.is_empty() {
                     $t::node_to_dot(&self, &mut graph, 0, &source, &sink);
                 }
@@ -1341,13 +1371,10 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ActivityKey, ActivityKeyTranslator, HasActivityKey, ProcessTree, StochasticProcessTree,
-        activity,
-        ebi_objects::process_tree::{
+        ActivityKey, ActivityKeyTranslator, HasActivityKey, ProcessTree, StochasticProcessTree, activity, ebi_objects::{process_tree::{
             Node, Operator, execute_transition, get_enabled_transitions, get_initial_state,
             get_transition_activity,
-        },
-        tau, xor,
+        }, scalable_vector_graphics::ToSVG}, tau, xor,
     };
     use std::fs;
 
@@ -1524,14 +1551,29 @@ mod tests {
     }
 
     #[test]
+    fn jan_tree_graph() {
+        let fin1 = fs::read_to_string(
+            "testfiles/testcase Jan/tree.ptree",
+        )
+        .unwrap();
+        let tree = fin1.parse::<ProcessTree>().unwrap();
+
+        let svg = tree.to_svg().unwrap();
+
+        fs::write("testfiles/testcase Jan/tree.ptree.svg", svg.to_string()).unwrap();
+
+        println!("{svg}");
+    }
+
+    #[test]
     fn jan_tree() {
         let fin1 = fs::read_to_string(
             "testfiles/IMPF_BPI_Challenge_2020_International_Declarations_178181.xes.ptree",
         )
         .unwrap();
-        let mut tree = fin1.parse::<ProcessTree>().unwrap();
+        let tree = fin1.parse::<ProcessTree>().unwrap();
 
-        println!("{:?}", tree.activity_key());
+        // println!("{:?}", tree.activity_key());
 
         let activity_End_trip = 0;
         let activity_start_trip = 1;
@@ -1541,16 +1583,16 @@ mod tests {
         let tau_21_line_49 = 8;
         let tau_25_line_59 = 9;
         let Permit_REJECTED_by_MISSING = 10;
+        let tau_29_line_67 = 11;
 
-        let n = 10;
+        let n = 11;
         match tree.get_node_of_transition(n).unwrap() {
-            Node::Activity(x) => println!("{}", tree.activity_key.activity_to_label(x)),
-            Node::Tau => println!("tau {}", tree.transition2node[n]),
+            Node::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(x)),
+            Node::Tau => println!("-tau {}", tree.transition2node[n]),
             _ => {}
         }
 
         let mut state = get_initial_state(&tree).unwrap();
-        // println!("{}\n", state);
         assert_eq!(
             get_enabled_transitions(&tree, &state),
             [
@@ -1565,6 +1607,18 @@ mod tests {
             ]
         );
 
+        println!("execute tau");
         execute_transition(&tree, &mut state, tau_25_line_59).unwrap();
+        assert_eq!(
+            get_enabled_transitions(&tree, &state),
+            [
+                activity_End_trip,
+                activity_start_trip,
+                Declaration_REJECTED_by_EMPLOYEE,
+                Send_Reminder,
+                Declaration_SUBMITTED_by_EMPLOYEE,
+                tau_29_line_67,
+            ]
+        );
     }
 }
