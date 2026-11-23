@@ -336,6 +336,69 @@ impl ProcessTree {
             }
         }
     }
+
+    /// Removes and returns the node and all of its children from the tree.
+    /// Returns an error if the node does not exist.
+    /// If an error is returned, the tree may be left in an inconsistent state.
+    pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<Node>> {
+        let drain = self.remove_recursive_internal(node)?.collect_vec();
+        self.update_caches();
+        Ok(drain)
+    }
+
+    fn remove_recursive_internal_do(&mut self, node: usize) -> std::vec::Drain<'_, Node> {
+        let node_after_child_tree = self.traverse(node);
+        self.tree.drain(node..node_after_child_tree)
+    }
+
+    fn remove_recursive_internal(&mut self, node: usize) -> Result<std::vec::Drain<'_, Node>> {
+        if node > self.len() {
+            return Err(anyhow!("Node {node} does not exist."));
+        }
+
+        if let Some((parent, _)) = self.get_parent(node) {
+            //node had a parent
+            let children_of_node = self.get_number_of_children(node).unwrap_or_default();
+            let children_of_parent = self.get_number_of_children(parent).unwrap();
+            match (children_of_node, children_of_parent) {
+                (_, 0) => unreachable!("Invalid tree."),
+                (0, 1) => {
+                    //p(n) -> p() -> recurse
+                    //parent won't have any children left; recurse
+                    self.remove_internal(parent)?;
+                }
+                (0, _) => {
+                    //p(n, ..) -> p(..)
+                    self.tree[parent].set_number_of_children(children_of_parent - 1)?;
+                }
+                (1, _) => {
+                    //p(n(c), ..) -> p(c, ..)
+                }
+                (_, 1) => {
+                    //p(n(c, ..)) -> p(c, ..)
+                    self.tree[parent].set_number_of_children(children_of_node)?;
+                }
+                (_, _) => {
+                    //p(n(c, ..), ..) -> p(c, .., ..)
+                    self.tree[parent]
+                        .set_number_of_children(children_of_parent + children_of_node - 1)?;
+                }
+            }
+            Ok(self.remove_recursive_internal_do(node))
+        } else {
+            //node is the root
+            if self
+                .get_number_of_children(node)
+                .ok_or_else(|| anyhow!("Node does not exist."))?
+                > 1
+            {
+                return Err(anyhow!(
+                    "Cannot remove the root as it has multiple children."
+                ));
+            }
+            Ok(self.remove_recursive_internal_do(node))
+        }
+    }
 }
 
 #[derive(EnumIs, Copy, Clone)]
@@ -599,6 +662,12 @@ macro_rules! tree {
             }
         }
 
+        impl std::ops::IndexMut<usize> for $t {
+            fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+                &mut self.tree[index]
+            }
+        }
+
         impl TranslateActivityKey for $t {
             fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
                 let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
@@ -714,71 +783,6 @@ macro_rules! tree {
 }
 
 tree!(ProcessTree, ChildrenIterator, ParentsIterator);
-
-impl ProcessTree {
-    /// Removes and returns the node and all of its children from the tree.
-    /// Returns an error if the node does not exist.
-    /// If an error is returned, the tree may be left in an inconsistent state.
-    pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<Node>> {
-        let drain = self.remove_recursive_internal(node)?.collect_vec();
-        self.update_caches();
-        Ok(drain)
-    }
-
-    fn remove_recursive_internal_do(&mut self, node: usize) -> std::vec::Drain<'_, Node> {
-        let node_after_child_tree = self.traverse(node);
-        self.tree.drain(node..node_after_child_tree)
-    }
-
-    fn remove_recursive_internal(&mut self, node: usize) -> Result<std::vec::Drain<'_, Node>> {
-        if node > self.len() {
-            return Err(anyhow!("Node {node} does not exist."));
-        }
-
-        if let Some((parent, _)) = self.get_parent(node) {
-            //node had a parent
-            let children_of_node = self.get_number_of_children(node).unwrap_or_default();
-            let children_of_parent = self.get_number_of_children(parent).unwrap();
-            match (children_of_node, children_of_parent) {
-                (_, 0) => unreachable!("Invalid tree."),
-                (0, 1) => {
-                    //p(n) -> p() -> recurse
-                    //parent won't have any children left; recurse
-                    self.remove_internal(parent)?;
-                }
-                (0, _) => {
-                    //p(n, ..) -> p(..)
-                    self.tree[parent].set_number_of_children(children_of_parent - 1)?;
-                }
-                (1, _) => {
-                    //p(n(c), ..) -> p(c, ..)
-                }
-                (_, 1) => {
-                    //p(n(c, ..)) -> p(c, ..)
-                    self.tree[parent].set_number_of_children(children_of_node)?;
-                }
-                (_, _) => {
-                    //p(n(c, ..), ..) -> p(c, .., ..)
-                    self.tree[parent]
-                        .set_number_of_children(children_of_parent + children_of_node - 1)?;
-                }
-            }
-            Ok(self.remove_recursive_internal_do(node))
-        } else {
-            //node is the root
-            if self
-                .get_number_of_children(node)
-                .ok_or_else(|| anyhow!("Node does not exist."))?
-                > 1
-            {
-                return Err(anyhow!(
-                    "Cannot remove the root as it has multiple children."
-                ));
-            }
-            Ok(self.remove_recursive_internal_do(node))
-        }
-    }
-}
 
 impl Display for ProcessTree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
