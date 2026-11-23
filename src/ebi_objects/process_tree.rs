@@ -1192,10 +1192,7 @@ macro_rules! tree_semantics {
         fn start_node(tree: &$t, state: &mut TreeMarking, node: usize, child: Option<usize>) {
             // println!("\tstart node {node}, child {:?} state {state}", child);
             match tree.tree[node] {
-                Node::Tau
-                | Node::Activity(_)
-                | Node::Operator(Operator::Concurrent, _)
-                | Node::Operator(Operator::Or, _) => {
+                Node::Tau | Node::Activity(_) | Node::Operator(Operator::Concurrent, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
 
@@ -1280,7 +1277,6 @@ macro_rules! tree_semantics {
                         }
                     }
                 }
-
                 Node::Operator(Operator::Xor, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
@@ -1297,6 +1293,18 @@ macro_rules! tree_semantics {
                         if let Some((parent, _)) = tree.get_parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
+                    }
+                }
+                Node::Operator(Operator::Or, _) => {
+                    if state[node] != NodeState::Started {
+                        state[node] = NodeState::Started;
+                        if let Some((parent, _)) = tree.get_parent(node) {
+                            start_node(tree, state, parent, Some(node));
+                        }
+                    } else if !can_terminate(tree, state, node) {
+                        // a child just committed, so successors enabled earlier
+                        // (because the or could finish) must be withdrawn
+                        withdraw_enablement_next_sequential_nodes(tree, state, node);
                     }
                 }
             }
@@ -1723,5 +1731,46 @@ mod tests {
 
         execute_transition(&tree, &mut state, C).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+    }
+
+    #[test]
+    fn or_skip_sibling_branch() {
+        let fin1 = fs::read_to_string("testfiles/seq(or(a,seq(b1,b2)),c).ptree").unwrap();
+        let tree = fin1.parse::<ProcessTree>().unwrap();
+
+        const A: usize = 0;
+        const B1: usize = 1;
+        const _B2: usize = 2;
+        const C: usize = 3;
+        const FIN: usize = 4;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+    }
+
+    #[test]
+    fn or_successor_withdrawn_when_sibling_starts() {
+        let fin1 = fs::read_to_string("testfiles/seq(or(a,seq(b1,b2)),c).ptree").unwrap();
+        let tree = fin1.parse::<ProcessTree>().unwrap();
+
+        const A: usize = 0;
+        const B1: usize = 1;
+        const B2: usize = 2;
+        const C: usize = 3;
+
+        let mut state = get_initial_state(&tree).unwrap();
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B1, C]);
+
+        execute_transition(&tree, &mut state, B1).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B2]);
+
+        execute_transition(&tree, &mut state, B2).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [C]);
     }
 }
