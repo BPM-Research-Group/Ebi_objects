@@ -67,6 +67,11 @@ impl ProcessTree {
         self.tree.remove(node);
     }
 
+    #[deprecated(note = "Internal access is discouraged, due to caches. If the tree is changed, ensure to call update_caches() afterwards.")]
+    pub fn tree(&mut self) -> &Vec<Node> {
+        &mut self.tree
+    }
+
     fn node_to_string(
         &self,
         indent: usize,
