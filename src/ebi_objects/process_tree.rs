@@ -1522,4 +1522,49 @@ mod tests {
         println!("{}\n", state);
         assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
     }
+
+    #[test]
+    fn jan_tree() {
+        let fin1 = fs::read_to_string(
+            "testfiles/IMPF_BPI_Challenge_2020_International_Declarations_178181.xes.ptree",
+        )
+        .unwrap();
+        let mut tree = fin1.parse::<ProcessTree>().unwrap();
+
+        println!("{:?}", tree.activity_key());
+
+        let activity_End_trip = 0;
+        let activity_start_trip = 1;
+        let Declaration_REJECTED_by_EMPLOYEE = 2;
+        let Send_Reminder = 4;
+        let Declaration_SUBMITTED_by_EMPLOYEE = 6;
+        let tau_21_line_49 = 8;
+        let tau_25_line_59 = 9;
+        let Permit_REJECTED_by_MISSING = 10;
+
+        let n = 10;
+        match tree.get_node_of_transition(n).unwrap() {
+            Node::Activity(x) => println!("{}", tree.activity_key.activity_to_label(x)),
+            Node::Tau => println!("tau {}", tree.transition2node[n]),
+            _ => {}
+        }
+
+        let mut state = get_initial_state(&tree).unwrap();
+        // println!("{}\n", state);
+        assert_eq!(
+            get_enabled_transitions(&tree, &state),
+            [
+                activity_End_trip,
+                activity_start_trip,
+                Declaration_REJECTED_by_EMPLOYEE,
+                Send_Reminder,
+                Declaration_SUBMITTED_by_EMPLOYEE,
+                tau_21_line_49,
+                tau_25_line_59,
+                Permit_REJECTED_by_MISSING,
+            ]
+        );
+
+        execute_transition(&tree, &mut state, tau_25_line_59).unwrap();
+    }
 }

@@ -1,0 +1,229 @@
+process tree
+concurrent
+# number of children
+3
+	activity End trip
+	activity Start trip
+	or
+	# number of children
+	2
+		loop
+		# number of children
+		2
+			activity Declaration REJECTED by EMPLOYEE
+			tau
+		sequence
+		# number of children
+		3
+			loop
+			# number of children
+			2
+				sequence
+				# number of children
+				2
+					or
+					# number of children
+					2
+						loop
+						# number of children
+						2
+							activity Send Reminder
+							tau
+						sequence
+						# number of children
+						2
+							or
+							# number of children
+							2
+								loop
+								# number of children
+								2
+									activity Declaration SUBMITTED by EMPLOYEE
+									tau
+								sequence
+								# number of children
+								3
+									xor
+									# number of children
+									2
+										tau
+										loop
+										# number of children
+										2
+											sequence
+											# number of children
+											2
+												xor
+												# number of children
+												2
+													tau
+													activity Permit REJECTED by MISSING
+												concurrent
+												# number of children
+												2
+													xor
+													# number of children
+													2
+														tau
+														loop
+														# number of children
+														2
+															activity Permit APPROVED by SUPERVISOR
+															tau
+													sequence
+													# number of children
+													2
+														concurrent
+														# number of children
+														2
+															xor
+															# number of children
+															2
+																tau
+																loop
+																# number of children
+																2
+																	activity Permit APPROVED by PRE_APPROVER
+																	tau
+															sequence
+															# number of children
+															2
+																loop
+																# number of children
+																2
+																	sequence
+																	# number of children
+																	3
+																		activity Permit SUBMITTED by EMPLOYEE
+																		xor
+																		# number of children
+																		3
+																			activity Permit REJECTED by PRE_APPROVER
+																			activity Permit REJECTED by ADMINISTRATION
+																			sequence
+																			# number of children
+																			2
+																				xor
+																				# number of children
+																				2
+																					tau
+																					activity Permit APPROVED by ADMINISTRATION
+																				xor
+																				# number of children
+																				2
+																					sequence
+																					# number of children
+																					2
+																						xor
+																						# number of children
+																						2
+																							tau
+																							activity Permit APPROVED by BUDGET OWNER
+																						xor
+																						# number of children
+																						3
+																							tau
+																							activity Permit REJECTED by SUPERVISOR
+																							activity Permit REJECTED by DIRECTOR
+																					activity Permit REJECTED by BUDGET OWNER
+																		xor
+																		# number of children
+																		2
+																			tau
+																			activity Permit REJECTED by EMPLOYEE
+																	tau
+																xor
+																# number of children
+																2
+																	tau
+																	activity Permit FINAL_APPROVED by SUPERVISOR
+														xor
+														# number of children
+														2
+															tau
+															activity Permit FINAL_APPROVED by DIRECTOR
+											tau
+									xor
+									# number of children
+									2
+										tau
+										activity Declaration APPROVED by PRE_APPROVER
+									or
+									# number of children
+									2
+										activity Declaration APPROVED by SUPERVISOR
+										sequence
+										# number of children
+										3
+											xor
+											# number of children
+											2
+												tau
+												loop
+												# number of children
+												2
+													sequence
+													# number of children
+													2
+														activity Declaration APPROVED by ADMINISTRATION
+														xor
+														# number of children
+														2
+															tau
+															activity Declaration REJECTED by DIRECTOR
+													tau
+											xor
+											# number of children
+											2
+												tau
+												activity Declaration APPROVED by BUDGET OWNER
+											xor
+											# number of children
+											2
+												tau
+												activity Declaration FINAL_APPROVED by DIRECTOR
+							or
+							# number of children
+							2
+								activity Request Payment
+								sequence
+								# number of children
+								2
+									xor
+									# number of children
+									2
+										tau
+										concurrent
+										# number of children
+										2
+											activity Declaration FINAL_APPROVED by SUPERVISOR
+											xor
+											# number of children
+											2
+												tau
+												activity Permit REJECTED by MISSING
+									xor
+									# number of children
+									2
+										tau
+										activity Payment Handled
+					xor
+					# number of children
+					6
+						tau
+						activity Declaration REJECTED by PRE_APPROVER
+						activity Declaration REJECTED by BUDGET OWNER
+						activity Declaration REJECTED by ADMINISTRATION
+						activity Declaration REJECTED by SUPERVISOR
+						activity Declaration REJECTED by MISSING
+				tau
+			xor
+			# number of children
+			2
+				tau
+				activity Declaration SAVED by EMPLOYEE
+			xor
+			# number of children
+			2
+				tau
+				activity Permit REJECTED by MISSING
