@@ -64,17 +64,68 @@ impl ProcessTree {
     }
 
     /**
-     * Returns the number of nodes in the tree.
+     * Removes a node from the tree.
+     * If the node has children, these will be added to the parent of the removed node (return an error if there is no such parent.).
+     * If the parent has no children left, it will be removed as well.
+     * Returns an error if the node does not exist.
+     * If an error is returned, the tree may be left in an inconsistent state.
      */
-    pub fn len(&self) -> usize {
-        self.tree.len()
+    pub fn remove(&mut self, node: usize) -> Result<()> {
+        self.remove_internal(node)?;
+        self.update_caches();
+        Ok(())
     }
 
-    /**
-     * Returns whether the tree has any nodes.
-     */
-    pub fn is_empty(&self) -> bool {
-        self.tree.is_empty()
+    fn remove_internal(&mut self, node: usize) -> Result<()> {
+        if node > self.len() {
+            return Err(anyhow!("Node {node} does not exist."));
+        }
+
+        if let Some((parent, _)) = self.get_parent(node) {
+            //node had a parent
+            let children_of_node = self.get_number_of_children(node).unwrap_or_default();
+            let children_of_parent = self.get_number_of_children(parent).unwrap();
+            self.tree.remove(node);
+            match (children_of_node, children_of_parent) {
+                (_, 0) => unreachable!("Invalid tree."),
+                (0, 1) => {
+                    //p(n) -> p() -> recurse
+                    self.tree[parent] = Node::Tau;
+                    //parent won't have any children left; recurse
+                    self.remove_internal(parent)?;
+                }
+                (0, _) => {
+                    //p(n, ..) -> p(..)
+                    self.tree[parent].set_number_of_children(children_of_parent - 1)?;
+                }
+                (1, _) => {
+                    //p(n(c), ..) -> p(c, ..)
+                }
+                (_, 1) => {
+                    //p(n(c, ..)) -> p(c, ..)
+                    self.tree[parent].set_number_of_children(children_of_node)?;
+                }
+                (_, _) => {
+                    //p(n(c, ..), ..) -> p(c, .., ..)
+                    self.tree[parent]
+                        .set_number_of_children(children_of_parent + children_of_node - 1)?;
+                }
+            }
+        } else {
+            //node is the root
+            if self
+                .get_number_of_children(node)
+                .ok_or_else(|| anyhow!("Node does not exist."))?
+                > 1
+            {
+                return Err(anyhow!(
+                    "Cannot remove the root as it has multiple children."
+                ));
+            }
+            self.tree.remove(node);
+        };
+
+        Ok(())
     }
 
     pub fn number_of_leaves(&self) -> usize {
@@ -372,10 +423,17 @@ impl Gateway {
 macro_rules! tree {
     ($t:ident, $u:ident, $v:ident) => {
         impl $t {
-            pub fn get_number_of_nodes(&self) -> usize {
-                return self.tree.len();
+            /// Returns the number of nodes in the tree.
+            pub fn len(&self) -> usize {
+                self.tree.len()
             }
 
+            /// Returns whether the tree has any nodes.
+            pub fn is_empty(&self) -> bool {
+                self.tree.is_empty()
+            }
+
+            /// Returns the node if it exists.
             pub fn get(&self, node: usize) -> Option<&Node> {
                 self.tree.get(node)
             }
@@ -541,7 +599,7 @@ macro_rules! tree {
 
         impl Infoable for $t {
             fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
-                writeln!(f, "Number of nodes\t\t{}", self.get_number_of_nodes())?;
+                writeln!(f, "Number of nodes\t\t{}", self.len())?;
                 writeln!(
                     f,
                     "Number of activities\t\t{}",
@@ -934,7 +992,7 @@ macro_rules! tree_semantics {
                 None
             } else {
                 let mut state = TreeMarking {
-                    states: vec![NodeState::Closed; tree.get_number_of_nodes()],
+                    states: vec![NodeState::Closed; tree.len()],
                     terminated: false,
                 };
                 enable_node(tree, &mut state, tree.root());
@@ -1472,7 +1530,7 @@ mod tests {
     fn tree_create() {
         let xor = xor!(tau!(), activity!("a"));
 
-        assert_eq!(xor.get_number_of_nodes(), 3)
+        assert_eq!(xor.len(), 3)
     }
 
     #[test]
@@ -1910,5 +1968,27 @@ mod tests {
     fn parse_invalid() {
         let fin1 = fs::read_to_string("testfiles/invalid-tree.ptree").unwrap();
         _ = fin1.parse::<ProcessTree>().unwrap_err();
+    }
+
+    #[test]
+    fn remove_node() {
+        let mut tree1 = xor!(tau!(), activity!("a"), activity!("b"));
+        let tree2 = xor!(tau!(), activity!("b"));
+        let tree3 = xor!(tau!());
+        let tree4 = ProcessTree::default();
+
+        tree1.remove(2).unwrap();
+
+        assert_eq!(tree1, tree2);
+
+        tree1.remove(2).unwrap();
+
+        assert_eq!(tree1, tree3);
+
+        tree1.remove(1).unwrap();
+
+        assert_eq!(tree1, tree4);
+
+        tree1.remove(0).unwrap_err();
     }
 }
