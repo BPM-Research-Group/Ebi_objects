@@ -52,7 +52,7 @@ macro_rules! xor {
         $(
             let opt = $opt;
             let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);
-            tree.extend(opt.tree.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {node}));
+            tree.extend(opt.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {*node}));
             len += 1;
         )+
         tree.insert(0, $crate::TreeNode::Operator($crate::TreeOperator::Xor, len));
@@ -70,7 +70,7 @@ macro_rules! seq {
         $(
             let opt = $opt;
             let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);
-            tree.extend(opt.tree.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {node}));
+            tree.extend(opt.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {*node}));
             len += 1;
         )+
         tree.insert(0, $crate::TreeNode::Operator($crate::TreeOperator::Sequence, len));
@@ -88,7 +88,7 @@ macro_rules! con {
         $(
             let opt = $opt;
             let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);
-            tree.extend(opt.tree.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {node}));
+            tree.extend(opt.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {*node}));
             len += 1;
         )+
         tree.insert(0, $crate::TreeNode::Operator($crate::TreeOperator::Concurrent, len));
@@ -106,7 +106,7 @@ macro_rules! or {
         $(
             let opt = $opt;
             let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);
-            tree.extend(opt.tree.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {node}));
+            tree.extend(opt.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {*node}));
             len += 1;
         )+
         tree.insert(0, $crate::TreeNode::Operator($crate::TreeOperator::Or, len));
@@ -124,7 +124,7 @@ macro_rules! int {
         $(
             let opt = $opt;
             let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);
-            tree.extend(opt.tree.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {node}));
+            tree.extend(opt.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {*node}));
             len += 1;
         )+
         tree.insert(0, $crate::TreeNode::Operator($crate::TreeOperator::Interleaved, len));
