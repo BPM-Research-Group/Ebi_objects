@@ -33,10 +33,6 @@ impl HasActivityKey for ProcessTreeMarkupLanguage {
     fn activity_key_mut(&mut self) -> &mut ActivityKey {
         self.tree.activity_key_mut()
     }
-
-    fn take_activity_key(self) -> crate::ActivityKey {
-        self.tree.take_activity_key()
-    }
 }
 
 impl TranslateActivityKey for ProcessTreeMarkupLanguage {

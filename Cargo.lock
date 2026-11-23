@@ -325,9 +325,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "ebi_activity_key"
-version = "0.0.5"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f523116a7536915e5e0fc4dc5724c03c3912ffbb31202a681e9845455b15395"
+checksum = "5a62ad52d7d82bbfaeb57cece5bff882d839dcecb79dc958b9b6893f38536858"
 dependencies = [
  "fnv",
  "intmap",
@@ -353,7 +353,7 @@ dependencies = [
 [[package]]
 name = "ebi_bpmn"
 version = "0.0.56"
-source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#47cb89f2479236fec1798bf75a2dc13e5a1cfbfc"
+source = "git+https://github.com/BPM-Research-Group/Ebi_BPMN.git#f0d99822aeb7b25a9fdab0248db76ce73f6557cf"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -370,9 +370,9 @@ dependencies = [
 
 [[package]]
 name = "ebi_derive"
-version = "0.2.14"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7517ea931faf2b13a13395736707e4ff1f8a4a74ba83f506ce8543e186043f53"
+checksum = "012a2b2b6d674147308c1ac3766e895e91e399f316234b24453400936605487c"
 dependencies = [
  "darling",
  "quote",
