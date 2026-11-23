@@ -469,6 +469,10 @@ macro_rules! tree {
                     .ok_or_else(|| anyhow!("Node does not exist."))
             }
 
+            pub fn transition_to_node(&self, transition: TransitionIndex) -> Option<usize> {
+                self.cache_transition_2_node.get(transition).copied()
+            }
+
             /**
              * Returns the parent of node. Notice that
              * this is an expensive operation; avoid if possible.
