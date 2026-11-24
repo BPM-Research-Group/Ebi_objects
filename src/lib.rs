@@ -154,6 +154,7 @@ pub use ebi_objects::event_log::EventLog;
 pub use ebi_objects::event_log_csv::EventLogCsv;
 pub use ebi_objects::event_log_ocel::EventLogOcel;
 pub use ebi_objects::event_log_python::EventLogPython;
+pub use ebi_objects::event_log_event_attributes::EventLogEventAttributes;
 pub use ebi_objects::event_log_trace_attributes::EventLogTraceAttributes;
 pub use ebi_objects::event_log_xes::EventLogXes;
 pub use ebi_objects::executions::Executions;
