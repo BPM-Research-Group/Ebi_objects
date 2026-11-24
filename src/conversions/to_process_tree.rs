@@ -15,7 +15,8 @@ impl From<ProcessTreeMarkupLanguage> for ProcessTree {
 
 impl From<StochasticProcessTree> for ProcessTree {
     fn from(value: StochasticProcessTree) -> Self {
-        Self::new(value.activity_key, value.tree)
+        let (activity_key, tree, _, _) = value.take();
+        Self::new(activity_key, tree)
     }
 }
 

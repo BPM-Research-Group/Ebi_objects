@@ -20,37 +20,14 @@ impl TryFrom<(ProcessTree, Vec<Fraction>, Fraction)> for StochasticProcessTree {
                 value.1.len()
             ));
         }
-        let (activity_key, tree, cache_transition_2_node) = value.0.take();
-        Ok(Self {
-            activity_key,
-            tree,
-            cache_transition_2_node,
-            termination_weight: value.2,
-            weights: value.1,
-        })
+        let (activity_key, tree) = value.0.take();
+        Ok(Self::new(activity_key, tree, value.1, value.2))
     }
 }
 
 impl From<(ActivityKey, Vec<TreeNode>, Vec<Fraction>, Fraction)> for StochasticProcessTree {
     fn from(value: (ActivityKey, Vec<TreeNode>, Vec<Fraction>, Fraction)) -> Self {
         let (activity_key, tree, weights, termination_weight) = value;
-
-        let mut transition2node = vec![];
-        for (node_index, node) in tree.iter().enumerate() {
-            match node {
-                TreeNode::Tau | TreeNode::Activity(_) => {
-                    transition2node.push(node_index);
-                }
-                TreeNode::Operator(_, _) => {}
-            }
-        }
-
-        Self {
-            activity_key,
-            tree,
-            cache_transition_2_node: transition2node,
-            weights,
-            termination_weight,
-        }
+        Self::new(activity_key, tree, weights, termination_weight)
     }
 }

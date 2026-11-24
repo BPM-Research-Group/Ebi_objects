@@ -30,55 +30,39 @@ pub const HEADER: &str = "process tree";
 pub struct ProcessTree {
     activity_key: ActivityKey,
     tree: Vec<TreeNode>,
-    cache_transition_2_node: Vec<usize>,
 
-    /// The parent of node, and the rank of the child.
+    cache_transition_2_node: OnceLock<Vec<usize>>,
+
+    /// Node -> next node after last child
+    cache_traverse: OnceLock<Vec<usize>>,
+
+    /// Cache of the parent of a node, and the child-rank of the node.
     cache_node_2_parent: OnceLock<Vec<(usize, usize)>>,
 }
 
 impl ProcessTree {
     pub fn new(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Self {
-        let mut result = Self {
+        Self {
             activity_key,
             tree,
-            cache_transition_2_node: vec![],
+            cache_traverse: OnceLock::new(),
+            cache_transition_2_node: OnceLock::new(),
             cache_node_2_parent: OnceLock::new(),
-        };
-        result.update_caches();
-        result
+        }
     }
 
     pub fn new_with_activity_key(activity_key: ActivityKey) -> ProcessTree {
         Self {
             activity_key,
             tree: vec![],
-            cache_transition_2_node: vec![],
+            cache_traverse: OnceLock::new(),
+            cache_transition_2_node: OnceLock::new(),
             cache_node_2_parent: OnceLock::new(),
         }
     }
 
-    pub fn update_caches(&mut self) {
-        self.cache_transition_2_node.clear();
-        for (node_index, node) in self.tree.iter().enumerate() {
-            match node {
-                TreeNode::Tau | TreeNode::Activity(_) => {
-                    self.cache_transition_2_node.push(node_index);
-                }
-                TreeNode::Operator(_, _) => {}
-            }
-        }
-        self.cache_node_2_parent = OnceLock::new();
-    }
-
     fn remove_internal_do(&mut self, node: usize) {
         self.tree.remove(node);
-    }
-
-    #[deprecated(
-        note = "Ensure to call update_caches() afterwards. Use edit() instead, where this is not necessary"
-    )]
-    pub fn tree(&mut self) -> &mut Vec<TreeNode> {
-        &mut self.tree
     }
 
     /// Change the process tree in a closure.
@@ -86,11 +70,11 @@ impl ProcessTree {
     /// Caches will be updated automatically.
     pub fn edit(&mut self, closure: impl Fn(&mut Vec<TreeNode>)) {
         closure(&mut self.tree);
-        self.update_caches();
+        self.clear_caches();
     }
 
-    pub(crate) fn take(self) -> (ActivityKey, Vec<TreeNode>, Vec<usize>) {
-        (self.activity_key, self.tree, self.cache_transition_2_node)
+    pub(crate) fn take(self) -> (ActivityKey, Vec<TreeNode>) {
+        (self.activity_key, self.tree)
     }
 
     fn node_to_string(
@@ -379,7 +363,7 @@ impl ProcessTree {
         }
         let subtree_ends = self.traverse(node);
         let result = self.tree.splice(node..subtree_ends, with).collect_vec();
-        self.update_caches();
+        self.clear_caches();
         Ok(result)
     }
 
@@ -388,7 +372,7 @@ impl ProcessTree {
     /// If an error is returned, the tree may be left in an inconsistent state.
     pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
         let drain = self.remove_recursive_internal(node)?.collect_vec();
-        self.update_caches();
+        self.clear_caches();
         Ok(drain)
     }
 
@@ -447,22 +431,6 @@ impl ProcessTree {
     }
 }
 
-#[derive(EnumIs, Copy, Clone)]
-pub enum Gateway {
-    Xor(NodeHandle),
-    And(NodeHandle),
-    Or(NodeHandle),
-    Int(NodeHandle),
-}
-
-impl Gateway {
-    pub(crate) fn handle(&self) -> &NodeHandle {
-        match self {
-            Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
-        }
-    }
-}
-
 #[macro_export]
 macro_rules! tree {
     ($t:ident, $u:ident, $v:ident) => {
@@ -482,13 +450,28 @@ macro_rules! tree {
                 self.tree.get(node)
             }
 
+            /// Returns the root of the tree (the root does not exist if the tree is empty).
             pub fn root(&self) -> usize {
                 0
             }
 
+            pub fn leaves(&self) -> &Vec<usize> {
+                self.cache_transition_2_node
+                    .get_or_init(|| self.compute_transition_to_node())
+            }
+
             /// Returns the number of tau and activity nodes in the tree.
             pub fn number_of_leaves(&self) -> usize {
-                self.tree.iter().filter(|node| node.is_leaf()).count()
+                self.cache_transition_2_node
+                    .get_or_init(|| self.compute_transition_to_node())
+                    .len()
+            }
+
+            /// Clears caches.
+            pub fn clear_caches(&mut self) {
+                self.cache_traverse = OnceLock::new();
+                self.cache_transition_2_node = OnceLock::new();
+                self.cache_node_2_parent = OnceLock::new();
             }
 
             /// Returns the operator of the node, or None if the node is not an operator.
@@ -499,24 +482,29 @@ macro_rules! tree {
                 }
             }
 
-            pub fn get_node_of_transition(&self, transition: TransitionIndex) -> Result<&TreeNode> {
-                self.tree
-                    .get(
-                        *self
-                            .cache_transition_2_node
-                            .get(transition)
-                            .ok_or_else(|| anyhow!("Transition does not exist."))?,
-                    )
-                    .ok_or_else(|| anyhow!("Node does not exist."))
+            /// Given a transition, returns the node and its index.
+            pub fn transition_to_node(&self, transition: TransitionIndex) -> Option<usize> {
+                self.cache_transition_2_node
+                    .get_or_init(|| Self::compute_transition_to_node(self))
+                    .get(transition)
+                    .copied()
             }
 
-            pub fn transition_to_node(&self, transition: TransitionIndex) -> Option<usize> {
-                self.cache_transition_2_node.get(transition).copied()
+            fn compute_transition_to_node(&self) -> Vec<usize> {
+                let mut result = vec![];
+                for (node_index, node) in self.tree.iter().enumerate() {
+                    match node {
+                        TreeNode::Tau | TreeNode::Activity(_) => {
+                            result.push(node_index);
+                        }
+                        TreeNode::Operator(_, _) => {}
+                    }
+                }
+                result
             }
 
             /**
-             * Returns the parent of node. Notice that
-             * this is an expensive operation; avoid if possible.
+             * Returns the parent of node.
              *
              * @param node
              * @return The parent of node, and the rank of the child
@@ -596,21 +584,30 @@ macro_rules! tree {
             }
 
             /**
-             * Find the next node of this node: the next sibling, and if that is not available, the next sibling up the tree.
+             * Find the next node after the subtere rooted in node.
              * May return a non-existing node if there is no sibling.
              */
             pub fn traverse(&self, node: usize) -> usize {
-                match self.tree[node] {
-                    TreeNode::Tau => node + 1,
-                    TreeNode::Activity(_) => node + 1,
-                    TreeNode::Operator(_, number_of_children) => {
-                        let mut n = node + 1;
-                        for _ in 0..number_of_children {
-                            n = self.traverse(n);
+                self.cache_traverse.get_or_init(|| self.compute_traverse())[node]
+            }
+
+            fn compute_traverse(&self) -> Vec<usize> {
+                let len = self.len();
+                let mut next = vec![0usize; len];
+
+                for i in (0..len).rev() {
+                    next[i] = match &self[i] {
+                        TreeNode::Tau | TreeNode::Activity(_) => i + 1,
+                        TreeNode::Operator(_, number_of_children) => {
+                            let mut child = i + 1;
+                            for _ in 0..*number_of_children {
+                                child = next.get(child).copied().unwrap_or(len);
+                            }
+                            child
                         }
-                        n
-                    }
+                    };
                 }
+                next
             }
 
             pub fn get_child(&self, parent: usize, child_rank: usize) -> usize {
@@ -626,7 +623,7 @@ macro_rules! tree {
             pub fn set_operator(&mut self, node: usize, operator: TreeOperator) {
                 if let Some(TreeNode::Operator(op, _)) = self.tree.get_mut(node) {
                     *op = operator;
-                    self.update_caches();
+                    self.clear_caches();
                 }
             }
 
@@ -663,7 +660,7 @@ macro_rules! tree {
              */
             pub fn remove(&mut self, node: usize) -> Result<()> {
                 self.remove_internal(node)?;
-                self.update_caches();
+                self.clear_caches();
                 Ok(())
             }
 
@@ -1616,14 +1613,14 @@ macro_rules! tree_semantics {
         pub fn get_enabled_transitions(tree: &$t, state: &TreeMarking) -> Vec<TransitionIndex> {
             let mut result = vec![];
 
-            for (transition_index, node) in tree.cache_transition_2_node.iter().enumerate() {
+            for (transition_index, node) in tree.leaves().iter().enumerate() {
                 if can_execute(tree, state, *node) {
                     result.push(transition_index);
                 }
             }
 
             if !state.terminated && can_terminate(tree, state, tree.root()) {
-                result.push(tree.cache_transition_2_node.len());
+                result.push(tree.number_of_leaves());
             }
 
             result
@@ -1634,8 +1631,8 @@ macro_rules! tree_semantics {
         }
 
         pub fn get_transition_activity(tree: &$t, transition: TransitionIndex) -> Option<Activity> {
-            let node = tree.cache_transition_2_node.get(transition)?;
-            match tree.tree[*node] {
+            let node = tree.transition_to_node(transition)?;
+            match tree.tree[node] {
                 TreeNode::Tau => None,
                 TreeNode::Activity(activity) => Some(activity),
                 TreeNode::Operator(_, _) => None,
@@ -1647,11 +1644,11 @@ macro_rules! tree_semantics {
             state: &mut TreeMarking,
             transition: TransitionIndex,
         ) -> Result<()> {
-            if transition >= tree.cache_transition_2_node.len() {
+            if transition >= tree.number_of_leaves() {
                 state.terminated = true;
                 state.states.fill(NodeState::Closed);
             } else {
-                let node = tree.cache_transition_2_node[transition];
+                let node = tree.transition_to_node(transition).unwrap();
                 start_node(tree, state, node, None);
                 close_node(tree, state, node);
             }
@@ -1662,6 +1659,22 @@ macro_rules! tree_semantics {
 }
 
 tree_semantics!(ProcessTree);
+
+#[derive(EnumIs, Copy, Clone)]
+pub enum Gateway {
+    Xor(NodeHandle),
+    And(NodeHandle),
+    Or(NodeHandle),
+    Int(NodeHandle),
+}
+
+impl Gateway {
+    pub(crate) fn handle(&self) -> &NodeHandle {
+        match self {
+            Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
+        }
+    }
+}
 
 #[cfg(any(test, feature = "testactivities"))]
 impl TestActivityKey for ProcessTree {
@@ -1918,9 +1931,9 @@ mod tests {
         let Permit_FINAL_APPROVED_by_DIRECTOR_line_144 = 34;
 
         let n = Permit_FINAL_APPROVED_by_DIRECTOR_line_144;
-        match tree.get_node_of_transition(n).unwrap() {
-            TreeNode::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(x)),
-            TreeNode::Tau => println!("-tau {}", tree.cache_transition_2_node[n]),
+        match tree[tree.transition_to_node(n).unwrap()] {
+            TreeNode::Activity(x) => println!("--{}", tree.activity_key.activity_to_label(&x)),
+            TreeNode::Tau => println!("-tau {:?}", tree.transition_to_node(n)),
             _ => {}
         }
 

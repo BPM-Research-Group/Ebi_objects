@@ -17,33 +17,67 @@ use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
-use std::fmt::Display;
+use std::{fmt::Display, sync::OnceLock};
 
 pub const HEADER: &str = "stochastic process tree";
 
-#[derive(Debug, ActivityKey, Clone)]
+#[derive(Debug, ActivityKey, Clone, Default)]
 pub struct StochasticProcessTree {
-    pub(crate) activity_key: ActivityKey,
+    activity_key: ActivityKey,
     pub(crate) tree: Vec<TreeNode>,
-    pub(crate) weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
-    pub(crate) termination_weight: Fraction,
-    cache_transition_2_node: Vec<usize>,
+
+    /// Weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
+    transition_2_weight: Vec<Fraction>,
+
+    /// Weights must be strictly positive.
+    termination_weight: Fraction,
+
+    cache_transition_2_node: OnceLock<Vec<usize>>,
+
+    /// Node -> next node after last child
+    cache_traverse: OnceLock<Vec<usize>>,
 
     /// The parent of node, and the rank of the child.
     cache_node_2_parent: OnceLock<Vec<(usize, usize)>>,
 }
 
 impl StochasticProcessTree {
-    pub fn update_caches(&mut self) {
-        self.cache_transition_2_node.clear();
-        for (node_index, node) in self.tree.iter().enumerate() {
-            match node {
-                TreeNode::Tau | TreeNode::Activity(_) => {
-                    self.cache_transition_2_node.push(node_index);
-                }
-                TreeNode::Operator(_, _) => {}
-            }
+    pub fn new(
+        activity_key: ActivityKey,
+        tree: Vec<TreeNode>,
+        weights: Vec<Fraction>,
+        termination_weight: Fraction,
+    ) -> Self {
+        Self {
+            activity_key,
+            tree,
+            transition_2_weight: weights,
+            termination_weight,
+            cache_traverse: OnceLock::new(),
+            cache_transition_2_node: OnceLock::new(),
+            cache_node_2_parent: OnceLock::new(),
         }
+    }
+
+    pub fn new_with_activity_key(activity_key: ActivityKey) -> Self {
+        Self {
+            activity_key,
+            tree: vec![],
+            transition_2_weight: vec![],
+            termination_weight: Fraction::zero(),
+            cache_traverse: OnceLock::new(),
+            cache_transition_2_node: OnceLock::new(),
+            cache_node_2_parent: OnceLock::new(),
+        }
+    }
+
+    pub fn take(self) -> (ActivityKey, Vec<TreeNode>, Vec<Fraction>, Fraction) {
+        (
+            self.activity_key,
+            self.tree,
+            self.transition_2_weight,
+            self.termination_weight,
+        )
     }
 
     fn remove_internal_do(&mut self, node: usize) {
@@ -51,7 +85,7 @@ impl StochasticProcessTree {
             self.get(node),
             Some(TreeNode::Tau) | Some(TreeNode::Activity(_))
         ) {
-            self.weights.remove(node);
+            self.transition_2_weight.remove(node);
         }
         self.tree.remove(node);
     }
@@ -72,7 +106,7 @@ impl StochasticProcessTree {
                     id,
                     node,
                     id,
-                    self.weights[self.node_to_transition(node).unwrap()]
+                    self.transition_2_weight[self.node_to_transition(node).unwrap()]
                 )?;
                 Ok(node + 1)
             }
@@ -85,7 +119,7 @@ impl StochasticProcessTree {
                     id,
                     node,
                     id,
-                    self.weights[self.node_to_transition(node).unwrap()]
+                    self.transition_2_weight[self.node_to_transition(node).unwrap()]
                 )?;
                 Ok(node + 1)
             }
@@ -462,8 +496,8 @@ pub fn get_transition_weight<'a>(
     _state: &TreeMarking,
     transition: TransitionIndex,
 ) -> Option<&'a Fraction> {
-    if transition < tree.cache_transition_2_node.len() {
-        tree.weights.get(transition)
+    if transition < tree.number_of_leaves() {
+        tree.transition_2_weight.get(transition)
     } else {
         Some(&tree.termination_weight)
     }
@@ -479,9 +513,9 @@ pub fn get_total_weight_of_enabled_transitions(
         Fraction::zero()
     };
 
-    for (transition, node) in tree.cache_transition_2_node.iter().enumerate() {
+    for (transition, node) in tree.leaves().iter().enumerate() {
         if can_execute(tree, state, *node) {
-            sum += &tree.weights[transition];
+            sum += &tree.transition_2_weight[transition];
         }
     }
 
@@ -905,7 +939,7 @@ pub mod tests {
             assert!(can_execute(
                 &$tree,
                 &$state,
-                $tree.cache_transition_2_node[$t]
+                $tree.transition_to_node($t).unwrap()
             ));
             execute_transition(&$tree, &mut $state, $t).unwrap();
             println!("{}\n", $state);
