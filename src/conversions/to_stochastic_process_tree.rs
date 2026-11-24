@@ -20,10 +20,11 @@ impl TryFrom<(ProcessTree, Vec<Fraction>, Fraction)> for StochasticProcessTree {
                 value.1.len()
             ));
         }
+        let (activity_key, tree, cache_transition_2_node) = value.0.take();
         Ok(Self {
-            activity_key: value.0.activity_key,
-            tree: value.0.tree,
-            cache_transition_2_node: value.0.cache_transition_2_node,
+            activity_key,
+            tree,
+            cache_transition_2_node,
             termination_weight: value.2,
             weights: value.1,
         })

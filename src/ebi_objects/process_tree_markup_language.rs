@@ -379,7 +379,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
         writeln!(f, "<processTree root=\"{}\">", self.tree.root())?;
 
         //nodes
-        for (node_id, node) in self.tree.tree.iter().enumerate() {
+        for (node_id, node) in self.tree.iter().enumerate() {
             match node {
                 TreeNode::Tau => writeln!(f, "<automaticTask id=\"{}\" name=\"tau\"/>", node_id)?,
                 TreeNode::Activity(activity) => writeln!(

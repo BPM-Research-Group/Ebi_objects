@@ -19,6 +19,7 @@ use std::{
     fmt::Display,
     ops::{Index, IndexMut},
     str::FromStr,
+    sync::OnceLock,
 };
 use strum::IntoEnumIterator;
 use strum_macros::{EnumIs, EnumIter};
@@ -27,9 +28,12 @@ pub const HEADER: &str = "process tree";
 
 #[derive(Debug, ActivityKey, Clone, Default)]
 pub struct ProcessTree {
-    pub(crate) activity_key: ActivityKey,
-    pub(crate) tree: Vec<TreeNode>,
-    pub(crate) cache_transition_2_node: Vec<usize>,
+    activity_key: ActivityKey,
+    tree: Vec<TreeNode>,
+    cache_transition_2_node: Vec<usize>,
+
+    /// The parent of node, and the rank of the child.
+    cache_node_2_parent: OnceLock<Vec<(usize, usize)>>,
 }
 
 impl ProcessTree {
@@ -38,6 +42,7 @@ impl ProcessTree {
             activity_key,
             tree,
             cache_transition_2_node: vec![],
+            cache_node_2_parent: OnceLock::new(),
         };
         result.update_caches();
         result
@@ -48,6 +53,7 @@ impl ProcessTree {
             activity_key,
             tree: vec![],
             cache_transition_2_node: vec![],
+            cache_node_2_parent: OnceLock::new(),
         }
     }
 
@@ -61,22 +67,30 @@ impl ProcessTree {
                 TreeNode::Operator(_, _) => {}
             }
         }
+        self.cache_node_2_parent = OnceLock::new();
     }
 
     fn remove_internal_do(&mut self, node: usize) {
         self.tree.remove(node);
     }
 
-    #[deprecated(note = "Ensure to call update_caches() afterwards. Use edit() instead.")]
+    #[deprecated(
+        note = "Ensure to call update_caches() afterwards. Use edit() instead, where this is not necessary"
+    )]
     pub fn tree(&mut self) -> &mut Vec<TreeNode> {
         &mut self.tree
     }
 
     /// Change the process tree in a closure.
     /// If the tree is kept consistent, the resulting tree will remain consistent, though this is not checked.
+    /// Caches will be updated automatically.
     pub fn edit(&mut self, closure: impl Fn(&mut Vec<TreeNode>)) {
         closure(&mut self.tree);
         self.update_caches();
+    }
+
+    pub(crate) fn take(self) -> (ActivityKey, Vec<TreeNode>, Vec<usize>) {
+        (self.activity_key, self.tree, self.cache_transition_2_node)
     }
 
     fn node_to_string(
@@ -512,14 +526,29 @@ macro_rules! tree {
                     return None;
                 }
 
-                let mut potential_parent = node - 1;
-                while self.traverse(potential_parent) <= node {
-                    potential_parent -= 1;
-                }
+                let arr = self.cache_node_2_parent.get_or_init(|| {
+                    let mut parents = vec![(0, 0); self.len()];
+                    let mut stack: Vec<(usize, usize, usize)> = Vec::new();
 
-                let child_rank = self.get_child_rank_with(potential_parent, node)?;
+                    for (i, node) in self.iter().enumerate() {
+                        if let Some(top) = stack.last_mut() {
+                            parents[i] = (top.0, top.2);
+                            top.1 -= 1; // top always has remaining > 0: finished entries are popped below
+                            top.2 += 1;
+                        }
+                        if let TreeNode::Operator(_, n) = node {
+                            if *n > 0 {
+                                stack.push((i, *n, 0));
+                            }
+                        }
+                        while matches!(stack.last(), Some(&(_, 0, _))) {
+                            stack.pop();
+                        }
+                    }
+                    parents
+                });
 
-                Some((potential_parent, child_rank))
+                arr.get(node).copied()
             }
 
             /**
@@ -688,6 +717,10 @@ macro_rules! tree {
                 };
 
                 Ok(())
+            }
+
+            pub fn iter(&self) -> impl Iterator<Item = &TreeNode> {
+                self.tree.iter()
             }
         }
 

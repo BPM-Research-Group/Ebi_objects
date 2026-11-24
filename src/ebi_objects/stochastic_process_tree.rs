@@ -25,9 +25,12 @@ pub const HEADER: &str = "stochastic process tree";
 pub struct StochasticProcessTree {
     pub(crate) activity_key: ActivityKey,
     pub(crate) tree: Vec<TreeNode>,
-    pub(crate) cache_transition_2_node: Vec<usize>,
     pub(crate) weights: Vec<Fraction>, //weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
     pub(crate) termination_weight: Fraction,
+    cache_transition_2_node: Vec<usize>,
+
+    /// The parent of node, and the rank of the child.
+    cache_node_2_parent: OnceLock<Vec<(usize, usize)>>,
 }
 
 impl StochasticProcessTree {

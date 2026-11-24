@@ -16,7 +16,7 @@ impl From<ProcessTree> for PartiallyOrderedWorkflowLanguage {
     fn from(value: ProcessTree) -> Self {
         let tree = tree_2_powl(&value, 0);
         Self {
-            activity_key: value.activity_key,
+            activity_key: value.take().0,
             tree,
             keys: Keys::default(),
         }
