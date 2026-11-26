@@ -120,14 +120,14 @@ impl<T> IndexMut<&AutomatonState> for Vec<T> {
     }
 }
 
+/// Constructs an automaton state of an usize.
 #[cfg(test)]
+#[macro_export]
 macro_rules! a {
     ($u:expr) => {
         $crate::AutomatonState::of($u)
     };
 }
-#[cfg(test)]
-pub(crate) use a;
 
 #[cfg(test)]
 mod tests {
