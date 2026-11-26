@@ -2,8 +2,9 @@ use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, Graphable,
     HasActivityKey, Infoable, StochasticAutomatonSemantics, TranslateActivityKey,
     constants::ebi_object::EbiObject,
-    dfg_format_comparison,
-    ebi_objects::labelled_petri_net::TransitionIndex,
+    ebi_objects::{
+        directly_follows_model::dfg_format_comparison, labelled_petri_net::TransitionIndex,
+    },
     json,
     traits::{
         exportable::Exportable,

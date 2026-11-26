@@ -1,8 +1,8 @@
 use crate::{
     Activity, ActivityKey, EbiObject, Exportable, HasActivityKey, Importable, Infoable,
     IntoTraceIterator, NumberOfTraces, TranslateActivityKey,
+    ebi_objects::event_log::{log_infoable_startend, log_infoable_stats},
     iterators::{parallel_trace_iterator::ParallelTraceIterator, trace_iterator::TraceIterator},
-    log_infoable_startend, log_infoable_stats,
     traits::{
         importable::{
             ImporterParameter, ImporterParameterValue, ImporterParameterValues, from_string,

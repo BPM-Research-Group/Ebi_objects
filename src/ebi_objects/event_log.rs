@@ -136,7 +136,6 @@ impl fmt::Display for EventLog {
     }
 }
 
-#[macro_export]
 macro_rules! log_infoable_stats {
     ($f:ident, $self:ident, $lengths:expr) => {
         writeln!(
@@ -175,8 +174,8 @@ macro_rules! log_infoable_stats {
         )?;
     };
 }
+pub(crate) use log_infoable_stats;
 
-#[macro_export]
 macro_rules! log_infoable_startend {
     ($f:ident, $self:ident) => {
         writeln!($f, "")?;
@@ -202,6 +201,7 @@ macro_rules! log_infoable_startend {
         }
     };
 }
+pub(crate) use log_infoable_startend;
 
 impl Infoable for EventLog {
     fn info(&self, f: &mut impl std::io::Write) -> Result<()> {

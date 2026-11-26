@@ -120,13 +120,14 @@ impl<T> IndexMut<&AutomatonState> for Vec<T> {
     }
 }
 
-#[macro_export]
+#[cfg(test)]
 macro_rules! a {
     ($u:expr) => {
         $crate::AutomatonState::of($u)
     };
 }
-pub use a;
+#[cfg(test)]
+pub(crate) use a;
 
 #[cfg(test)]
 mod tests {

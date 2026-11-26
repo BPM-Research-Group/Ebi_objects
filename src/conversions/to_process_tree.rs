@@ -26,6 +26,15 @@ impl From<(ActivityKey, Vec<TreeNode>)> for ProcessTree {
     }
 }
 
+/// Creates a process tree consisting of a silent leaf.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = tau!();
+/// ```
 #[macro_export]
 macro_rules! tau {
     () => {
@@ -34,6 +43,15 @@ macro_rules! tau {
 }
 pub use tau;
 
+/// Creates a process tree consisting of an activity leaf.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = activity!("activity label");
+/// ```
 #[macro_export]
 macro_rules! activity {
     ($a:expr) => {{
@@ -44,6 +62,15 @@ macro_rules! activity {
 }
 pub use activity;
 
+/// Creates a process tree consisting of an exclusive choice node with the given children.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = xor!(activity!("a"), activity!("b"));
+/// ```
 #[macro_export]
 macro_rules! xor {
     ($($opt:expr),+) => {{
@@ -62,6 +89,15 @@ macro_rules! xor {
 }
 pub use xor;
 
+/// Creates a process tree consisting of a sequence node with the given children.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = seq!(activity!("a"), activity!("b"));
+/// ```
 #[macro_export]
 macro_rules! seq {
     ($($opt:expr),+) => {{
@@ -80,6 +116,15 @@ macro_rules! seq {
 }
 pub use seq;
 
+/// Creates a process tree consisting of a concurrent node with the given children.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = con!(activity!("a"), activity!("b"));
+/// ```
 #[macro_export]
 macro_rules! con {
     ($($opt:expr),+) => {{
@@ -98,6 +143,15 @@ macro_rules! con {
 }
 pub use con;
 
+/// Creates a process tree consisting of an inclusive choice node with the given children.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = or!(activity!("a"), activity!("b"));
+/// ```
 #[macro_export]
 macro_rules! or {
     ($($opt:expr),+) => {{
@@ -116,6 +170,15 @@ macro_rules! or {
 }
 pub use or;
 
+/// Creates a process tree consisting of an interleaved node with the given children.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = int!(activity!("a"), activity!("b"));
+/// ```
 #[macro_export]
 macro_rules! int {
     ($($opt:expr),+) => {{
@@ -134,6 +197,15 @@ macro_rules! int {
 }
 pub use int;
 
+/// Creates a process tree consisting of a loop node with the given children.
+///
+/// Involves cloning; in high-performant code, it is better to use methods of [ProcessTree] directly.
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::ProcessTree;
+/// let tree: ProcessTree = tloop!(activity!("a"), activity!("b"));
+/// ```
 #[macro_export]
 macro_rules! tloop {
     ($($opt:expr),+) => {{

@@ -1,8 +1,10 @@
 use crate::{
     Activity, ActivityKey, ActivityKeyTranslator, AutomatonSemantics, AutomatonState, EbiObject,
     Exportable, Graphable, HasActivityKey, Importable, Infoable, StochasticAutomatonSemantics,
-    TranslateActivityKey, dfg_format_comparison,
-    ebi_objects::labelled_petri_net::TransitionIndex,
+    TranslateActivityKey,
+    ebi_objects::{
+        directly_follows_model::dfg_format_comparison, labelled_petri_net::TransitionIndex,
+    },
     line_reader::LineReader,
     traits::{
         graphable,

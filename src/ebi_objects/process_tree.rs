@@ -4,7 +4,7 @@ use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
-use std::sync::OnceLock;
+use std::{fmt::Display, sync::OnceLock};
 use strum_macros::EnumIter;
 
 /// The string that must be present as the first non-comment line of a process tree file.
@@ -55,19 +55,6 @@ impl ProcessTree {
         }
     }
 
-    /// Remove a node from the tree. It is the responsibility of the caller to clear the caches after calling this function.
-    fn remove_internal_do(&mut self, node: usize) {
-        self.tree.remove(node);
-    }
-
-    /// Change the process tree in a closure.
-    /// It is the responsibility of the caller to ensure that the tree remains valid.
-    /// That is, an operator must have >= 1 children, and there must not be multiple roots.
-    pub fn edit(&mut self, closure: impl FnOnce(&mut Vec<TreeNode>)) {
-        closure(&mut self.tree);
-        self.clear_caches();
-    }
-
     /// Deconstruct the tree by taking its internal components.
     pub(crate) fn take(self) -> (ActivityKey, Vec<TreeNode>) {
         (self.activity_key, self.tree)
@@ -85,10 +72,10 @@ impl ProcessTree {
     fn node_to_canonical_string(&self, node: usize) -> String {
         match self.tree[node] {
             TreeNode::Tau => "tau".to_string(),
-            TreeNode::Activity(activity) => format!(
-                "activity {}",
-                self.activity_key.deprocess_activity(&activity)
-            ),
+            TreeNode::Activity(activity) => {
+                let label = self.activity_key.deprocess_activity(&activity);
+                format!("activity {} {}", label.len(), label)
+            }
             TreeNode::Operator(TreeOperator::Concurrent, _)
             | TreeNode::Operator(TreeOperator::Xor, _)
             | TreeNode::Operator(TreeOperator::Or, _)
@@ -119,59 +106,8 @@ impl ProcessTree {
             }
         }
     }
-
-    /// Remove the node from the tree (recursively) and replace it with another single node (recursively).
-    /// Returns an error if the node does not exist.
-    /// Returns the removed node (recursively) if successful.
-    ///
-    /// It is the responsibility of the caller to ensure the `with` parameter contains a valid tree.
-    /// That is, an operator must have >= 1 children, and there must not be multiple roots.
-    /// Providing an invalid `with` will result in an invalid tree.
-    pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<TreeNode>>
-    where
-        W: IntoIterator<Item = TreeNode>,
-    {
-        if node >= self.len() {
-            return Err(anyhow!("Node does not exist."));
-        }
-        let subtree_ends = self.traverse(node);
-        let result = self.tree.splice(node..subtree_ends, with).collect_vec();
-        self.clear_caches();
-        Ok(result)
-    }
-
-    /// Removes and returns the node and all of its children from the tree.
-    /// If the parent of the node has no children left, it is removed (but not returned).
-    /// Returns an error if the node does not exist.
-    /// If an error is returned, the tree may be left in an inconsistent state.
-    pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
-        if node >= self.len() {
-            return Err(anyhow!("Node {node} does not exist."));
-        }
-
-        let node_after_child_tree = self.traverse(node);
-        self.parent(1); //ensure the parent cache is filled
-        let removed = self.tree.drain(node..node_after_child_tree).collect_vec();
-
-        //Invariant: the cache is valid up till node.
-
-        let mut target = node;
-        while let Some((parent, _)) = self.parent(target) {
-            let number_of_children = self[parent].number_of_children();
-            self.tree[parent].set_number_of_children_unchecked(number_of_children - 1);
-            if number_of_children > 1 {
-                break;
-            }
-            self.tree.remove(parent);
-
-            target = parent;
-        }
-        self.clear_caches();
-        Ok(removed)
-    }
 }
 
-#[macro_export]
 macro_rules! tree {
     ($t:ident, $u:ident, $v:ident) => {
         impl $t {
@@ -206,13 +142,6 @@ macro_rules! tree {
                 self.cache_transition_2_node
                     .get_or_init(|| self.compute_transition_to_node())
                     .len()
-            }
-
-            /// Clears caches.
-            pub(crate) fn clear_caches(&mut self) {
-                self.cache_traverse = std::sync::OnceLock::new();
-                self.cache_transition_2_node = std::sync::OnceLock::new();
-                self.cache_node_2_parent = std::sync::OnceLock::new();
             }
 
             /// Returns the operator of the node, or None if the node is not an operator.
@@ -385,56 +314,6 @@ macro_rules! tree {
                 Ok(())
             }
 
-            /// Perform the removal of a node without clearing caches.
-            fn remove_internal(&mut self, node: usize) -> $crate::anyhow::Result<()> {
-                if node >= self.len() {
-                    return Err($crate::anyhow::anyhow!("Node {node} does not exist."));
-                }
-
-                if let Some((parent, _)) = self.parent(node) {
-                    //node had a parent
-                    let children_of_node = self[node].number_of_children();
-                    let children_of_parent = self[parent].number_of_children();
-                    self.remove_internal_do(node);
-                    match (children_of_node, children_of_parent) {
-                        (_, 0) => unreachable!("Invalid tree."),
-                        (0, 1) => {
-                            //p(n) -> p() -> recurse
-                            //parent won't have any children left; recurse
-                            self.tree[parent].set_number_of_children_unchecked(0);
-                            self.remove_internal(parent)?;
-                        }
-                        (0, _) => {
-                            //p(n, ..) -> p(..)
-                            self.tree[parent].set_number_of_children(children_of_parent - 1)?;
-                        }
-                        (1, _) => {
-                            //p(n(c), ..) -> p(c, ..)
-                        }
-                        (_, 1) => {
-                            //p(n(c, ..)) -> p(c, ..)
-                            self.tree[parent].set_number_of_children(children_of_node)?;
-                        }
-                        (_, _) => {
-                            //p(n(c, ..), ..) -> p(c, .., ..)
-                            self.tree[parent].set_number_of_children(
-                                children_of_parent + children_of_node - 1,
-                            )?;
-                        }
-                    }
-                } else {
-                    //node is the root
-                    if self[node].number_of_children() > 1 {
-                        return Err($crate::anyhow::anyhow!(
-                            "Cannot remove the root as it has multiple children."
-                        ));
-                    }
-                    self.remove_internal_do(node);
-                };
-
-                Ok(())
-            }
-
             pub fn iter(&self) -> impl Iterator<Item = &$crate::TreeNode> {
                 self.tree.iter()
             }
@@ -562,7 +441,7 @@ macro_rules! tree {
         }
     };
 }
-
+pub(crate) use tree;
 tree!(ProcessTree, ChildrenIterator, ParentsIterator);
 
 impl PartialEq for ProcessTree {
@@ -613,7 +492,7 @@ impl TreeNode {
             Ok(())
         } else {
             Err(anyhow!(
-                "Attempted to alter the number of children of an activity or a tau."
+                "Attempted to alter the number of children of a leaf (activity or a tau)."
             ))
         }
     }
@@ -708,17 +587,168 @@ pub enum TreeOperator {
     Loop,
 }
 
-impl TreeOperator {
-    pub fn to_string(&self) -> &str {
-        match self {
-            TreeOperator::Xor => "xor",
-            TreeOperator::Sequence => "sequence",
-            TreeOperator::Interleaved => "interleaved",
-            TreeOperator::Concurrent => "concurrent",
-            TreeOperator::Or => "or",
-            TreeOperator::Loop => "loop",
+impl Display for TreeOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                TreeOperator::Xor => "xor",
+                TreeOperator::Sequence => "sequence",
+                TreeOperator::Interleaved => "interleaved",
+                TreeOperator::Concurrent => "concurrent",
+                TreeOperator::Or => "or",
+                TreeOperator::Loop => "loop",
+            }
+        )
+    }
+}
+
+pub mod edit {
+    use crate::{
+        ProcessTree, TreeNode,
+        anyhow::{Result, anyhow},
+    };
+    use itertools::Itertools;
+
+    impl ProcessTree {
+        /// Change the process tree in a closure.
+        /// It is the responsibility of the caller to ensure that the tree remains valid.
+        /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+        pub fn edit(&mut self, closure: impl FnOnce(&mut Vec<TreeNode>)) {
+            closure(&mut self.tree);
+            self.clear_caches();
+        }
+
+        /// Removes and returns the node and all of its children from the tree.
+        /// If the parent of the node has no children left, it is removed (but not returned).
+        /// Returns an error if the node does not exist.
+        ///
+        /// Note that if the first child of a loop is removed, the second child moves to the first position, which makes it a body rather than a redo.
+        pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
+            if node >= self.len() {
+                return Err(anyhow!("Node {node} does not exist."));
+            }
+
+            let node_after_child_tree = self.traverse(node);
+            self.parent(1); //ensure the parent cache is filled
+            let removed = self.tree.drain(node..node_after_child_tree).collect_vec();
+
+            //Invariant: the cache is valid up till node.
+
+            let mut target = node;
+            while let Some((parent, _)) = self.parent(target) {
+                let number_of_children = self[parent].number_of_children();
+                self.tree[parent].set_number_of_children_unchecked(number_of_children - 1);
+                if number_of_children > 1 {
+                    break;
+                }
+                self.tree.remove(parent);
+
+                target = parent;
+            }
+            self.clear_caches();
+            Ok(removed)
+        }
+
+        /// Remove a node from the tree.
+        ///
+        /// It is the responsibility of the caller to clear the caches after calling this function.
+        pub(crate) fn remove_internal_do(&mut self, node: usize) {
+            self.tree.remove(node);
+        }
+
+        /// Removes and returns the node from the tree (recursively) and replace it with another single node (recursively).
+        /// Returns an error if the node does not exist.
+        /// Returns the removed node (recursively) if successful.
+        ///
+        /// It is the responsibility of the caller to ensure the `with` parameter contains a valid tree.
+        /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+        /// Providing an invalid `with` will result in an invalid tree.
+        pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<TreeNode>>
+        where
+            W: IntoIterator<Item = TreeNode>,
+        {
+            if node >= self.len() {
+                return Err(anyhow!("Node {node} does not exist."));
+            }
+            let subtree_ends = self.traverse(node);
+            let result = self.tree.splice(node..subtree_ends, with).collect_vec();
+            self.clear_caches();
+            Ok(result)
         }
     }
+
+    macro_rules! tree_edit {
+        ($t:tt) => {
+            impl $t {
+                /// Perform the removal of a node without clearing caches.
+                /// It is the responsibility of the caller to clear the caches after calling this method.
+                pub(super) fn remove_internal(
+                    &mut self,
+                    node: usize,
+                ) -> $crate::anyhow::Result<()> {
+                    if node >= self.len() {
+                        return Err($crate::anyhow::anyhow!("Node {node} does not exist."));
+                    }
+
+                    if let Some((parent, _)) = self.parent(node) {
+                        //node had a parent
+                        let children_of_node = self[node].number_of_children();
+                        let children_of_parent = self[parent].number_of_children();
+                        self.remove_internal_do(node);
+                        match (children_of_node, children_of_parent) {
+                            (_, 0) => return Err($crate::anyhow::anyhow!("Invalid tree.")),
+                            (0, 1) => {
+                                //p(n) -> p() -> recurse
+                                //parent won't have any children left; recurse
+                                self.tree[parent].set_number_of_children_unchecked(0);
+                                self.remove_internal(parent)?;
+                            }
+                            (0, _) => {
+                                //p(n, ..) -> p(..)
+                                self.tree[parent]
+                                    .set_number_of_children_unchecked(children_of_parent - 1);
+                            }
+                            (1, _) => {
+                                //p(n(c), ..) -> p(c, ..)
+                            }
+                            (_, 1) => {
+                                //p(n(c, ..)) -> p(c, ..)
+                                self.tree[parent]
+                                    .set_number_of_children_unchecked(children_of_node);
+                            }
+                            (_, _) => {
+                                //p(n(c, ..), ..) -> p(c, .., ..)
+                                self.tree[parent].set_number_of_children_unchecked(
+                                    children_of_parent + children_of_node - 1,
+                                );
+                            }
+                        }
+                    } else {
+                        //node is the root
+                        if self[node].number_of_children() > 1 {
+                            return Err($crate::anyhow::anyhow!(
+                                "Cannot remove the root as it has multiple children."
+                            ));
+                        }
+                        self.remove_internal_do(node);
+                    };
+
+                    Ok(())
+                }
+
+                /// Clears caches. Rather cheap operation; caches are re-filled when requested.
+                pub(crate) fn clear_caches(&mut self) {
+                    self.cache_traverse = std::sync::OnceLock::new();
+                    self.cache_transition_2_node = std::sync::OnceLock::new();
+                    self.cache_node_2_parent = std::sync::OnceLock::new();
+                }
+            }
+        };
+    }
+    pub(crate) use tree_edit;
+    tree_edit!(ProcessTree);
 }
 
 pub(crate) mod graph {
@@ -726,7 +756,6 @@ pub(crate) mod graph {
     use layout::adt::dag::NodeHandle;
     use strum_macros::EnumIs;
 
-    #[macro_export]
     macro_rules! tree_graphable {
         ($t:tt) => {
             impl $crate::Graphable for $t {
@@ -748,23 +777,8 @@ pub(crate) mod graph {
             }
         };
     }
+    pub(crate) use tree_graphable;
     tree_graphable!(ProcessTree);
-
-    #[derive(EnumIs, Copy, Clone)]
-    pub(crate) enum Gateway {
-        Xor(NodeHandle),
-        And(NodeHandle),
-        Or(NodeHandle),
-        Int(NodeHandle),
-    }
-
-    impl Gateway {
-        pub(crate) fn handle(&self) -> &NodeHandle {
-            match self {
-                Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
-            }
-        }
-    }
 
     impl ProcessTree {
         fn node_to_dot(
@@ -892,6 +906,22 @@ pub(crate) mod graph {
             }
         }
     }
+
+    #[derive(EnumIs, Copy, Clone)]
+    pub(crate) enum Gateway {
+        Xor(NodeHandle),
+        And(NodeHandle),
+        Or(NodeHandle),
+        Int(NodeHandle),
+    }
+
+    impl Gateway {
+        pub(crate) fn handle(&self) -> &NodeHandle {
+            match self {
+                Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
+            }
+        }
+    }
 }
 
 /// Input and output for process trees.
@@ -964,7 +994,7 @@ pub mod io {
                 .with_context(|| format!("Failed to read header, which should be {}.", HEADER))?;
             if head != HEADER {
                 return Err(anyhow!(
-                    "First line should be exactly `{}`, but found `{}` on line `{}`.",
+                    "First line should be exactly `{}`, but found `{}` at line {}.",
                     HEADER,
                     lreader.get_last_line(),
                     lreader.get_last_line_number()
@@ -977,7 +1007,7 @@ pub mod io {
 
             if lreader.next_line().is_ok() {
                 return Err(anyhow!(
-                    "The tree parsed correctly, however there is additional text after it, from line {}.",
+                    "The tree parsed correctly, however there are lines left in the file, from line {}.",
                     lreader.get_last_line_number()
                 ));
             }
@@ -1078,8 +1108,7 @@ pub mod io {
                 })?;
                 if number_of_children < 1 {
                     return Err(anyhow!(
-                        "The {:?} node ending at node {} at line {} has no children",
-                        operator,
+                        "The {operator} node with number {} at line {} has no children.",
                         tree.len(),
                         lreader.get_last_line_number()
                     ));
@@ -1093,7 +1122,7 @@ pub mod io {
                 return Ok(());
             } else {
                 return Err(anyhow!(
-                    "Could not parse type of node {} at line {}. Expected `tau`, `activity`, `concurrent`, `interleaved`, `loop`, `or`, `sequence` or `xor`.",
+                    "Could not parse type of node {} at line {}. Expected `tau`, `activity <label>`, `concurrent`, `interleaved`, `loop`, `or`, `sequence` or `xor`.",
                     tree.len(),
                     lreader.get_last_line_number()
                 ));
@@ -1112,7 +1141,7 @@ pub mod io {
                     return Ok(op);
                 }
             }
-            Err(anyhow!("Did not recognise `{s}` as an operator."))
+            Err(anyhow!("Could not read `{s}` as an operator."))
         }
     }
 
@@ -1183,7 +1212,6 @@ pub mod semantics {
 
     /// Defines semantics for process trees.
     /// To avoid confusion in the `Ebi` crate, these methods are not implemented on the struct, but merely add it to the file.
-    #[macro_export]
     macro_rules! tree_semantics {
     ($t:ident) => {
         pub fn get_initial_state(tree: &$t) -> Option<TreeMarking> {
@@ -1726,7 +1754,7 @@ pub mod semantics {
             transition: $crate::TransitionIndex,
         ) -> Result<()> {
             if !get_enabled_transitions(tree, state).contains(&transition) {
-                return Err(anyhow!("Transition is not enabled."));
+                return Err(anyhow!("Transition {transition} is not enabled."));
             }
 
             execute_transition_unchecked(tree, state, transition);
@@ -1758,7 +1786,7 @@ pub mod semantics {
         }
     };
 }
-
+    pub(crate) use tree_semantics;
     tree_semantics!(ProcessTree);
 }
 

@@ -19,7 +19,6 @@ use std::{cmp::Ordering, fmt::Display, io::Write};
 
 pub const HEADER: &str = "directly follows model";
 
-#[macro_export]
 macro_rules! dfg_format_comparison {
     () => {"
     
@@ -38,6 +37,7 @@ macro_rules! dfg_format_comparison {
     \\end{tabularx}
     \\end{center}"}
 }
+pub(crate) use dfg_format_comparison;
 
 #[derive(ActivityKey, Debug, Clone)]
 pub struct DirectlyFollowsModel {

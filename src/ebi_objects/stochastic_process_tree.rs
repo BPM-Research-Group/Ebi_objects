@@ -1,13 +1,20 @@
 use super::process_tree::graph::Gateway;
 use crate::{
     Activity, ActivityKey, EbiObject, Exportable, Importable, TreeMarking, TreeNode, TreeOperator,
-    ebi_objects::{labelled_petri_net::TransitionIndex, process_tree::semantics::NodeState},
+    ebi_objects::{
+        labelled_petri_net::TransitionIndex,
+        process_tree::{
+            edit::tree_edit,
+            graph::tree_graphable,
+            semantics::{NodeState, tree_semantics},
+            tree,
+        },
+    },
     line_reader::LineReader,
     traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
-    tree, tree_graphable, tree_semantics,
 };
 use ebi_activity_key::HasActivityKey;
 #[cfg(any(test, feature = "testactivities"))]
@@ -378,6 +385,7 @@ impl StochasticProcessTree {
     }
 }
 
+tree_edit!(StochasticProcessTree);
 tree!(
     StochasticProcessTree,
     StochasticChildrenIterator,

@@ -150,6 +150,13 @@ impl From<(process_mining::EventLog, EventLogClassifier)> for EventLog {
     }
 }
 
+/// Creates a trace from &str literals.
+///
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// let trace: Vec<&str> = trace!("a", "b");
+/// ```
 #[macro_export]
 macro_rules! trace {
     ($($opt:expr),*) => {{
@@ -162,10 +169,18 @@ macro_rules! trace {
 }
 pub use trace;
 
+/// Creates an event log.
+///
+/// For instance:
+/// ```
+/// # #[macro_use] extern crate ebi_objects;
+/// use ebi_objects::EventLog;
+/// let log: EventLog = event_log!(trace!("a", "b"), trace!("b"));
+/// ```
 #[macro_export]
 macro_rules! event_log {
     ($($opt:expr),*) => {{
-        let mut result = EventLog{activity_key: ActivityKey::default(), traces: vec![]};
+        let mut result = $crate::EventLog{activity_key: $crate::ActivityKey::default(), traces: vec![]};
         $(
             let trace = result.activity_key.process_trace_ref(&$opt);
             result.traces.push(trace);

@@ -1,6 +1,7 @@
 use crate::{
     Attribute, AttributeKey, EbiObject, EventLogXes, Exportable, Importable, Infoable,
     IntoRefTraceIterator, NumberOfTraces,
+    ebi_objects::event_log::{log_infoable_startend, log_infoable_stats},
     iterators::{
         event_attribute_iterator::{
             CategoricalEventAttributeIterator, NumericEventAttributeIterator,
@@ -9,7 +10,6 @@ use crate::{
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
         ref_trace_iterator::RefTraceIterator,
     },
-    log_infoable_startend, log_infoable_stats,
     traits::{
         attributes::Attributes,
         event_attribute_iterators::IntoEventAttributeIterator,

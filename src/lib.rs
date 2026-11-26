@@ -12,16 +12,21 @@
 //! 1. The crate [Ebi_optimisation](https://docs.rs/ebi_optimisation/latest/ebi_optimisation/) contains optimisation routines.
 //! 1. The crate [Ebi_derive](https://docs.rs/ebi_derive/latest/ebi_derive/) contains derivation macros.
 
+/// Attribute keys de-duplicate strings in attributes.
 pub mod attribute_key {
     pub mod attribute;
     pub mod attribute_key_struct;
     pub mod data_type;
     pub mod has_attribute_key;
 }
+
+/// Lists of objects and types for the Ebi framework.
 pub mod constants {
     pub mod ebi_object;
     pub mod ebi_object_type;
 }
+
+/// Conversions from objects into other objects.
 pub mod conversions {
     pub mod to_business_process_model_and_notation;
     pub mod to_compressed_event_log;
@@ -53,6 +58,8 @@ pub mod conversions {
     pub mod to_stochastic_nondeterministic_finite_automaton;
     pub mod to_stochastic_process_tree;
 }
+
+/// Object structs.
 pub mod ebi_objects {
     pub mod business_process_model_and_notation;
     pub mod compressed_event_log;
@@ -93,6 +100,8 @@ pub mod ebi_objects {
     pub mod stochastic_nondeterministic_finite_automaton;
     pub mod stochastic_process_tree;
 }
+
+/// Dedicated iterators for event logs.
 pub mod iterators {
     pub mod event_attribute_iterator;
     pub mod parallel_ref_probability_trace_iterator;
@@ -102,6 +111,8 @@ pub mod iterators {
     pub mod trace_attribute_iterator;
     pub mod trace_iterator;
 }
+
+/// Common traits.
 pub mod traits {
     pub mod attributes;
     pub mod automaton_semantics;
@@ -118,8 +129,10 @@ pub mod traits {
     pub mod trace_attributes;
     pub mod trace_iterators;
 }
+
+/// Functions to read values from JSON structures in type-safe ways.
 pub mod json;
-pub mod line_reader;
+mod line_reader;
 pub mod marking;
 pub mod strongly_connected_components;
 pub mod tests;

@@ -3,6 +3,7 @@ use crate::{
     HasActivityKey, Importable, Infoable, IntoAttributeIterator, IntoAttributeTraceIterator,
     IntoRefTraceIterator, TranslateActivityKey,
     constants::ebi_object::EbiObject,
+    ebi_objects::event_log::{log_infoable_startend, log_infoable_stats},
     iterators::{
         parallel_ref_trace_iterator::ParallelRefTraceIterator,
         ref_trace_iterator::RefTraceIterator,
@@ -10,7 +11,6 @@ use crate::{
             CategoricalTraceAttributeIterator, NumericAttributeIterator, TimeAttributeIterator,
         },
     },
-    log_infoable_startend, log_infoable_stats,
     traits::{
         attributes::Attributes,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
