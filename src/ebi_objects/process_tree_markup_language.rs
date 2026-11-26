@@ -7,7 +7,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Result, anyhow};
 use fnv::FnvBuildHasher;
 use quick_xml::{
     Reader,
@@ -399,7 +399,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                         node_id
                     )?;
                     //edges
-                    for child_id in self.tree.get_children(node_id) {
+                    for child_id in self.tree.children(node_id) {
                         writeln!(
                             f,
                             "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",
@@ -432,7 +432,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                         node_id
                     )?;
                     //edges
-                    for child_id in self.tree.get_children(node_id) {
+                    for child_id in self.tree.children(node_id) {
                         writeln!(
                             f,
                             "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",
@@ -464,7 +464,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     )?;
 
                     //edges
-                    for (i, child_id) in self.tree.get_children(node_id).enumerate() {
+                    for (i, child_id) in self.tree.children(node_id).enumerate() {
                         if i == 0 {
                             //body gets attached to the loop node
                             writeln!(
@@ -494,7 +494,7 @@ impl Exportable for ProcessTreeMarkupLanguage {
                     writeln!(f, "<{} id=\"{}\"/>", PTMLTag::from(operator), node_id)?;
 
                     //edges
-                    for child_id in self.tree.get_children(node_id) {
+                    for child_id in self.tree.children(node_id) {
                         writeln!(
                             f,
                             "<parentsNode sourceId=\"{}\" targetId=\"{}\"/>",

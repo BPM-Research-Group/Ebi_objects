@@ -1,20 +1,17 @@
-use super::process_tree::{Gateway, NodeState, TreeMarking, TreeNode, TreeOperator};
+use super::process_tree::graph::Gateway;
 use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, Importable,
-    Infoable, TranslateActivityKey,
-    ebi_objects::labelled_petri_net::TransitionIndex,
-    line_reader::LineReader,
-    traits::{
+    Activity, ActivityKey, EbiObject, Exportable, Importable, TreeMarking, TreeNode, TreeOperator, ebi_objects::{labelled_petri_net::TransitionIndex, process_tree::semantics::NodeState}, line_reader::LineReader, traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    },
-    tree, tree_semantics,
+    }, tree, tree_graphable, tree_semantics,
 };
 use ebi_activity_key::HasActivityKey;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
-use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
+use ebi_bpmn::ebi_arithmetic::{
+    Fraction, Signed, Zero,
+    anyhow::{Context, Result, anyhow},
+};
 use ebi_derive::ActivityKey;
 use layout::topo::layout::VisualGraph;
 use std::{fmt::Display, sync::OnceLock};
@@ -240,7 +237,7 @@ impl StochasticProcessTree {
         Ok(())
     }
 
-    pub fn node_to_dot(
+    fn node_to_dot(
         &self,
         graph: &mut VisualGraph,
         node: usize,
@@ -490,6 +487,7 @@ impl Exportable for StochasticProcessTree {
 }
 
 tree_semantics!(StochasticProcessTree);
+tree_graphable!(StochasticProcessTree);
 
 pub fn get_transition_weight<'a>(
     tree: &'a StochasticProcessTree,

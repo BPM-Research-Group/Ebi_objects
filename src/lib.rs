@@ -80,6 +80,8 @@ pub mod ebi_objects {
     pub mod petri_net_markup_language;
     pub mod portable_document_format;
     pub mod portable_network_graphics;
+
+    /// A process tree is a block-structured process model.
     pub mod process_tree;
     pub mod process_tree_markup_language;
     pub mod scalable_vector_graphics;
@@ -152,9 +154,9 @@ pub use ebi_objects::directly_follows_graph::DirectlyFollowsGraph;
 pub use ebi_objects::directly_follows_model::DirectlyFollowsModel;
 pub use ebi_objects::event_log::EventLog;
 pub use ebi_objects::event_log_csv::EventLogCsv;
+pub use ebi_objects::event_log_event_attributes::EventLogEventAttributes;
 pub use ebi_objects::event_log_ocel::EventLogOcel;
 pub use ebi_objects::event_log_python::EventLogPython;
-pub use ebi_objects::event_log_event_attributes::EventLogEventAttributes;
 pub use ebi_objects::event_log_trace_attributes::EventLogTraceAttributes;
 pub use ebi_objects::event_log_xes::EventLogXes;
 pub use ebi_objects::executions::Executions;
@@ -162,13 +164,17 @@ pub use ebi_objects::finite_language::FiniteLanguage;
 pub use ebi_objects::finite_stochastic_language::FiniteStochasticLanguage;
 pub use ebi_objects::finite_stochastic_partially_ordered_language::FiniteStochasticPartiallyOrderedLanguage;
 pub use ebi_objects::labelled_petri_net::LabelledPetriNet;
+pub use ebi_objects::labelled_petri_net::TransitionIndex;
 pub use ebi_objects::language_of_alignments::LanguageOfAlignments;
 pub use ebi_objects::lola_net::LolaNet;
 pub use ebi_objects::partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage;
 pub use ebi_objects::petri_net_markup_language::PetriNetMarkupLanguage;
 pub use ebi_objects::portable_document_format::PortableDocumentFormat;
 pub use ebi_objects::portable_network_graphics::PortableNetworkGraphics;
-pub use ebi_objects::process_tree::{ProcessTree, TreeMarking, TreeNode, TreeOperator};
+pub use ebi_objects::process_tree::semantics::TreeMarking;
+pub use ebi_objects::process_tree::ProcessTree;
+pub use ebi_objects::process_tree::TreeNode;
+pub use ebi_objects::process_tree::TreeOperator;
 pub use ebi_objects::process_tree_markup_language::ProcessTreeMarkupLanguage;
 pub use ebi_objects::scalable_vector_graphics::ScalableVectorGraphics;
 pub use ebi_objects::stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton;

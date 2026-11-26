@@ -21,7 +21,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, One};
 use ebi_derive::{ActivityKey, AttributeKey};
 use intmap::IntMap;

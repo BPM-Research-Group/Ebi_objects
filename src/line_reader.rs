@@ -31,7 +31,7 @@ impl<'a> LineReader<'a> {
         self.line.clear();
 
         match self.reader.read_line(&mut self.line) {
-            Ok(0) => Err(anyhow!("premature end of file")),
+            Ok(0) => Err(anyhow!("Premature end of file.")),
             Ok(_n) => {
                 if self.line.ends_with('\n') {
                     self.line.pop();

@@ -53,7 +53,7 @@ macro_rules! tree {
         }
 
         impl $t {
-            pub fn node_to_lpn(
+            pub(crate) fn node_to_lpn(
                 &self,
                 node: usize,
                 net: &mut LabelledPetriNet,

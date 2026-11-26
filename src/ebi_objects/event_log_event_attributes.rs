@@ -18,7 +18,7 @@ use crate::{
         start_end_activities::StartEndActivities,
     },
 };
-use anyhow::{Error, Result, anyhow};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, FixedOffset};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;

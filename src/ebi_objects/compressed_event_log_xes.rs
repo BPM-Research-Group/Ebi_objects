@@ -5,7 +5,7 @@ use crate::{
 use anyhow::anyhow;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Error, Result};
+use ebi_bpmn::ebi_arithmetic::anyhow::Result;
 use flate2::{Compression, bufread::GzDecoder, write::GzEncoder};
 use std::io::{BufRead, BufReader, Write};
 

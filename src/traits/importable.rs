@@ -1,28 +1,36 @@
 use crate::constants::ebi_object::EbiObject;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
-use ebi_bpmn::ebi_arithmetic::{ConstFraction, Fraction};
+use ebi_bpmn::ebi_arithmetic::{
+    ConstFraction, Fraction,
+    anyhow::{Result, anyhow},
+};
 use fnv::FnvBuildHasher;
 use std::{collections::HashMap, fmt::Debug, hash::Hash, io::BufRead};
 use strum_macros::Display;
 
 pub trait Importable {
-    ///Defines the parameters that the importer expects.
+    /// Defines the parameters that the importer expects.
     const IMPORTER_PARAMETERS: &[ImporterParameter];
 
-    ///A latex piece that describes the file format.
+    /// A latex piece that describes the file format.
     const FILE_FORMAT_SPECIFICATION_LATEX: &str;
 
+    /// Attempt to import from `reader` as an EbiObject.
+    ///
+    /// Default parameters can be obtained using [Importable::default_importer_parameter_values()].
     fn import_as_object(
         reader: &mut dyn BufRead,
         parameter_values: &ImporterParameterValues,
     ) -> Result<EbiObject>;
 
-    ///Attempts to import from the reader.
-    ///The parameter_values must match the order given in `IMPORTER_PARAMETERS`.
+    /// Attempts to import from the `reader`.
+    /// The parameter_values must match the order given in [Importable::IMPORTER_PARAMETERS].
+    ///
+    /// Default parameters can be obtained using [Importable::default_importer_parameter_values()].
     fn import(reader: &mut dyn BufRead, parameter_values: &ImporterParameterValues) -> Result<Self>
     where
         Self: Sized;
 
+    /// An importer may use importer parameters values. This method returns default parameter values..
     fn default_importer_parameter_values() -> ImporterParameterValues {
         let mut result = HashMap::default();
         for parameter in Self::IMPORTER_PARAMETERS {
@@ -35,7 +43,7 @@ pub trait Importable {
 macro_rules! from_string {
     ($t:ident) => {
         impl std::str::FromStr for $t {
-            type Err = Error;
+            type Err = $crate::anyhow::Error;
 
             fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
                 let mut reader = std::io::Cursor::new(s);

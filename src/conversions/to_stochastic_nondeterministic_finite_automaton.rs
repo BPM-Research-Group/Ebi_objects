@@ -6,7 +6,7 @@ use crate::{
     StochasticDeterministicFiniteAutomaton, StochasticDirectlyFollowsModel,
     StochasticNondeterministicFiniteAutomaton, StochasticProcessTree,
     ebi_objects::stochastic_process_tree::{
-        execute_transition, get_enabled_transitions, get_initial_state,
+        execute_transition_unchecked, get_enabled_transitions, get_initial_state,
         get_total_weight_of_enabled_transitions, get_transition_activity, get_transition_weight,
     },
 };
@@ -307,7 +307,7 @@ impl From<StochasticProcessTree> for StochasticNondeterministicFiniteAutomaton {
             let sum_weight = get_total_weight_of_enabled_transitions(&tree, &marking);
             for transition in get_enabled_transitions(&tree, &marking) {
                 let mut target_marking = marking.clone();
-                execute_transition(&tree, &mut target_marking, transition).unwrap(); //by construction, transition is enabled
+                execute_transition_unchecked(&tree, &mut target_marking, transition); //by construction, transition is enabled
 
                 //get the target node
                 let target_node = marking2node

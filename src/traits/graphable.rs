@@ -9,7 +9,10 @@ use layout::{
     topo::layout::VisualGraph,
 };
 
+/// Allows for the creation of a graph that visually represents the object.
 pub trait Graphable {
+
+    /// Create a dot structure that visually represents the object.
     fn to_dot(&self) -> Result<VisualGraph>;
 }
 

@@ -16,7 +16,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Result, anyhow};
 use fnv::FnvBuildHasher;
 use itertools::Itertools;
 use std::{

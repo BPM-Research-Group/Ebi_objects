@@ -15,7 +15,7 @@ use crate::{
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::{
     Fraction, Signed, Zero,
-    anyhow::{Context, Error, Result, anyhow},
+    anyhow::{Context, Result, anyhow},
 };
 use ebi_derive::ActivityKey;
 use intmap::{Entry, IntMap};
@@ -834,12 +834,12 @@ impl Graphable for DirectlyFollowsGraph {
 
 /**
  * States:
- * Initial state = nodes[len]
- * Final state = nodes[len] + 1. A final state is reached after executing a silent step from an end activity node.
+ * Initial state = nodes\[len\]
+ * Final state = nodes\[len\] + 1. A final state is reached after executing a silent step from an end activity node.
  *
  * Transitions:
- * End activity/Initial state -> final state = edges[len]
- * initial state -> start activity = edges[len] + 1 ...
+ * End activity/Initial state -> final state = edges\[len\]
+ * initial state -> start activity = edges\[len\] + 1 ...
  */
 impl AutomatonSemantics for DirectlyFollowsGraph {
     fn initial_state(&self) -> Option<AutomatonState> {

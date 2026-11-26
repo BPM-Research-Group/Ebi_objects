@@ -1,36 +1,25 @@
-use super::stochastic_process_tree::StochasticProcessTree;
-use crate::{
-    Activity, ActivityKey, ActivityKeyTranslator, EbiObject, Exportable, Graphable, HasActivityKey,
-    Importable, Infoable, TranslateActivityKey,
-    ebi_objects::labelled_petri_net::TransitionIndex,
-    line_reader::LineReader,
-    traits::{
-        graphable,
-        importable::{ImporterParameter, ImporterParameterValues, from_string},
-    },
-};
+use crate::{Activity, ActivityKey, HasActivityKey};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
-use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
-use std::{
-    fmt::Display,
-    ops::{Index, IndexMut},
-    str::FromStr,
-    sync::OnceLock,
-};
-use strum::IntoEnumIterator;
-use strum_macros::{EnumIs, EnumIter};
+use std::sync::OnceLock;
+use strum_macros::EnumIter;
 
+/// The string that must be present as the first non-comment line of a process tree file.
 pub const HEADER: &str = "process tree";
 
+/// A process tree is a block-structured process model.
+/// 
+/// Its implementation keeps a list of nodes.
+/// A tree is valid if every operator node has at least one child, and there is only one node without parent.
 #[derive(Debug, ActivityKey, Clone, Default)]
 pub struct ProcessTree {
     activity_key: ActivityKey,
     tree: Vec<TreeNode>,
 
+    /// Transition -> node
     cache_transition_2_node: OnceLock<Vec<usize>>,
 
     /// Node -> next node after last child
@@ -41,6 +30,10 @@ pub struct ProcessTree {
 }
 
 impl ProcessTree {
+    /// Create a new process tree with the given activity key and node array.
+    ///
+    /// It is the responsibility of the caller to ensure the tree is valid.
+    /// That is, an operator must have >= 1 children, and there must not be multiple roots.
     pub fn new(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Self {
         Self {
             activity_key,
@@ -51,6 +44,7 @@ impl ProcessTree {
         }
     }
 
+    /// Create a new process tree without any nodes (having the empty language).
     pub fn new_with_activity_key(activity_key: ActivityKey) -> ProcessTree {
         Self {
             activity_key,
@@ -61,260 +55,34 @@ impl ProcessTree {
         }
     }
 
+    /// Remove a node from the tree. It is the responsibility of the caller to clear the caches after calling this function.
     fn remove_internal_do(&mut self, node: usize) {
         self.tree.remove(node);
     }
 
     /// Change the process tree in a closure.
-    /// If the tree is kept consistent, the resulting tree will remain consistent, though this is not checked.
-    /// Caches will be updated automatically.
-    pub fn edit(&mut self, closure: impl Fn(&mut Vec<TreeNode>)) {
+    /// It is the responsibility of the caller to ensure that the tree remains valid.
+    /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+    pub fn edit(&mut self, closure: impl FnOnce(&mut Vec<TreeNode>)) {
         closure(&mut self.tree);
         self.clear_caches();
     }
 
+    /// Deconstruct the tree by taking its internal components.
     pub(crate) fn take(self) -> (ActivityKey, Vec<TreeNode>) {
         (self.activity_key, self.tree)
     }
 
-    fn node_to_string(
-        &self,
-        indent: usize,
-        node: usize,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> Result<usize> {
-        let id = "\t".repeat(indent);
-        match &self.tree[node] {
-            TreeNode::Tau => {
-                writeln!(f, "{}tau", id)?;
-                Ok(node + 1)
-            }
-            TreeNode::Activity(activity) => {
-                writeln!(
-                    f,
-                    "{}activity {}",
-                    id,
-                    self.activity_key.activity_to_label(activity)
-                )?;
-                Ok(node + 1)
-            }
-            TreeNode::Operator(operator, number_of_children) => {
-                writeln!(f, "{}{}", id, operator.to_string())?;
-                writeln!(
-                    f,
-                    "{}# number of children\n{}{}",
-                    id, id, number_of_children
-                )?;
-                let mut child = node + 1;
-                for _ in 0..*number_of_children {
-                    child = self.node_to_string(indent + 1, child, f)?;
-                }
-                Ok(child)
-            }
-        }
-    }
-
-    fn node_to_dot(
-        &self,
-        graph: &mut VisualGraph,
-        node: usize,
-        entry: &Gateway,
-        exit: &Gateway,
-    ) -> usize {
-        match self.tree[node] {
-            TreeNode::Tau => {
-                graphable::create_edge(graph, entry.handle(), exit.handle(), "");
-                node + 1
-            }
-            TreeNode::Activity(activity) => {
-                let transition = graphable::create_transition(
-                    graph,
-                    self.activity_key.activity_to_label(&activity),
-                    "",
-                );
-                graphable::create_edge(graph, entry.handle(), &transition, "");
-                graphable::create_edge(graph, &transition, exit.handle(), "");
-                node + 1
-            }
-            TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
-                let mut child = node + 1;
-                let child_entry = if !entry.is_xor() {
-                    let x = Gateway::Xor(graphable::create_dot(graph));
-                    graphable::create_edge(graph, entry.handle(), x.handle(), "");
-                    x
-                } else {
-                    *entry
-                };
-                let child_exit = if !exit.is_xor() {
-                    let x = Gateway::Xor(graphable::create_dot(graph));
-                    graphable::create_edge(graph, x.handle(), exit.handle(), "");
-                    x
-                } else {
-                    *exit
-                };
-                for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(self, graph, child, &child_entry, &child_exit);
-                }
-                child
-            }
-            TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
-                let intermediate_nodes = (0..(number_of_children - 1))
-                    .map(|_| Gateway::Xor(graphable::create_dot(graph)))
-                    .collect::<Vec<_>>();
-
-                let mut child = node + 1;
-                for i in 0..number_of_children {
-                    let child_entry = if i == 0 {
-                        entry
-                    } else {
-                        &intermediate_nodes[i - 1]
-                    };
-                    let child_exit = if i == number_of_children - 1 {
-                        exit
-                    } else {
-                        &intermediate_nodes[i]
-                    };
-
-                    child = ProcessTree::node_to_dot(self, graph, child, child_entry, child_exit);
-                }
-                child
-            }
-            TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
-                let split = Gateway::And(graphable::create_gateway(graph, "+"));
-                graphable::create_edge(graph, entry.handle(), split.handle(), "");
-                let join = Gateway::And(graphable::create_gateway(graph, "+"));
-                graphable::create_edge(graph, join.handle(), exit.handle(), "");
-
-                let mut child = node + 1;
-                for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
-                }
-                child
-            }
-            TreeNode::Operator(TreeOperator::Or, number_of_children) => {
-                let split = Gateway::Or(graphable::create_gateway(graph, "o"));
-                graphable::create_edge(graph, entry.handle(), split.handle(), "");
-                let join = Gateway::Or(graphable::create_gateway(graph, "o"));
-                graphable::create_edge(graph, join.handle(), exit.handle(), "");
-
-                let mut child = node + 1;
-                for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
-                }
-                child
-            }
-            TreeNode::Operator(TreeOperator::Interleaved, number_of_children) => {
-                let split = Gateway::Int(graphable::create_gateway(graph, "↔"));
-                graphable::create_edge(graph, entry.handle(), split.handle(), "");
-                let join = Gateway::Int(graphable::create_gateway(graph, "↔"));
-                graphable::create_edge(graph, join.handle(), exit.handle(), "");
-
-                let mut child = node + 1;
-                for _ in 0..number_of_children {
-                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
-                }
-                child
-            }
-            TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
-                let split = Gateway::Xor(graphable::create_dot(graph));
-                graphable::create_edge(graph, entry.handle(), split.handle(), "");
-                let join = Gateway::Xor(graphable::create_dot(graph));
-                graphable::create_edge(graph, join.handle(), exit.handle(), "");
-
-                let mut child = node + 1;
-
-                child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
-
-                if number_of_children == 1 {
-                    graphable::create_edge(graph, join.handle(), split.handle(), "");
-                } else {
-                    for _ in 1..number_of_children {
-                        child = ProcessTree::node_to_dot(self, graph, child, &join, &split);
-                    }
-                }
-                child
-            }
-        }
-    }
-
-    ///read one node, recursively
-    fn string_to_tree(
-        lreader: &mut LineReader<'_>,
-        tree: &mut Vec<TreeNode>,
-        activity_key: &mut ActivityKey,
-        root: bool,
-    ) -> Result<()> {
-        let node_type_line = match lreader.next_line_string().with_context(|| {
-            format!(
-                "Failed to read node {} at line {}",
-                tree.len(),
-                lreader.get_last_line_number()
-            )
-        }) {
-            Ok(x) => x,
-            Err(e) => {
-                if root {
-                    //The root may be missing: then, we have an empty tree.
-                    return Ok(());
-                } else {
-                    return Err(e);
-                }
-            }
-        };
-
-        if node_type_line.trim_start().starts_with("tau") {
-            tree.push(TreeNode::Tau);
-        } else if node_type_line.trim_start().starts_with("activity ") {
-            let label = node_type_line.trim_start()[9..].to_string();
-            let activity = activity_key.process_activity(&label);
-            tree.push(TreeNode::Activity(activity));
-        } else if let Ok(operator) = node_type_line
-            .trim_start()
-            .trim_end()
-            .parse::<TreeOperator>()
-        {
-            let number_of_children = lreader.next_line_index().with_context(|| {
-                format!(
-                    "failed to read number of children for node {} at line {}",
-                    tree.len(),
-                    lreader.get_last_line_number()
-                )
-            })?;
-            if number_of_children < 1 {
-                return Err(anyhow!(
-                    "{:?} node ending at node {} at line {} has no children",
-                    operator,
-                    tree.len(),
-                    lreader.get_last_line_number()
-                ));
-            }
-            tree.push(TreeNode::Operator(operator, number_of_children));
-            for _ in 0..number_of_children {
-                Self::string_to_tree(lreader, tree, activity_key, false)?;
-            }
-        } else if root && node_type_line.trim_start().is_empty() {
-            //empty tree
-            return Ok(());
-        } else {
-            return Err(anyhow!(
-                "could not parse type of node {} at line {}. Expected `tau`, `activity`, `concurrent`, `interleaved`, `or`, `sequence` or `xor`",
-                tree.len(),
-                lreader.get_last_line_number()
-            ));
-        }
-
-        Ok(())
-    }
-
-    pub fn to_hash_string(&self) -> String {
+    /// Returns a string representation of the tree that can be used to compare trees with one another.
+    pub fn to_canonical_string(&self) -> String {
         if self.tree.is_empty() {
             String::new()
         } else {
-            self.node_to_hash_string(0)
+            self.node_to_canonical_string(0)
         }
     }
 
-    fn node_to_hash_string(&self, node: usize) -> String {
+    fn node_to_canonical_string(&self, node: usize) -> String {
         match self.tree[node] {
             TreeNode::Tau => "tau".to_string(),
             TreeNode::Activity(activity) => format!(
@@ -327,23 +95,23 @@ impl ProcessTree {
             | TreeNode::Operator(TreeOperator::Interleaved, _) => format!(
                 "node {:?} [{:?}]",
                 self.node_to_operator(node).unwrap(),
-                self.get_children(node)
-                    .map(|child| self.node_to_hash_string(child))
+                self.children(node)
+                    .map(|child| self.node_to_canonical_string(child))
                     .sorted()
             ),
             TreeNode::Operator(TreeOperator::Sequence, _) => format!(
                 "node sequence [{:?}]",
-                self.get_children(node)
-                    .map(|child| self.node_to_hash_string(child))
+                self.children(node)
+                    .map(|child| self.node_to_canonical_string(child))
                     .collect::<Vec<_>>()
             ),
             TreeNode::Operator(TreeOperator::Loop, _) => {
                 format!(
                     "node loop {} [{:?}]",
-                    self.node_to_hash_string(node + 1),
-                    self.get_children(node)
+                    self.node_to_canonical_string(node + 1),
+                    self.children(node)
                         .skip(1)
-                        .map(|child| self.node_to_hash_string(child))
+                        .map(|child| self.node_to_canonical_string(child))
                         .sorted()
                         .collect::<Vec<_>>()
                 )
@@ -351,9 +119,13 @@ impl ProcessTree {
         }
     }
 
-    /// Remove the node from the tree (recursively) and replace it with another node (recursively).
+    /// Remove the node from the tree (recursively) and replace it with another single node (recursively).
     /// Returns an error if the node does not exist.
     /// Returns the removed node (recursively) if successful.
+    ///
+    /// It is the responsibility of the caller to ensure the `with` parameter contains a valid tree.
+    /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+    /// Providing an invalid `with` will result in an invalid tree.
     pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<TreeNode>>
     where
         W: IntoIterator<Item = TreeNode>,
@@ -368,66 +140,32 @@ impl ProcessTree {
     }
 
     /// Removes and returns the node and all of its children from the tree.
+    /// If the parent of the node has no children left, it is removed (but not returned).
     /// Returns an error if the node does not exist.
     /// If an error is returned, the tree may be left in an inconsistent state.
     pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
-        let drain = self.remove_recursive_internal(node)?.collect_vec();
-        self.clear_caches();
-        Ok(drain)
-    }
-
-    fn remove_recursive_internal_do(&mut self, node: usize) -> std::vec::Drain<'_, TreeNode> {
-        let node_after_child_tree = self.traverse(node);
-        self.tree.drain(node..node_after_child_tree)
-    }
-
-    fn remove_recursive_internal(&mut self, node: usize) -> Result<std::vec::Drain<'_, TreeNode>> {
-        if node > self.len() {
+        if node >= self.len() {
             return Err(anyhow!("Node {node} does not exist."));
         }
 
-        if let Some((parent, _)) = self.get_parent(node) {
-            //node had a parent
-            let children_of_node = self.get_number_of_children(node).unwrap_or_default();
-            let children_of_parent = self.get_number_of_children(parent).unwrap();
-            match (children_of_node, children_of_parent) {
-                (_, 0) => unreachable!("Invalid tree."),
-                (0, 1) => {
-                    //p(n) -> p() -> recurse
-                    //parent won't have any children left; recurse
-                    self.remove_internal(parent)?;
-                }
-                (0, _) => {
-                    //p(n, ..) -> p(..)
-                    self.tree[parent].set_number_of_children(children_of_parent - 1)?;
-                }
-                (1, _) => {
-                    //p(n(c), ..) -> p(c, ..)
-                }
-                (_, 1) => {
-                    //p(n(c, ..)) -> p(c, ..)
-                    self.tree[parent].set_number_of_children(children_of_node)?;
-                }
-                (_, _) => {
-                    //p(n(c, ..), ..) -> p(c, .., ..)
-                    self.tree[parent]
-                        .set_number_of_children(children_of_parent + children_of_node - 1)?;
-                }
+        let node_after_child_tree = self.traverse(node);
+        let removed = self.tree.drain(node..node_after_child_tree).collect_vec();
+
+        //Invariant: the cache is valid up till node.
+
+        let mut target = node;
+        while let Some((parent, _)) = self.parent(target) {
+            let number_of_children = self[parent].number_of_children();
+            self.tree[parent].set_number_of_children_internal(number_of_children - 1);
+            if number_of_children > 1 {
+                break;
             }
-            Ok(self.remove_recursive_internal_do(node))
-        } else {
-            //node is the root
-            if self
-                .get_number_of_children(node)
-                .ok_or_else(|| anyhow!("Node does not exist."))?
-                > 1
-            {
-                return Err(anyhow!(
-                    "Cannot remove the root as it has multiple children."
-                ));
-            }
-            Ok(self.remove_recursive_internal_do(node))
+            self.tree.remove(parent);
+
+            target = parent;
         }
+        self.clear_caches();
+        Ok(removed)
     }
 }
 
@@ -446,7 +184,7 @@ macro_rules! tree {
             }
 
             /// Returns the node if it exists.
-            pub fn get(&self, node: usize) -> Option<&TreeNode> {
+            pub fn get(&self, node: usize) -> Option<&$crate::TreeNode> {
                 self.tree.get(node)
             }
 
@@ -455,6 +193,7 @@ macro_rules! tree {
                 0
             }
 
+            /// Returns an array with node indices of the leaves of the process tree, in the order they are encountered in the tree.
             pub fn leaves(&self) -> &Vec<usize> {
                 self.cache_transition_2_node
                     .get_or_init(|| self.compute_transition_to_node())
@@ -468,22 +207,22 @@ macro_rules! tree {
             }
 
             /// Clears caches.
-            pub fn clear_caches(&mut self) {
+            pub(crate) fn clear_caches(&mut self) {
                 self.cache_traverse = OnceLock::new();
                 self.cache_transition_2_node = OnceLock::new();
                 self.cache_node_2_parent = OnceLock::new();
             }
 
             /// Returns the operator of the node, or None if the node is not an operator.
-            pub fn node_to_operator(&self, node: usize) -> Option<TreeOperator> {
+            pub fn node_to_operator(&self, node: usize) -> Option<$crate::TreeOperator> {
                 match self.tree.get(node)? {
-                    TreeNode::Tau | TreeNode::Activity(_) => None,
-                    TreeNode::Operator(operator, _) => Some(*operator),
+                    $crate::TreeNode::Tau | $crate::TreeNode::Activity(_) => None,
+                    $crate::TreeNode::Operator(operator, _) => Some(*operator),
                 }
             }
 
             /// Given a transition, returns the node and its index.
-            pub fn transition_to_node(&self, transition: TransitionIndex) -> Option<usize> {
+            pub fn transition_to_node(&self, transition: $crate::TransitionIndex) -> Option<usize> {
                 self.cache_transition_2_node
                     .get_or_init(|| Self::compute_transition_to_node(self))
                     .get(transition)
@@ -494,22 +233,17 @@ macro_rules! tree {
                 let mut result = vec![];
                 for (node_index, node) in self.tree.iter().enumerate() {
                     match node {
-                        TreeNode::Tau | TreeNode::Activity(_) => {
+                        $crate::TreeNode::Tau | $crate::TreeNode::Activity(_) => {
                             result.push(node_index);
                         }
-                        TreeNode::Operator(_, _) => {}
+                        $crate::TreeNode::Operator(_, _) => {}
                     }
                 }
                 result
             }
 
-            /**
-             * Returns the parent of node.
-             *
-             * @param node
-             * @return The parent of node, and the rank of the child
-             */
-            pub fn get_parent(&self, node: usize) -> Option<(usize, usize)> {
+            /// Returns the parent of node, and the rank of the node.
+            pub fn parent(&self, node: usize) -> Option<(usize, usize)> {
                 if node == 0 {
                     return None;
                 }
@@ -524,7 +258,7 @@ macro_rules! tree {
                             top.1 -= 1; // top always has remaining > 0: finished entries are popped below
                             top.2 += 1;
                         }
-                        if let TreeNode::Operator(_, n) = node {
+                        if let $crate::TreeNode::Operator(_, n) = node {
                             if *n > 0 {
                                 stack.push((i, *n, 0));
                             }
@@ -539,16 +273,11 @@ macro_rules! tree {
                 arr.get(node).copied()
             }
 
-            /**
-             *
-             * @param parent
-             * @param grandChild
-             * @return The number of the child within parent that contains grandChild.
-             *         If grandChild is not a child of parent, will return None.
-             */
+            /// Returns the rank of the child within parent that contains grandChild.
+            /// If grandChild is not a child of parent, will return None.
             pub fn get_child_rank_with(&self, parent: usize, grand_child: usize) -> Option<usize> {
                 let mut child_rank = 0;
-                for child in self.get_children(parent) {
+                for child in self.children(parent) {
                     if self.is_parent_of(child, grand_child) {
                         return Some(child_rank);
                     }
@@ -557,25 +286,23 @@ macro_rules! tree {
                 None
             }
 
-            pub fn get_children(&self, node: usize) -> $u<'_> {
+            /// Returns an iterator over the direct children of this node.
+            pub fn children(&self, node: usize) -> $u<'_> {
                 $u::new(self, node)
             }
 
-            pub fn get_parents(&self, node: usize) -> $v<'_> {
-                $v::new(self, node)
+            /// Returns an iterator over the (grand) parents of this node.
+            pub fn ancestors(&self, child: usize) -> $v<'_> {
+                $v::new(self, child)
             }
 
-            pub fn get_descendants(&self, node: usize) -> &[TreeNode] {
+            /// Returns all nodes of which `node` is a (grand) parent.
+            pub fn get_descendants(&self, node: usize) -> &[$crate::TreeNode] {
                 let next = self.traverse(node);
                 &self.tree[node..next]
             }
 
-            /**
-             *
-             * @param parent
-             * @param child
-             * @return Whether the child is a direct or indirect child of parent.
-             */
+            /// Returns whether the child is a direct or indirect child of parent.
             pub fn is_parent_of(&self, parent: usize, child: usize) -> bool {
                 if parent > child {
                     return false;
@@ -597,8 +324,8 @@ macro_rules! tree {
 
                 for i in (0..len).rev() {
                     next[i] = match &self[i] {
-                        TreeNode::Tau | TreeNode::Activity(_) => i + 1,
-                        TreeNode::Operator(_, number_of_children) => {
+                        $crate::TreeNode::Tau | $crate::TreeNode::Activity(_) => i + 1,
+                        $crate::TreeNode::Operator(_, number_of_children) => {
                             let mut child = i + 1;
                             for _ in 0..*number_of_children {
                                 child = next.get(child).copied().unwrap_or(len);
@@ -610,6 +337,8 @@ macro_rules! tree {
                 next
             }
 
+            /// Returns the child with rank `child_rank` of node `parent`.
+            /// Does not verify whether the node is an operator, or whether `child_rank` <= its number of children.
             pub fn get_child(&self, parent: usize, child_rank: usize) -> usize {
                 let mut i = parent + 1;
                 for _ in 0..child_rank {
@@ -620,35 +349,19 @@ macro_rules! tree {
 
             /// If the node is an operator, set it to the given operator type.
             /// Otherwise, has no effect.
-            pub fn set_operator(&mut self, node: usize, operator: TreeOperator) {
-                if let Some(TreeNode::Operator(op, _)) = self.tree.get_mut(node) {
+            pub fn set_operator(&mut self, node: usize, operator: $crate::TreeOperator) {
+                if let Some($crate::TreeNode::Operator(op, _)) = self.tree.get_mut(node) {
                     *op = operator;
                     self.clear_caches();
                 }
             }
 
-            pub fn get_number_of_children(&self, parent: usize) -> Option<usize> {
-                match self.tree.get(parent)? {
-                    TreeNode::Tau => Some(0),
-                    TreeNode::Activity(_) => Some(0),
-                    TreeNode::Operator(_, number_of_children) => Some(*number_of_children),
-                }
-            }
-
+            /// Returns the transition that belongs to a given node, or None if the node does not have a transition or does not exist.
             pub fn node_to_transition(&self, node: usize) -> Option<usize> {
-                let mut transitions = 0;
-                let mut last = false;
-                for node in self.tree.iter().take(node + 1) {
-                    match node {
-                        TreeNode::Activity(_) | TreeNode::Tau => {
-                            transitions += 1;
-                            last = true
-                        }
-                        _ => last = false,
-                    }
-                }
-
-                if last { Some(transitions - 1) } else { None }
+                let transition_2_node = self
+                    .cache_transition_2_node
+                    .get_or_init(|| self.compute_transition_to_node());
+                transition_2_node.binary_search(&node).ok()
             }
 
             /**
@@ -669,10 +382,10 @@ macro_rules! tree {
                     return Err(anyhow!("Node {node} does not exist."));
                 }
 
-                if let Some((parent, _)) = self.get_parent(node) {
+                if let Some((parent, _)) = self.parent(node) {
                     //node had a parent
-                    let children_of_node = self.get_number_of_children(node).unwrap_or_default();
-                    let children_of_parent = self.get_number_of_children(parent).unwrap();
+                    let children_of_node = self[node].number_of_children();
+                    let children_of_parent = self[parent].number_of_children();
                     self.remove_internal_do(node);
                     match (children_of_node, children_of_parent) {
                         (_, 0) => unreachable!("Invalid tree."),
@@ -701,11 +414,7 @@ macro_rules! tree {
                     }
                 } else {
                     //node is the root
-                    if self
-                        .get_number_of_children(node)
-                        .ok_or_else(|| anyhow!("Node does not exist."))?
-                        > 1
-                    {
+                    if self[node].number_of_children() > 1 {
                         return Err(anyhow!(
                             "Cannot remove the root as it has multiple children."
                         ));
@@ -716,13 +425,13 @@ macro_rules! tree {
                 Ok(())
             }
 
-            pub fn iter(&self) -> impl Iterator<Item = &TreeNode> {
+            pub fn iter(&self) -> impl Iterator<Item = &$crate::TreeNode> {
                 self.tree.iter()
             }
         }
 
         impl std::ops::Index<usize> for $t {
-            type Output = TreeNode;
+            type Output = $crate::TreeNode;
 
             fn index(&self, index: usize) -> &Self::Output {
                 &self.tree[index]
@@ -730,18 +439,19 @@ macro_rules! tree {
         }
 
         impl std::ops::Index<core::ops::Range<usize>> for $t {
-            type Output = [TreeNode];
+            type Output = [$crate::TreeNode];
 
             fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
                 self.tree.index(index)
             }
         }
 
-        impl TranslateActivityKey for $t {
+        impl $crate::TranslateActivityKey for $t {
             fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
-                let translator = ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
+                let translator =
+                    $crate::ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
                 self.tree.iter_mut().for_each(|node| {
-                    if let TreeNode::Activity(a) = node {
+                    if let $crate::TreeNode::Activity(a) = node {
                         *a = translator.translate_activity(&a)
                     }
                 });
@@ -749,7 +459,7 @@ macro_rules! tree {
             }
         }
 
-        impl Infoable for $t {
+        impl $crate::Infoable for $t {
             fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
                 writeln!(f, "Number of nodes\t\t{}", self.len())?;
                 writeln!(
@@ -765,26 +475,17 @@ macro_rules! tree {
             }
         }
 
-        impl Graphable for $t {
-            fn to_dot(&self) -> Result<layout::topo::layout::VisualGraph> {
-                let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
-                let source = Gateway::Xor(graphable::create_place(&mut graph, ""));
-                let sink = Gateway::Xor(graphable::create_place(&mut graph, ""));
-                if !self.tree.is_empty() {
-                    $t::node_to_dot(&self, &mut graph, 0, &source, &sink);
-                }
-                Ok(graph)
-            }
-        }
-
         impl<'a> IntoIterator for &'a $t {
-            type Item = &'a TreeNode;
-            type IntoIter = core::slice::Iter<'a, TreeNode>;
+            type Item = &'a $crate::TreeNode;
+            type IntoIter = core::slice::Iter<'a, $crate::TreeNode>;
+
+            /// Iterate over the nodes of the tree.
             fn into_iter(self) -> Self::IntoIter {
                 self.tree.iter()
             }
         }
 
+        /// Iterate over the children of a node.
         pub struct $u<'a> {
             //children iterator
             tree: &'a $t,
@@ -810,7 +511,7 @@ macro_rules! tree {
             type Item = usize;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if self.count >= self.tree.get_number_of_children(self.node)? {
+                if self.count >= self.tree.get(self.node)?.number_of_children() {
                     return None;
                 }
                 self.count += 1;
@@ -820,6 +521,7 @@ macro_rules! tree {
             }
         }
 
+        /// Iterate over the parents of a node.
         pub struct $v<'a> {
             //parents iterator
             tree: &'a $t,
@@ -830,7 +532,7 @@ macro_rules! tree {
             fn new(tree: &'a $t, node: usize) -> Self {
                 Self {
                     tree,
-                    node: tree.get_parent(node),
+                    node: tree.parent(node),
                 }
             }
         }
@@ -840,7 +542,7 @@ macro_rules! tree {
 
             fn next(&mut self) -> Option<Self::Item> {
                 if let Some((node, child_rank)) = self.node {
-                    self.node = self.tree.get_parent(node);
+                    self.node = self.tree.parent(node);
 
                     Some((node, child_rank))
                 } else {
@@ -853,111 +555,24 @@ macro_rules! tree {
 
 tree!(ProcessTree, ChildrenIterator, ParentsIterator);
 
-impl Display for ProcessTree {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", HEADER)?;
-        if !self.tree.is_empty() {
-            let _ = self.node_to_string(0, 0, f).map_err(|_| std::fmt::Error);
-        };
-        write!(f, "")
-    }
-}
-
 impl PartialEq for ProcessTree {
     fn eq(&self, other: &Self) -> bool {
-        self.to_hash_string() == other.to_hash_string()
+        self.to_canonical_string() == other.to_canonical_string()
     }
 }
 impl Eq for ProcessTree {}
 
-impl Importable for ProcessTree {
-    const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A process tree is a line-based structure. Lines starting with a \\# are ignored.
-    This first line is exactly `process tree'.
-    The subsequent lines contain the nodes:
-    Each node is either:
-    \\begin{itemize}
-        \\item A line with the word `activity' followed on the same line by a space and the label of the activity leaf;
-        \\item The word `tau';
-        \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
-        The line thereafter contains the number of children of the node, after which the nodes are given.
-        An operator node must have at least one child.
-    \\end{itemize}
-    Indentation of nodes is allowed, but not mandatory.
-    
-    For instance:
-    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/all_operators.ptree}";
-
-    const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
-
-    fn import_as_object(
-        reader: &mut dyn std::io::BufRead,
-        parameter_values: &ImporterParameterValues,
-    ) -> Result<EbiObject> {
-        Ok(EbiObject::ProcessTree(Self::import(
-            reader,
-            parameter_values,
-        )?))
-    }
-
-    fn import(reader: &mut dyn std::io::BufRead, _: &ImporterParameterValues) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let mut lreader = LineReader::new(reader);
-
-        let head = lreader
-            .next_line_string()
-            .with_context(|| format!("failed to read header, which should be {}", HEADER))?;
-        if head != HEADER {
-            return Err(anyhow!(
-                "first line should be exactly `{}`, but found `{}` on line `{}`",
-                HEADER,
-                lreader.get_last_line(),
-                lreader.get_last_line_number()
-            ));
-        }
-
-        let mut activity_key = ActivityKey::default();
-        let mut tree = vec![];
-        Self::string_to_tree(&mut lreader, &mut tree, &mut activity_key, true)?;
-
-        if lreader.next_line().is_ok() {
-            return Err(anyhow!(
-                "The tree parsed correctly, however there is additional text after it, from line {}.",
-                lreader.get_last_line_number()
-            ));
-        }
-
-        Ok((activity_key, tree).into())
-    }
-}
-from_string!(ProcessTree);
-
-impl Exportable for ProcessTree {
-    fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
-        match object {
-            EbiObject::ProcessTree(lpn) => lpn.export(f),
-            EbiObject::StochasticProcessTree(lpn) => {
-                <StochasticProcessTree as Into<ProcessTree>>::into(lpn).export(f)
-            }
-            _ => Err(anyhow!(
-                "cannot export {} {} as a process tree",
-                object.get_type().get_article(),
-                object.get_type()
-            )),
-        }
-    }
-
-    fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
-        Ok(write!(f, "{}", self)?)
-    }
-}
-
+/// A node in a process tree.
 #[derive(Debug, Clone, Copy)]
 pub enum TreeNode {
+    /// A node with the empty language (silent leaf).
     Tau,
+
+    /// A node that expresses the execution of an activity (activity leaf).
     Activity(Activity),
-    ///type, number of children
+
+    /// An operator node.
+    /// Contains the operator type and the number of children (which must be >= 1).
     Operator(TreeOperator, usize),
 }
 
@@ -988,6 +603,14 @@ impl TreeNode {
             Err(anyhow!(
                 "Attempted to alter the number of children of an activity or a tau."
             ))
+        }
+    }
+
+    fn set_number_of_children_internal(&mut self, number_of_children: usize) {
+        if let Self::Operator(_, old_number_of_children) = self {
+            *old_number_of_children = number_of_children;
+        } else {
+            unreachable!();
         }
     }
 
@@ -1042,13 +665,25 @@ impl TreeNode {
     }
 }
 
+/// The type of operator of a node in a process tree.
 #[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TreeOperator {
+    /// Exclusive choice. On execution, allows for one child to execute.
     Xor,
+
+    /// Sequence. On execution, every child executes in order.
     Sequence,
+
+    /// Interleaved. On execution, executes every child, in no particular, though non-overlapping, order.
     Interleaved,
+
+    /// Concurrent. On execution, executes all children concurrently.
     Concurrent,
+
+    /// Inclusive choice. On execution, executes at least one child, and other children optionally, concurrently.
     Or,
+
+    /// Loop. On execution, executes its first child. Then, there is a choice between any non-first children (if any) followed by another execution of the first child.
     Loop,
 }
 
@@ -1065,79 +700,469 @@ impl TreeOperator {
     }
 }
 
-impl FromStr for TreeOperator {
-    type Err = Error;
+pub(crate) mod graph {
+    use crate::{ProcessTree, TreeNode, TreeOperator, traits::graphable};
+    use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
+    use strum_macros::EnumIs;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        for op in TreeOperator::iter() {
-            if s == op.to_string() {
-                return Ok(op);
+    #[macro_export]
+    macro_rules! tree_graphable {
+        ($t:tt) => {
+            impl $crate::Graphable for $t {
+                fn to_dot(&self) -> $crate::anyhow::Result<layout::topo::layout::VisualGraph> {
+                    let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
+                    let source = $crate::ebi_objects::process_tree::graph::Gateway::Xor(
+                        graphable::create_place(&mut graph, ""),
+                    );
+                    let sink = $crate::ebi_objects::process_tree::graph::Gateway::Xor(
+                        graphable::create_place(&mut graph, ""),
+                    );
+                    if !self.tree.is_empty() {
+                        $t::node_to_dot(&self, &mut graph, 0, &source, &sink);
+                    }
+                    Ok(graph)
+                }
+            }
+        };
+    }
+    tree_graphable!(ProcessTree);
+
+    #[derive(EnumIs, Copy, Clone)]
+    pub(crate) enum Gateway {
+        Xor(NodeHandle),
+        And(NodeHandle),
+        Or(NodeHandle),
+        Int(NodeHandle),
+    }
+
+    impl Gateway {
+        pub(crate) fn handle(&self) -> &NodeHandle {
+            match self {
+                Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
             }
         }
-        Err(anyhow!("operator not recognised"))
+    }
+
+    impl ProcessTree {
+        fn node_to_dot(
+            &self,
+            graph: &mut VisualGraph,
+            node: usize,
+            entry: &Gateway,
+            exit: &Gateway,
+        ) -> usize {
+            match self.tree[node] {
+                TreeNode::Tau => {
+                    graphable::create_edge(graph, entry.handle(), exit.handle(), "");
+                    node + 1
+                }
+                TreeNode::Activity(activity) => {
+                    let transition = graphable::create_transition(
+                        graph,
+                        self.activity_key.activity_to_label(&activity),
+                        "",
+                    );
+                    graphable::create_edge(graph, entry.handle(), &transition, "");
+                    graphable::create_edge(graph, &transition, exit.handle(), "");
+                    node + 1
+                }
+                TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
+                    let mut child = node + 1;
+                    let child_entry = if !entry.is_xor() {
+                        let x = Gateway::Xor(graphable::create_dot(graph));
+                        graphable::create_edge(graph, entry.handle(), x.handle(), "");
+                        x
+                    } else {
+                        *entry
+                    };
+                    let child_exit = if !exit.is_xor() {
+                        let x = Gateway::Xor(graphable::create_dot(graph));
+                        graphable::create_edge(graph, x.handle(), exit.handle(), "");
+                        x
+                    } else {
+                        *exit
+                    };
+                    for _ in 0..number_of_children {
+                        child =
+                            ProcessTree::node_to_dot(self, graph, child, &child_entry, &child_exit);
+                    }
+                    child
+                }
+                TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
+                    let intermediate_nodes = (0..(number_of_children - 1))
+                        .map(|_| Gateway::Xor(graphable::create_dot(graph)))
+                        .collect::<Vec<_>>();
+
+                    let mut child = node + 1;
+                    for i in 0..number_of_children {
+                        let child_entry = if i == 0 {
+                            entry
+                        } else {
+                            &intermediate_nodes[i - 1]
+                        };
+                        let child_exit = if i == number_of_children - 1 {
+                            exit
+                        } else {
+                            &intermediate_nodes[i]
+                        };
+
+                        child =
+                            ProcessTree::node_to_dot(self, graph, child, child_entry, child_exit);
+                    }
+                    child
+                }
+                TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
+                    let split = Gateway::And(graphable::create_gateway(graph, "+"));
+                    graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                    let join = Gateway::And(graphable::create_gateway(graph, "+"));
+                    graphable::create_edge(graph, join.handle(), exit.handle(), "");
+
+                    let mut child = node + 1;
+                    for _ in 0..number_of_children {
+                        child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
+                    }
+                    child
+                }
+                TreeNode::Operator(TreeOperator::Or, number_of_children) => {
+                    let split = Gateway::Or(graphable::create_gateway(graph, "o"));
+                    graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                    let join = Gateway::Or(graphable::create_gateway(graph, "o"));
+                    graphable::create_edge(graph, join.handle(), exit.handle(), "");
+
+                    let mut child = node + 1;
+                    for _ in 0..number_of_children {
+                        child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
+                    }
+                    child
+                }
+                TreeNode::Operator(TreeOperator::Interleaved, number_of_children) => {
+                    let split = Gateway::Int(graphable::create_gateway(graph, "↔"));
+                    graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                    let join = Gateway::Int(graphable::create_gateway(graph, "↔"));
+                    graphable::create_edge(graph, join.handle(), exit.handle(), "");
+
+                    let mut child = node + 1;
+                    for _ in 0..number_of_children {
+                        child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
+                    }
+                    child
+                }
+                TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
+                    let split = Gateway::Xor(graphable::create_dot(graph));
+                    graphable::create_edge(graph, entry.handle(), split.handle(), "");
+                    let join = Gateway::Xor(graphable::create_dot(graph));
+                    graphable::create_edge(graph, join.handle(), exit.handle(), "");
+
+                    let mut child = node + 1;
+
+                    child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
+
+                    if number_of_children == 1 {
+                        graphable::create_edge(graph, join.handle(), split.handle(), "");
+                    } else {
+                        for _ in 1..number_of_children {
+                            child = ProcessTree::node_to_dot(self, graph, child, &join, &split);
+                        }
+                    }
+                    child
+                }
+            }
+        }
     }
 }
 
-// ======= semantics functions =======
-// Semantics belongs in the Ebi crate, not here in Ebi_objects,
-// however we use them to create a state space in several conversions.
-// As such, its bases functions are here.
+/// Input and output for process trees.
+pub mod io {
+    use strum::IntoEnumIterator;
 
-#[derive(
-    Copy, Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, EnumIs,
-)]
-pub enum NodeState {
-    /// Indicates that the node can be executed (for a leaf), or that one of its children can be executed (for an operator)
-    Enabled,
-    /// Indicates that the node has started.
-    Started,
-    /// Used in POWL models, not in process trees
-    NotYetExecuted,
-    /// Indicates that a node is currently inactive and has completed or not started yet.
-    Closed,
-}
+    use crate::{
+        ActivityKey, EbiObject, Exportable, Importable, ProcessTree, TreeMarking, TreeNode,
+        TreeOperator,
+        anyhow::{Context, Error, Result, anyhow},
+        ebi_objects::process_tree::HEADER,
+        line_reader::LineReader,
+        traits::importable::{ImporterParameter, ImporterParameterValues, from_string},
+    };
+    use std::{
+        fmt::{Display, Formatter},
+        str::FromStr,
+    };
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
-pub struct TreeMarking {
-    pub terminated: bool,
-    pub states: Vec<NodeState>,
-}
-
-impl TreeMarking {
-    pub fn new(size: usize) -> Self {
-        Self {
-            terminated: false,
-            states: vec![NodeState::Closed; size],
+    impl Display for ProcessTree {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            writeln!(f, "{}", HEADER)?;
+            if !self.tree.is_empty() {
+                self.node_to_string(0, 0, f).map_err(|_| std::fmt::Error)?;
+            } else {
+                writeln!(f)?;
+            };
+            write!(f, "")
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<&NodeState> {
-        self.states.get(index)
+    impl Importable for ProcessTree {
+        const FILE_FORMAT_SPECIFICATION_LATEX: &str = "A process tree is a line-based structure. Lines starting with a \\# are ignored.
+    This first line is exactly `process tree'.
+    The subsequent lines contain the nodes:
+    Each node is either:
+    \\begin{itemize}
+        \\item A line with the word `activity' followed on the same line by a space and the label of the activity leaf;
+        \\item The word `tau';
+        \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
+        The line thereafter contains the number of children of the node, after which the nodes are given.
+        An operator node must have at least one child.
+    \\end{itemize}
+    Indentation of nodes is allowed, but not mandatory.
+    A tree with the empty language is represented by a second empty line.
+    
+    For instance:
+    \\lstinputlisting[language=ebilines, style=boxed]{../testfiles/all_operators.ptree}";
+
+        const IMPORTER_PARAMETERS: &[ImporterParameter] = &[];
+
+        fn import_as_object(
+            reader: &mut dyn std::io::BufRead,
+            parameter_values: &ImporterParameterValues,
+        ) -> Result<EbiObject> {
+            Ok(EbiObject::ProcessTree(Self::import(
+                reader,
+                parameter_values,
+            )?))
+        }
+
+        fn import(reader: &mut dyn std::io::BufRead, _: &ImporterParameterValues) -> Result<Self>
+        where
+            Self: Sized,
+        {
+            let mut lreader = LineReader::new(reader);
+
+            let head = lreader
+                .next_line_string()
+                .with_context(|| format!("Failed to read header, which should be {}.", HEADER))?;
+            if head != HEADER {
+                return Err(anyhow!(
+                    "First line should be exactly `{}`, but found `{}` on line `{}`.",
+                    HEADER,
+                    lreader.get_last_line(),
+                    lreader.get_last_line_number()
+                ));
+            }
+
+            let mut activity_key = ActivityKey::default();
+            let mut tree = vec![];
+            Self::string_to_tree(&mut lreader, &mut tree, &mut activity_key, true)?;
+
+            if lreader.next_line().is_ok() {
+                return Err(anyhow!(
+                    "The tree parsed correctly, however there is additional text after it, from line {}.",
+                    lreader.get_last_line_number()
+                ));
+            }
+
+            Ok((activity_key, tree).into())
+        }
+    }
+    from_string!(ProcessTree);
+
+    impl Exportable for ProcessTree {
+        fn export_from_object(object: EbiObject, f: &mut dyn std::io::Write) -> Result<()> {
+            match object {
+                EbiObject::ProcessTree(lpn) => lpn.export(f),
+                EbiObject::StochasticProcessTree(slpn) => ProcessTree::from(slpn).export(f),
+                _ => Err(anyhow!(
+                    "Cannot export {} {} as a process tree.",
+                    object.get_type().get_article(),
+                    object.get_type()
+                )),
+            }
+        }
+
+        fn export(&self, f: &mut dyn std::io::Write) -> Result<()> {
+            Ok(write!(f, "{}", self)?)
+        }
+    }
+
+    impl ProcessTree {
+        fn node_to_string(
+            &self,
+            indent: usize,
+            node: usize,
+            f: &mut std::fmt::Formatter<'_>,
+        ) -> Result<usize> {
+            let id = "\t".repeat(indent);
+            match &self.tree[node] {
+                TreeNode::Tau => {
+                    writeln!(f, "{}tau", id)?;
+                    Ok(node + 1)
+                }
+                TreeNode::Activity(activity) => {
+                    writeln!(
+                        f,
+                        "{}activity {}",
+                        id,
+                        self.activity_key.activity_to_label(activity)
+                    )?;
+                    Ok(node + 1)
+                }
+                TreeNode::Operator(operator, number_of_children) => {
+                    writeln!(f, "{}{}", id, operator.to_string())?;
+                    writeln!(
+                        f,
+                        "{}# number of children\n{}{}",
+                        id, id, number_of_children
+                    )?;
+                    let mut child = node + 1;
+                    for _ in 0..*number_of_children {
+                        child = self.node_to_string(indent + 1, child, f)?;
+                    }
+                    Ok(child)
+                }
+            }
+        }
+
+        ///read one node, recursively
+        fn string_to_tree(
+            lreader: &mut LineReader<'_>,
+            tree: &mut Vec<TreeNode>,
+            activity_key: &mut ActivityKey,
+            root: bool,
+        ) -> Result<()> {
+            let node_type_line = lreader.next_line_string().with_context(|| {
+                format!(
+                    "Failed to read node {} at line {}.",
+                    tree.len(),
+                    lreader.get_last_line_number()
+                )
+            })?;
+
+            if node_type_line.trim_start() == "tau" {
+                tree.push(TreeNode::Tau);
+            } else if node_type_line.trim_start().starts_with("activity ") {
+                let label = node_type_line.trim_start()[9..].to_string();
+                let activity = activity_key.process_activity(&label);
+                tree.push(TreeNode::Activity(activity));
+            } else if let Ok(operator) = node_type_line
+                .trim_start()
+                .trim_end()
+                .parse::<TreeOperator>()
+            {
+                let number_of_children = lreader.next_line_index().with_context(|| {
+                    format!(
+                        "Failed to read number of children for node {} at line {}.",
+                        tree.len(),
+                        lreader.get_last_line_number()
+                    )
+                })?;
+                if number_of_children < 1 {
+                    return Err(anyhow!(
+                        "The {:?} node ending at node {} at line {} has no children",
+                        operator,
+                        tree.len(),
+                        lreader.get_last_line_number()
+                    ));
+                }
+                tree.push(TreeNode::Operator(operator, number_of_children));
+                for _ in 0..number_of_children {
+                    Self::string_to_tree(lreader, tree, activity_key, false)?;
+                }
+            } else if root && node_type_line.trim_start().is_empty() {
+                //empty tree
+                return Ok(());
+            } else {
+                return Err(anyhow!(
+                    "Could not parse type of node {} at line {}. Expected `tau`, `activity`, `concurrent`, `interleaved`, `loop`, `or`, `sequence` or `xor`.",
+                    tree.len(),
+                    lreader.get_last_line_number()
+                ));
+            }
+
+            Ok(())
+        }
+    }
+
+    impl FromStr for TreeOperator {
+        type Err = Error;
+
+        fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+            for op in TreeOperator::iter() {
+                if s == op.to_string() {
+                    return Ok(op);
+                }
+            }
+            Err(anyhow!("Did not recognise `{s}` as an operator."))
+        }
+    }
+
+    impl Display for TreeMarking {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{:?}, terminated: {}", self.states, self.terminated)
+        }
     }
 }
 
-impl Display for TreeMarking {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}, terminated: {}", self.states, self.terminated)
+/// Semantics belongs in the Ebi crate, not here in Ebi_objects,
+/// however we use them to create a state space in several conversions.
+/// As such, its bases functions are here.
+pub mod semantics {
+    use crate::{
+        ProcessTree, TreeNode, TreeOperator,
+        anyhow::{Result, anyhow},
+        ebi_activity_key::Activity,
+    };
+    use std::ops::{Index, IndexMut};
+    use strum_macros::EnumIs;
+
+    #[derive(
+        Copy, Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, EnumIs,
+    )]
+    pub enum NodeState {
+        /// Indicates that the node can be executed (for a leaf), or that one of its children can be executed (for an operator)
+        Enabled,
+        /// Indicates that the node has started.
+        Started,
+        /// Used in POWL models, not in process trees
+        NotYetExecuted,
+        /// Indicates that a node is currently inactive and has completed or not started yet.
+        Closed,
     }
-}
 
-impl Index<usize> for TreeMarking {
-    type Output = NodeState;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        self.states.index(index)
+    #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+    pub struct TreeMarking {
+        pub terminated: bool,
+        pub states: Vec<NodeState>,
     }
-}
 
-impl IndexMut<usize> for TreeMarking {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        self.states.index_mut(index)
+    impl TreeMarking {
+        pub fn new(size: usize) -> Self {
+            Self {
+                terminated: false,
+                states: vec![NodeState::Closed; size],
+            }
+        }
+
+        pub fn get(&self, index: usize) -> Option<&NodeState> {
+            self.states.get(index)
+        }
     }
-}
 
-#[macro_export]
-macro_rules! tree_semantics {
+    impl Index<usize> for TreeMarking {
+        type Output = NodeState;
+
+        fn index(&self, index: usize) -> &Self::Output {
+            self.states.index(index)
+        }
+    }
+
+    impl IndexMut<usize> for TreeMarking {
+        fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+            self.states.index_mut(index)
+        }
+    }
+
+    /// Defines semantics for process trees.
+    /// To avoid confusion in the `Ebi` crate, these methods are not implemented on the struct, but merely add it to the file.
+    #[macro_export]
+    macro_rules! tree_semantics {
     ($t:ident) => {
         pub fn get_initial_state(tree: &$t) -> Option<TreeMarking> {
             if tree.tree.is_empty() {
@@ -1160,14 +1185,14 @@ macro_rules! tree_semantics {
                 TreeNode::Operator(TreeOperator::Concurrent, _)
                 | TreeNode::Operator(TreeOperator::Interleaved, _) => {
                     //these nodes can terminate if all of their children are either closed or can terminate
-                    tree.get_children(node).all(|child| {
+                    tree.children(node).all(|child| {
                         state[child] == NodeState::Closed || can_terminate(tree, state, child)
                     })
                 }
                 TreeNode::Operator(TreeOperator::Or, _) => {
                     //an or can terminate if at least one child can terminate, and the others can be withdrawn
                     let mut one_child_closed = false;
-                    for child in tree.get_children(node) {
+                    for child in tree.children(node) {
                         if can_terminate(tree, state, child) {
                             one_child_closed = true;
                         } else if !can_withdraw_enablement(tree, state, child) {
@@ -1210,7 +1235,7 @@ macro_rules! tree_semantics {
                 }
                 TreeNode::Operator(TreeOperator::Xor, _) => {
                     //an xor can terminate if all of its children are closed or can terminate
-                    tree.get_children(node).all(|child| {
+                    tree.children(node).all(|child| {
                         state[child] == NodeState::Closed || can_terminate(tree, state, child)
                     })
                 }
@@ -1240,12 +1265,12 @@ macro_rules! tree_semantics {
 
             //for every interleaved parent, check whether we're not executing two nodes concurrently
             let mut previous_parent = node;
-            for (parent, _) in tree.get_parents(node) {
+            for (parent, _) in tree.ancestors(node) {
                 if let Some(TreeNode::Operator(TreeOperator::Interleaved, _)) =
                     tree.tree.get(parent)
                 {
                     //count the number of started children
-                    let started_children = tree.get_children(parent).fold(0, |count, child| {
+                    let started_children = tree.children(parent).fold(0, |count, child| {
                         if state[child] == NodeState::Started && !can_terminate(tree, state, child)
                         {
                             count + 1
@@ -1284,7 +1309,7 @@ macro_rules! tree_semantics {
                 | TreeNode::Operator(TreeOperator::Or, _)
                 | TreeNode::Operator(TreeOperator::Xor, _) => {
                     //enable all children
-                    for child in tree.get_children(node) {
+                    for child in tree.children(node) {
                         enable_node(tree, state, child);
                     }
                 }
@@ -1298,7 +1323,7 @@ macro_rules! tree_semantics {
 
         /// enable the nodes that are sequentially next from this node
         fn enable_next_sequential_nodes(tree: &$t, state: &mut TreeMarking, node: usize) {
-            if let Some((parent, child_rank)) = tree.get_parent(node) {
+            if let Some((parent, child_rank)) = tree.parent(node) {
                 match tree.tree[parent] {
                     TreeNode::Tau | TreeNode::Activity(_) => {
                         unreachable!("Taus and activities cannot have children.")
@@ -1349,7 +1374,7 @@ macro_rules! tree_semantics {
             node: usize,
         ) {
             // println!("\t\twithdraw enablement next sequential nodes node {node}");
-            if let Some((parent, child_rank)) = tree.get_parent(node) {
+            if let Some((parent, child_rank)) = tree.parent(node) {
                 match tree.tree[parent] {
                     TreeNode::Tau | TreeNode::Activity(_) => {
                         unreachable!("Taus and activities cannot have children.")
@@ -1405,7 +1430,7 @@ macro_rules! tree_semantics {
             }
 
             //this may open another node, based on the operator of the parent
-            if let Some((parent, child_rank)) = tree.get_parent(node) {
+            if let Some((parent, child_rank)) = tree.parent(node) {
                 match tree.tree[parent] {
                     TreeNode::Tau | TreeNode::Activity(_) => {
                         unreachable!("Taus and activities cannot have children.")
@@ -1425,7 +1450,7 @@ macro_rules! tree_semantics {
                     | TreeNode::Operator(TreeOperator::Interleaved, _) => {
                         //for a concurrent parent, the parent can be closed if all of its children have been closed
                         if tree
-                            .get_children(parent)
+                            .children(parent)
                             .all(|child| state[child] == NodeState::Closed)
                         {
                             //close the parent
@@ -1439,7 +1464,7 @@ macro_rules! tree_semantics {
                     TreeNode::Operator(TreeOperator::Or, _) => {
                         //for an or parent, the parent can be closed if all of its children have been closed
                         if tree
-                            .get_children(parent)
+                            .children(parent)
                             .all(|child| state[child] == NodeState::Closed)
                         {
                             //close the parent
@@ -1491,7 +1516,7 @@ macro_rules! tree_semantics {
                         state[node] = NodeState::Started;
 
                         //recurse to parent
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     }
@@ -1509,7 +1534,7 @@ macro_rules! tree_semantics {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
                         //recurse to parent
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     }
@@ -1519,14 +1544,14 @@ macro_rules! tree_semantics {
                         state[node] = NodeState::Started;
 
                         //recurse to parent
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     } else if let Some(from_child) = child {
                         //we are starting a non-first child of an interleaved node: withdraw enablement in the finished grand child
 
                         //find the previous child that was started
-                        for sibling in tree.get_children(node) {
+                        for sibling in tree.children(node) {
                             if sibling != from_child && state[sibling] == NodeState::Started {
                                 close_node(tree, state, sibling);
                             }
@@ -1542,7 +1567,7 @@ macro_rules! tree_semantics {
                         state[node] = NodeState::Started;
 
                         //recurse to parent
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     } else {
@@ -1568,7 +1593,7 @@ macro_rules! tree_semantics {
                         }
 
                         //recurse to parent
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     }
@@ -1578,7 +1603,7 @@ macro_rules! tree_semantics {
                         state[node] = NodeState::Started;
 
                         //for an xor, the siblings of the child must be withdrawn
-                        for child2 in tree.get_children(node) {
+                        for child2 in tree.children(node) {
                             if let Some(child) = child {
                                 if child2 != child {
                                     withdraw_enablement(tree, state, child2);
@@ -1586,7 +1611,7 @@ macro_rules! tree_semantics {
                             }
                         }
                         //recurse to parent
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     }
@@ -1594,7 +1619,7 @@ macro_rules! tree_semantics {
                 TreeNode::Operator(TreeOperator::Or, _) => {
                     if state[node] != NodeState::Started {
                         state[node] = NodeState::Started;
-                        if let Some((parent, _)) = tree.get_parent(node) {
+                        if let Some((parent, _)) = tree.parent(node) {
                             start_node(tree, state, parent, Some(node));
                         }
                     } else if !can_terminate(tree, state, node) {
@@ -1610,7 +1635,7 @@ macro_rules! tree_semantics {
             tree.tree.iter().filter(|node| node.is_leaf()).count() + 1 //the last transition is explicit termination, which is required by the semantics of Ebi
         }
 
-        pub fn get_enabled_transitions(tree: &$t, state: &TreeMarking) -> Vec<TransitionIndex> {
+        pub fn get_enabled_transitions(tree: &$t, state: &TreeMarking) -> Vec<$crate::TransitionIndex> {
             let mut result = vec![];
 
             for (transition_index, node) in tree.leaves().iter().enumerate() {
@@ -1630,7 +1655,7 @@ macro_rules! tree_semantics {
             state.terminated
         }
 
-        pub fn get_transition_activity(tree: &$t, transition: TransitionIndex) -> Option<Activity> {
+        pub fn get_transition_activity(tree: &$t, transition: $crate::TransitionIndex) -> Option<Activity> {
             let node = tree.transition_to_node(transition)?;
             match tree.tree[node] {
                 TreeNode::Tau => None,
@@ -1639,11 +1664,32 @@ macro_rules! tree_semantics {
             }
         }
 
+        /// Verifies that the transition is enabled and updates the state to execute it.
+        ///
+        /// If the caller can guarantee that the transition is enabled, then `execute_transition_unchecked` is a faster alternative.
         pub fn execute_transition(
             tree: &$t,
             state: &mut TreeMarking,
-            transition: TransitionIndex,
+            transition: $crate::TransitionIndex,
         ) -> Result<()> {
+            if !get_enabled_transitions(tree, state).contains(&transition) {
+                return Err(anyhow!("Transition is not enabled."));
+            }
+
+            execute_transition_unchecked(tree, state, transition);
+            Ok(())
+        }
+
+        /// Execute the given transition.
+        ///
+        /// For performance reasons, this method does not check whether the transition is actually enabled.
+        /// It is the responsibility of the caller to ensure the transition is enabled.
+        /// If a non-enabled transition is executed, the resulting state is undefined.
+        pub fn execute_transition_unchecked(
+            tree: &$t,
+            state: &mut TreeMarking,
+            transition: $crate::TransitionIndex,
+        ) {
             if transition >= tree.number_of_leaves() {
                 state.terminated = true;
                 state.states.fill(NodeState::Closed);
@@ -1653,27 +1699,11 @@ macro_rules! tree_semantics {
                 close_node(tree, state, node);
             }
             // println!("state after executing transition {transition}: {}", state);
-            Ok(())
         }
     };
 }
 
-tree_semantics!(ProcessTree);
-
-#[derive(EnumIs, Copy, Clone)]
-pub enum Gateway {
-    Xor(NodeHandle),
-    And(NodeHandle),
-    Or(NodeHandle),
-    Int(NodeHandle),
-}
-
-impl Gateway {
-    pub(crate) fn handle(&self) -> &NodeHandle {
-        match self {
-            Gateway::Xor(h) | Gateway::And(h) | Gateway::Or(h) | Gateway::Int(h) => h,
-        }
-    }
+    tree_semantics!(ProcessTree);
 }
 
 #[cfg(any(test, feature = "testactivities"))]
@@ -1693,8 +1723,11 @@ mod tests {
         HasActivityKey, ProcessTree, StochasticProcessTree, activity, con,
         ebi_objects::{
             process_tree::{
-                TreeNode, execute_transition, get_enabled_transitions, get_initial_state,
-                get_transition_activity,
+                TreeNode,
+                semantics::{
+                    execute_transition, get_enabled_transitions, get_initial_state,
+                    get_transition_activity,
+                },
             },
             scalable_vector_graphics::ToSVG,
         },
@@ -2222,5 +2255,84 @@ mod tests {
 
         execute_transition(&tree, &mut state, C).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+    }
+
+    #[test]
+    fn remove_recursive_leaf_with_siblings() {
+        let mut tree = xor!(tau!(), activity!("a"), activity!("b"));
+        // nodes: 0 xor(3), 1 tau, 2 a, 3 b
+
+        let removed = tree.remove_recursive(2).unwrap();
+
+        assert_eq!(removed.len(), 1);
+        assert_eq!(tree.len(), 3);
+        assert_eq!(tree, xor!(tau!(), activity!("b")));
+    }
+
+    #[test]
+    fn remove_recursive_subtree_with_siblings() {
+        let mut tree = con!(seq!(activity!("a"), activity!("b")), activity!("c"));
+        // nodes: 0 con(2), 1 seq(2), 2 a, 3 b, 4 c
+
+        let removed = tree.remove_recursive(1).unwrap();
+
+        assert_eq!(removed.len(), 3); // seq, a, b
+        assert_eq!(tree.len(), 2);
+        assert_eq!(tree[0].number_of_children(), 1);
+        assert_eq!(tree, con!(activity!("c")));
+    }
+
+    #[test]
+    fn remove_recursive_single_child_subtree_with_siblings() {
+        let mut tree = xor!(seq!(activity!("a")), activity!("b"));
+        // nodes: 0 xor(2), 1 seq(1), 2 a, 3 b
+
+        tree.remove_recursive(1).unwrap();
+
+        assert_eq!(tree.len(), 2);
+        assert_eq!(tree[0].number_of_children(), 1);
+        assert_eq!(tree, xor!(activity!("b")));
+    }
+
+    #[test]
+    fn remove_recursive_only_child_removes_empty_parent() {
+        let mut tree = seq!(activity!("a"), xor!(activity!("b")), activity!("c"));
+        // nodes: 0 seq(3), 1 a, 2 xor(1), 3 b, 4 c
+
+        tree.remove_recursive(3).unwrap();
+
+        println!("{}", tree);
+
+        assert_eq!(tree.len(), 3);
+        assert_eq!(tree[0].number_of_children(), 2);
+        assert_eq!(tree, seq!(activity!("a"), activity!("c")));
+    }
+
+    #[test]
+    fn remove_recursive_out_of_range() {
+        let mut tree = xor!(tau!(), activity!("a"));
+        tree.remove_recursive(tree.len()).unwrap_err();
+        tree.remove_recursive(100).unwrap_err();
+        assert_eq!(tree.len(), 3); // untouched
+    }
+
+    #[test]
+    fn empty_tree() {
+        let fin = "process tree";
+        assert!(fin.parse::<ProcessTree>().is_err());
+
+        let fin = "process tree\n";
+        assert!(fin.parse::<ProcessTree>().is_err());
+
+        let fin = "process tree\n\n";
+        assert_eq!(fin.parse::<ProcessTree>().unwrap(), ProcessTree::default());
+
+        assert_eq!(
+            ProcessTree::default(),
+            ProcessTree::default()
+                .to_string()
+                .parse::<ProcessTree>()
+                .unwrap()
+        );
     }
 }

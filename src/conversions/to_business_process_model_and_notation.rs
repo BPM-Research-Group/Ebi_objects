@@ -263,7 +263,7 @@ fn transform_node(
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Parallel);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
             c.add_sequence_flow_unchecked(parent, sub_sink, sink);
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
             true
@@ -273,7 +273,7 @@ fn transform_node(
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
             c.add_sequence_flow_unchecked(parent, sub_sink, sink);
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
             true
@@ -283,7 +283,7 @@ fn transform_node(
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Inclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
             c.add_sequence_flow_unchecked(parent, sub_sink, sink);
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
             true
@@ -293,7 +293,7 @@ fn transform_node(
             let sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             c.add_sequence_flow_unchecked(parent, source, sub_source);
             c.add_sequence_flow_unchecked(parent, sub_sink, sink);
-            let mut it = tree.get_children(node);
+            let mut it = tree.children(node);
             if let Some(child) = it.next() {
                 transform_node(tree, child, sub_source, sub_sink, c, parent);
             }
@@ -303,7 +303,7 @@ fn transform_node(
             true
         }
         Some(TreeNode::Operator(TreeOperator::Sequence, _)) => {
-            let mut it = tree.get_children(node);
+            let mut it = tree.children(node);
             let mut sub_sink = c.add_gateway_unchecked(parent, GatewayType::Exclusive);
             if let Some(child) = it.next() {
                 transform_node(tree, child, source, sub_sink, c, parent);
@@ -317,7 +317,7 @@ fn transform_node(
             true
         }
         Some(TreeNode::Operator(TreeOperator::Interleaved, _)) => {
-            let children = tree.get_children(node).collect::<Vec<_>>();
+            let children = tree.children(node).collect::<Vec<_>>();
             let mut children_left_2_gateway = HashMap::<_, _, FnvBuildHasher>::default();
             children_left_2_gateway.insert(vec![], sink);
             children_left_2_gateway.insert(children.clone(), source);

@@ -55,7 +55,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
         }],
         TreeNode::Operator(TreeOperator::Sequence, number_of_children) => {
             let mut child_nodes = vec![];
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
             }
 
@@ -75,7 +75,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
         }
         TreeNode::Operator(TreeOperator::Xor, number_of_children) => {
             let mut child_nodes = vec![];
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
             }
 
@@ -97,7 +97,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
         }
         TreeNode::Operator(TreeOperator::Concurrent, number_of_children) => {
             let mut child_nodes = vec![];
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
             }
 
@@ -117,7 +117,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
         }
         TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
             let mut child_nodes = vec![];
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 child_nodes.append(&mut tree_2_powl(tree, child));
             }
 
@@ -145,12 +145,12 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
 
             //recurse
             let mut child_blocks = vec![];
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 child_blocks.push(tree_2_powl(tree, child));
             }
 
             let mut and_blocks = vec![];
-            for (child_rank, _) in tree.get_children(node).enumerate() {
+            for (child_rank, _) in tree.children(node).enumerate() {
                 let mut and_block = vec![];
                 and_block.push(PowlNode::PartialOrder {
                     id: Some(format!("and block {}", child_rank)),
@@ -162,7 +162,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
                     description: None,
                 });
 
-                for (child_rank2, _) in tree.get_children(node).enumerate() {
+                for (child_rank2, _) in tree.children(node).enumerate() {
                     if child_rank == child_rank2 {
                         //the `own` child is not skippable
                         and_block.extend(child_blocks[child_rank2].clone());
@@ -197,7 +197,7 @@ fn tree_2_powl(tree: &ProcessTree, node: usize) -> Vec<PowlNode> {
 
             //recurse
             let mut child_blocks = vec![];
-            for child in tree.get_children(node) {
+            for child in tree.children(node) {
                 child_blocks.push(tree_2_powl(tree, child));
             }
 

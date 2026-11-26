@@ -11,8 +11,8 @@ use crate::{
         event_log_python::EventLogPython,
         finite_language::FiniteLanguage,
         finite_stochastic_language::FiniteStochasticLanguage,
-        process_tree::{
-            execute_transition, get_enabled_transitions, get_initial_state,
+        process_tree::semantics::{
+            execute_transition_unchecked, get_enabled_transitions, get_initial_state,
             get_transition_activity, is_final_state,
         },
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
@@ -217,7 +217,7 @@ impl From<ProcessTree> for DeterministicFiniteAutomaton {
                     } else {
                         for transition in get_enabled_transitions(&tree, &marking) {
                             let mut target_marking = marking.clone();
-                            execute_transition(&tree, &mut target_marking, transition).unwrap(); //by construction, transition is enabled
+                            execute_transition_unchecked(&tree, &mut target_marking, transition); //by construction, transition is enabled
 
                             if let Some(activity) = get_transition_activity(&tree, transition) {
                                 //labelled activity: insert into resulting map

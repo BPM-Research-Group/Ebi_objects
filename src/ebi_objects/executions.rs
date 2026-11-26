@@ -11,7 +11,7 @@ use ebi_activity_key::{Activity, ActivityKey, ActivityKeyTranslator, TranslateAc
 use ebi_activity_key::{HasActivityKey, TestActivityKey};
 use ebi_bpmn::ebi_arithmetic::{
     Fraction,
-    anyhow::{Error, Result},
+    anyhow::Result,
 };
 use ebi_derive::ActivityKey;
 use intmap::IntMap;

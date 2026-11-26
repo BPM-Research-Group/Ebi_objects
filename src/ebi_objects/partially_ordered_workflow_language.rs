@@ -6,7 +6,7 @@ use crate::{
         importable::{ImporterParameter, ImporterParameterValues, from_string},
     },
 };
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_activity_key::{

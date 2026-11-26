@@ -22,7 +22,7 @@ use crate::{
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::{
-    ebi_arithmetic::anyhow::{Context, Error, Ok, Result, anyhow},
+    ebi_arithmetic::anyhow::{Context, Ok, Result, anyhow},
     if_not::IfNot,
 };
 use ebi_derive::ActivityKey;

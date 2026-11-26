@@ -11,7 +11,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Error, Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Context, Result, anyhow};
 use ebi_bpmn::ebi_arithmetic::{Fraction, Signed, Zero};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
@@ -485,12 +485,12 @@ impl Infoable for StochasticDirectlyFollowsModel {
 
 /**
  * States:
- * Initial state = nodes[len]
- * Final state = nodes[len] + 1. A final state is reached after executing a silent step from an end activity node.
+ * Initial state = nodes\[len\]
+ * Final state = nodes\[len\] + 1. A final state is reached after executing a silent step from an end activity node.
  *
  * Transitions:
- * End activity -> final state = edges[len]
- * initial state -> start activity = edges[len] + 1 ...
+ * End activity -> final state = edges\[len\]
+ * initial state -> start activity = edges\[len\] + 1 ...
  */
 impl AutomatonSemantics for StochasticDirectlyFollowsModel {
     fn initial_state(&self) -> Option<AutomatonState> {
