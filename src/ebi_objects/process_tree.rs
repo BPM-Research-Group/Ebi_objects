@@ -686,16 +686,25 @@ pub enum TreeOperator {
     /// Sequence. On execution, every child executes in order.
     Sequence,
 
-    /// Interleaved. On execution, executes every child, in no particular, though non-overlapping, order.
+    /// Interleaved.
+    ///
+    /// On execution, executes every child, in no particular, though non-overlapping, order.
     Interleaved,
 
-    /// Concurrent. On execution, executes all children concurrently.
+    /// Concurrent.
+    ///
+    /// On execution, executes all children concurrently.
     Concurrent,
 
-    /// Inclusive choice. On execution, executes at least one child, and other children optionally, concurrently.
+    /// Inclusive choice.
+    ///
+    /// On execution, executes at least one child, and other children optionally, concurrently.
     Or,
 
-    /// Loop. On execution, executes its first child. Then, there is a choice between any non-first children (if any) followed by another execution of the first child.
+    /// Loop.
+    ///
+    /// On execution, executes its first child. Then, there is a choice between any non-first children followed by another execution of the first child.
+    /// If there is only a single child, then the loop behaves as if its second child was a tau.
     Loop,
 }
 
@@ -1222,6 +1231,10 @@ pub mod semantics {
                         //if the loop is closed, it can terminate
                         return true;
                     }
+                    if number_of_children == 1 {
+                        // single-child loop: the loop may stop whenever the body may stop
+                        return can_terminate(tree, state, body_child);
+                    }
                     if state[body_child] == NodeState::Enabled {
                         //the first child is enabled, which means that the loop cannot terminate in this state
                         return false;
@@ -1255,9 +1268,37 @@ pub mod semantics {
             }
         }
 
-        /**
-         * Returns whether it is possible to withdraw the enablement.
-         */
+        /// Starts a new iteration of a loop with a single child.
+        fn restart_loop_body(tree: &$t, state: &mut TreeMarking, loop_node: usize) {
+            let body = loop_node + 1;
+            withdraw_enablement(tree, state, body);   // close the old iteration
+            enable_node(tree, state, body);           // fresh iteration
+            // the exit is no longer available until this iteration completes
+            withdraw_enablement_next_sequential_nodes(tree, state, loop_node);
+        }
+
+        /// If `leaf` is closed but would be enabled in a fresh iteration of a
+        /// single-child loop above it, returns that loop (innermost first).
+        fn single_child_loop_for(tree: &$t, state: &TreeMarking, leaf: usize) -> Option<usize> {
+            if state[leaf] != NodeState::Closed {
+                return None;
+            }
+            for (ancestor, _) in tree.ancestors(leaf) {
+                if matches!(tree.tree[ancestor], TreeNode::Operator(TreeOperator::Loop, 1))
+                    && state[ancestor] == NodeState::Started
+                    && can_terminate(tree, state, ancestor + 1)
+                {
+                    let mut restarted = state.clone();
+                    restart_loop_body(tree, &mut restarted, ancestor);
+                    if can_execute(tree, &restarted, leaf) {
+                        return Some(ancestor);
+                    }
+                }
+            }
+            None
+        }
+
+        /// Returns whether it is possible to withdraw the enablement.
         fn can_withdraw_enablement(_tree: &$t, state: &TreeMarking, node: usize) -> bool {
             state[node] == NodeState::Enabled
         }
@@ -1422,12 +1463,11 @@ pub mod semantics {
                                     tree.get_child(parent, child_rank),
                                 );
                             }
+                            //propagate to parent
+                            withdraw_enablement_next_sequential_nodes(tree, state, parent);
                         } else {
                             //we were a redo child, withdraw the body child
                             withdraw_enablement(tree, state, tree.get_child(parent, 0));
-
-                            //propagate to parent
-                            withdraw_enablement_next_sequential_nodes(tree, state, parent);
                         }
                     }
                 }
@@ -1652,7 +1692,7 @@ pub mod semantics {
             let mut result = vec![];
 
             for (transition_index, node) in tree.leaves().iter().enumerate() {
-                if can_execute(tree, state, *node) {
+                if can_execute(tree, state, *node) || single_child_loop_for(tree, state, *node).is_some() {
                     result.push(transition_index);
                 }
             }
@@ -1708,6 +1748,9 @@ pub mod semantics {
                 state.states.fill(NodeState::Closed);
             } else {
                 let node = tree.transition_to_node(transition).unwrap();
+                if let Some(loop_node) = single_child_loop_for(tree, state, node) {
+                    restart_loop_body(tree, state, loop_node);
+                }
                 start_node(tree, state, node, None);
                 close_node(tree, state, node);
             }
@@ -2368,6 +2411,12 @@ mod tests {
         execute_transition(&tree, &mut state, A).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
 
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
+
         execute_transition(&tree, &mut state, FIN).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), vec![0; 0]);
     }
@@ -2394,7 +2443,7 @@ mod tests {
     }
 
     #[test]
-    fn tau_loop_or() {
+    fn loop_or() {
         let tree = tloop!(or!(activity!("a"), activity!("b")));
 
         const A: usize = 0;
@@ -2406,5 +2455,107 @@ mod tests {
 
         execute_transition(&tree, &mut state, A).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    }
+
+    #[test]
+    fn loop_or_seq() {
+        let tree = tloop!(or!(activity!("a"), seq!(activity!("b"), activity!("c"))));
+
+        const A: usize = 0;
+        const B: usize = 1;
+        const C: usize = 2;
+        const FIN: usize = 3;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    }
+
+    #[test]
+    fn seq_loop_or_seq_tau() {
+        let tree = seq!(
+            tloop!(
+                or!(activity!("a"), seq!(activity!("b1"), activity!("b2"))),
+                tau!()
+            ),
+            activity!("c")
+        );
+
+        const A: usize = 0;
+        const B1: usize = 1;
+        const B2: usize = 2;
+        const TAU: usize = 3;
+        const C: usize = 4;
+        const FIN: usize = 5;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B1, TAU, C]);
+
+        execute_transition(&tree, &mut state, B1).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B2]);
+
+        execute_transition(&tree, &mut state, B2).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [TAU, C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    }
+
+    #[test]
+    fn seq_loop_or_seq() {
+        let tree = seq!(
+            tloop!(or!(activity!("a"), seq!(activity!("b1"), activity!("b2")))),
+            activity!("c")
+        );
+
+        const A: usize = 0;
+        const B1: usize = 1;
+        const B2: usize = 2;
+        const C: usize = 3;
+        const FIN: usize = 4;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1, C]);
+
+        execute_transition(&tree, &mut state, B1).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B2]);
+
+        execute_transition(&tree, &mut state, B2).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1, C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
     }
 }
