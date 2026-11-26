@@ -11,7 +11,7 @@ use strum_macros::EnumIter;
 pub const HEADER: &str = "process tree";
 
 /// A process tree is a block-structured process model.
-/// 
+///
 /// Its implementation keeps a list of nodes.
 /// A tree is valid if every operator node has at least one child, and there is only one node without parent.
 #[derive(Debug, ActivityKey, Clone, Default)]
@@ -93,27 +93,28 @@ impl ProcessTree {
             | TreeNode::Operator(TreeOperator::Xor, _)
             | TreeNode::Operator(TreeOperator::Or, _)
             | TreeNode::Operator(TreeOperator::Interleaved, _) => format!(
-                "node {:?} [{:?}]",
+                "node {:?} [{}]",
                 self.node_to_operator(node).unwrap(),
                 self.children(node)
                     .map(|child| self.node_to_canonical_string(child))
                     .sorted()
+                    .join(", ")
             ),
             TreeNode::Operator(TreeOperator::Sequence, _) => format!(
-                "node sequence [{:?}]",
+                "node sequence [{}]",
                 self.children(node)
                     .map(|child| self.node_to_canonical_string(child))
-                    .collect::<Vec<_>>()
+                    .join(", ")
             ),
             TreeNode::Operator(TreeOperator::Loop, _) => {
                 format!(
-                    "node loop {} [{:?}]",
+                    "node loop {} [{}]",
                     self.node_to_canonical_string(node + 1),
                     self.children(node)
                         .skip(1)
                         .map(|child| self.node_to_canonical_string(child))
                         .sorted()
-                        .collect::<Vec<_>>()
+                        .join(", ")
                 )
             }
         }
@@ -149,6 +150,7 @@ impl ProcessTree {
         }
 
         let node_after_child_tree = self.traverse(node);
+        self.parent(1); //ensure the parent cache is filled
         let removed = self.tree.drain(node..node_after_child_tree).collect_vec();
 
         //Invariant: the cache is valid up till node.
@@ -208,9 +210,9 @@ macro_rules! tree {
 
             /// Clears caches.
             pub(crate) fn clear_caches(&mut self) {
-                self.cache_traverse = OnceLock::new();
-                self.cache_transition_2_node = OnceLock::new();
-                self.cache_node_2_parent = OnceLock::new();
+                self.cache_traverse = std::sync::OnceLock::new();
+                self.cache_transition_2_node = std::sync::OnceLock::new();
+                self.cache_node_2_parent = std::sync::OnceLock::new();
             }
 
             /// Returns the operator of the node, or None if the node is not an operator.
@@ -243,6 +245,7 @@ macro_rules! tree {
             }
 
             /// Returns the parent of node, and the rank of the node.
+            /// Returns None if the parent or the node does not exist.
             pub fn parent(&self, node: usize) -> Option<(usize, usize)> {
                 if node == 0 {
                     return None;
@@ -297,12 +300,17 @@ macro_rules! tree {
             }
 
             /// Returns all nodes of which `node` is a (grand) parent.
+            /// Does not return node itself.
             pub fn get_descendants(&self, node: usize) -> &[$crate::TreeNode] {
+                if self[node].is_leaf() {
+                    return &[];
+                }
                 let next = self.traverse(node);
-                &self.tree[node..next]
+                &self.tree[node + 1..next]
             }
 
             /// Returns whether the child is a direct or indirect child of parent.
+            /// Parent = child also returns `true`.
             pub fn is_parent_of(&self, parent: usize, child: usize) -> bool {
                 if parent > child {
                     return false;
@@ -371,15 +379,16 @@ macro_rules! tree {
              * Returns an error if the node does not exist.
              * If an error is returned, the tree may be left in an inconsistent state.
              */
-            pub fn remove(&mut self, node: usize) -> Result<()> {
+            pub fn remove(&mut self, node: usize) -> $crate::anyhow::Result<()> {
                 self.remove_internal(node)?;
                 self.clear_caches();
                 Ok(())
             }
 
-            fn remove_internal(&mut self, node: usize) -> Result<()> {
+            /// Perform the removal of a node without clearing caches.
+            fn remove_internal(&mut self, node: usize) -> $crate::anyhow::Result<()> {
                 if node >= self.len() {
-                    return Err(anyhow!("Node {node} does not exist."));
+                    return Err($crate::anyhow::anyhow!("Node {node} does not exist."));
                 }
 
                 if let Some((parent, _)) = self.parent(node) {
@@ -415,7 +424,7 @@ macro_rules! tree {
                 } else {
                     //node is the root
                     if self[node].number_of_children() > 1 {
-                        return Err(anyhow!(
+                        return Err($crate::anyhow::anyhow!(
                             "Cannot remove the root as it has multiple children."
                         ));
                     }
@@ -447,7 +456,7 @@ macro_rules! tree {
         }
 
         impl $crate::TranslateActivityKey for $t {
-            fn translate_using_activity_key(&mut self, to_activity_key: &mut ActivityKey) {
+            fn translate_using_activity_key(&mut self, to_activity_key: &mut $crate::ActivityKey) {
                 let translator =
                     $crate::ActivityKeyTranslator::new(&self.activity_key, to_activity_key);
                 self.tree.iter_mut().for_each(|node| {
@@ -460,7 +469,7 @@ macro_rules! tree {
         }
 
         impl $crate::Infoable for $t {
-            fn info(&self, f: &mut impl std::io::Write) -> Result<()> {
+            fn info(&self, f: &mut impl std::io::Write) -> $crate::anyhow::Result<()> {
                 writeln!(f, "Number of nodes\t\t{}", self.len())?;
                 writeln!(
                     f,
@@ -702,7 +711,7 @@ impl TreeOperator {
 
 pub(crate) mod graph {
     use crate::{ProcessTree, TreeNode, TreeOperator, traits::graphable};
-    use layout::{adt::dag::NodeHandle, topo::layout::VisualGraph};
+    use layout::adt::dag::NodeHandle;
     use strum_macros::EnumIs;
 
     #[macro_export]
@@ -710,12 +719,14 @@ pub(crate) mod graph {
         ($t:tt) => {
             impl $crate::Graphable for $t {
                 fn to_dot(&self) -> $crate::anyhow::Result<layout::topo::layout::VisualGraph> {
-                    let mut graph = VisualGraph::new(layout::core::base::Orientation::LeftToRight);
+                    let mut graph = layout::topo::layout::VisualGraph::new(
+                        layout::core::base::Orientation::LeftToRight,
+                    );
                     let source = $crate::ebi_objects::process_tree::graph::Gateway::Xor(
-                        graphable::create_place(&mut graph, ""),
+                        $crate::traits::graphable::create_place(&mut graph, ""),
                     );
                     let sink = $crate::ebi_objects::process_tree::graph::Gateway::Xor(
-                        graphable::create_place(&mut graph, ""),
+                        $crate::traits::graphable::create_place(&mut graph, ""),
                     );
                     if !self.tree.is_empty() {
                         $t::node_to_dot(&self, &mut graph, 0, &source, &sink);
@@ -746,7 +757,7 @@ pub(crate) mod graph {
     impl ProcessTree {
         fn node_to_dot(
             &self,
-            graph: &mut VisualGraph,
+            graph: &mut layout::topo::layout::VisualGraph,
             node: usize,
             entry: &Gateway,
             exit: &Gateway,
@@ -1035,7 +1046,7 @@ pub mod io {
                 )
             })?;
 
-            if node_type_line.trim_start() == "tau" {
+            if node_type_line.trim() == "tau" {
                 tree.push(TreeNode::Tau);
             } else if node_type_line.trim_start().starts_with("activity ") {
                 let label = node_type_line.trim_start()[9..].to_string();
@@ -1105,9 +1116,8 @@ pub mod io {
 /// As such, its bases functions are here.
 pub mod semantics {
     use crate::{
-        ProcessTree, TreeNode, TreeOperator,
+        Activity, ProcessTree, TreeNode, TreeOperator,
         anyhow::{Result, anyhow},
-        ebi_activity_key::Activity,
     };
     use std::ops::{Index, IndexMut};
     use strum_macros::EnumIs;
@@ -2300,8 +2310,6 @@ mod tests {
         // nodes: 0 seq(3), 1 a, 2 xor(1), 3 b, 4 c
 
         tree.remove_recursive(3).unwrap();
-
-        println!("{}", tree);
 
         assert_eq!(tree.len(), 3);
         assert_eq!(tree[0].number_of_children(), 2);
