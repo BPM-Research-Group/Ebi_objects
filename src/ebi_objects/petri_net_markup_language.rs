@@ -12,7 +12,7 @@ use crate::{
 use anyhow::Context;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
-use ebi_bpmn::ebi_arithmetic::anyhow::{ Result, anyhow};
+use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use process_mining::core::process_models::petri_net::pnml::export_petri_net_to_pnml;
 use quick_xml::{NsReader, events::Event};
 use std::io::{BufRead, Write};

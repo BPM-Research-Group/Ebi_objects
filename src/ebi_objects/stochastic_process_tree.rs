@@ -1,9 +1,13 @@
 use super::process_tree::graph::Gateway;
 use crate::{
-    Activity, ActivityKey, EbiObject, Exportable, Importable, TreeMarking, TreeNode, TreeOperator, ebi_objects::{labelled_petri_net::TransitionIndex, process_tree::semantics::NodeState}, line_reader::LineReader, traits::{
+    Activity, ActivityKey, EbiObject, Exportable, Importable, TreeMarking, TreeNode, TreeOperator,
+    ebi_objects::{labelled_petri_net::TransitionIndex, process_tree::semantics::NodeState},
+    line_reader::LineReader,
+    traits::{
         graphable,
         importable::{ImporterParameter, ImporterParameterValues, from_string},
-    }, tree, tree_graphable, tree_semantics,
+    },
+    tree, tree_graphable, tree_semantics,
 };
 use ebi_activity_key::HasActivityKey;
 #[cfg(any(test, feature = "testactivities"))]

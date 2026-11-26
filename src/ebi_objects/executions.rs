@@ -9,10 +9,7 @@ use chrono::{DateTime, FixedOffset};
 use ebi_activity_key::{Activity, ActivityKey, ActivityKeyTranslator, TranslateActivityKey};
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::{HasActivityKey, TestActivityKey};
-use ebi_bpmn::ebi_arithmetic::{
-    Fraction,
-    anyhow::Result,
-};
+use ebi_bpmn::ebi_arithmetic::{Fraction, anyhow::Result};
 use ebi_derive::ActivityKey;
 use intmap::IntMap;
 use process_mining::core::event_data::case_centric::AttributeValue;

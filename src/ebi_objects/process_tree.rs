@@ -158,7 +158,7 @@ impl ProcessTree {
         let mut target = node;
         while let Some((parent, _)) = self.parent(target) {
             let number_of_children = self[parent].number_of_children();
-            self.tree[parent].set_number_of_children_internal(number_of_children - 1);
+            self.tree[parent].set_number_of_children_unchecked(number_of_children - 1);
             if number_of_children > 1 {
                 break;
             }
@@ -401,6 +401,7 @@ macro_rules! tree {
                         (0, 1) => {
                             //p(n) -> p() -> recurse
                             //parent won't have any children left; recurse
+                            self.tree[parent].set_number_of_children_unchecked(0);
                             self.remove_internal(parent)?;
                         }
                         (0, _) => {
@@ -601,6 +602,8 @@ impl TreeNode {
         matches!(self, Self::Tau)
     }
 
+    /// Sets the number of children of the node.
+    /// Returns an error if `number_of_children` is zero or if the node is not an operator node.
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
         if let Self::Operator(_, old_number_of_children) = self {
             if number_of_children == 0 {
@@ -615,11 +618,11 @@ impl TreeNode {
         }
     }
 
-    fn set_number_of_children_internal(&mut self, number_of_children: usize) {
+    /// Sets the number of children.
+    /// Allows `number_of_children`, and does not have any effect if the node is not an operator node.
+    pub(super) fn set_number_of_children_unchecked(&mut self, number_of_children: usize) {
         if let Self::Operator(_, old_number_of_children) = self {
             *old_number_of_children = number_of_children;
-        } else {
-            unreachable!();
         }
     }
 
@@ -1493,14 +1496,14 @@ pub mod semantics {
                     TreeNode::Operator(TreeOperator::Loop, number_of_children) => {
                         //for a loop parent, we open the next child(ren)
                         if child_rank == 0 {
-                            //enable the siblings
+                            //enable the non-first/redo siblings
                             for child_rank in 1..number_of_children {
                                 enable_node(tree, state, tree.get_child(parent, child_rank));
                             }
                             //enable the exit
                             enable_next_sequential_nodes(tree, state, parent);
                         } else {
-                            //enable the first child
+                            //enable the first/body child
                             enable_node(tree, state, tree.get_child(parent, 0));
                         }
                     }
@@ -1741,7 +1744,7 @@ mod tests {
             },
             scalable_vector_graphics::ToSVG,
         },
-        seq, tau, tloop, xor,
+        or, seq, tau, tloop, xor,
     };
     use std::fs;
 
@@ -2342,5 +2345,66 @@ mod tests {
                 .parse::<ProcessTree>()
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn remove() {
+        let mut tree = seq!(activity!("a"), xor!(activity!("b")));
+        tree.remove(3).unwrap();
+        assert_eq!(tree, seq!(activity!("a")));
+    }
+
+    #[test]
+    fn tau_loop() {
+        let fin = "process tree\nloop\n1\nactivity a";
+        let tree = fin.parse::<ProcessTree>().unwrap();
+
+        const A: usize = 0;
+        const FIN: usize = 1;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![0; 0]);
+    }
+
+    #[test]
+    fn loop_seq() {
+        let tree = tloop!(seq!(activity!("a"), activity!("b")));
+
+        const A: usize = 0;
+        const B: usize = 1;
+        const FIN: usize = 2;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [B]);
+
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
+
+        execute_transition(&tree, &mut state, FIN).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), vec![0; 0]);
+    }
+
+    #[test]
+    fn tau_loop_or() {
+        let tree = tloop!(or!(activity!("a"), activity!("b")));
+
+        const A: usize = 0;
+        const B: usize = 1;
+        const FIN: usize = 2;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
     }
 }

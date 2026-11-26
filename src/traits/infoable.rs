@@ -6,7 +6,6 @@ use ebi_bpmn::ebi_arithmetic::{
 };
 
 pub trait Infoable {
-
     /// Write basic information about the object, such as the number of model elements or events, to `f`.
     fn info(&self, f: &mut impl std::io::Write) -> Result<()>;
 }
