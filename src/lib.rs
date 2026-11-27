@@ -1,4 +1,8 @@
 #![allow(clippy::needless_range_loop)]
+#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(rustdoc::private_intra_doc_links)]
+#![deny(rustdoc::invalid_html_tags)]
+#![deny(rustdoc::bare_urls)]
 #![doc = include_str!("../README.md")]
 
 //! ## Sister crates
