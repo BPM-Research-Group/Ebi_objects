@@ -289,7 +289,7 @@ mod tests {
             TreeNode::Activity(d),
             TreeNode::Activity(e),
         ];
-        let ptree = ProcessTree::from((activity_key, tree));
+        let ptree = ProcessTree::try_from((activity_key, tree)).unwrap();
 
         let powl = PartiallyOrderedWorkflowLanguage::from(ptree);
 
@@ -305,7 +305,7 @@ mod tests {
     fn ptree_2_powl_empty() {
         let activity_key = ActivityKey::default();
         let tree = vec![];
-        let ptree = ProcessTree::from((activity_key, tree));
+        let ptree = ProcessTree::try_from((activity_key, tree)).unwrap();
         let _powl = PartiallyOrderedWorkflowLanguage::from(ptree);
     }
 }

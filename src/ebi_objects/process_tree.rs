@@ -1,10 +1,11 @@
 use crate::{Activity, ActivityKey, HasActivityKey};
+use anyhow::Context;
 #[cfg(any(test, feature = "testactivities"))]
 use ebi_activity_key::TestActivityKey;
 use ebi_bpmn::ebi_arithmetic::anyhow::{Result, anyhow};
 use ebi_derive::ActivityKey;
 use itertools::Itertools;
-use std::{fmt::Display, sync::OnceLock};
+use std::{cmp::Ordering, fmt::Display, hash::Hash, sync::OnceLock};
 use strum_macros::EnumIter;
 
 /// The string that must be present as the first non-comment line of a process tree file.
@@ -13,7 +14,10 @@ pub const HEADER: &str = "process tree";
 /// A process tree is a block-structured process model.
 ///
 /// Its implementation keeps a list of nodes.
-/// A tree is valid if every operator node has at least one child, and there is only one node without parent.
+/// A tree is valid if every operator node has at least one child (loops: two), there is only one node without parent, and there is no shortage or surplus of children.
+/// All methods whose name does not end in `_unchecked` guarantee that if they do not return an error, the tree is valid.
+///
+/// Equality, ordering and hashing are robust to reordering of children when the operator allows it.
 #[derive(Debug, ActivityKey, Clone, Default)]
 pub struct ProcessTree {
     activity_key: ActivityKey,
@@ -32,9 +36,16 @@ pub struct ProcessTree {
 impl ProcessTree {
     /// Create a new process tree with the given activity key and node array.
     ///
+    /// Returns an error when the tree is not valid.
+    pub fn new(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Result<Self> {
+        let result = Self::new_unchecked(activity_key, tree);
+        result.validate()?;
+        Ok(result)
+    }
+
     /// It is the responsibility of the caller to ensure the tree is valid.
     /// That is, an operator must have >= 1 children, and there must not be multiple roots.
-    pub fn new(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Self {
+    pub fn new_unchecked(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Self {
         Self {
             activity_key,
             tree,
@@ -53,6 +64,10 @@ impl ProcessTree {
             cache_transition_2_node: OnceLock::new(),
             cache_node_2_parent: OnceLock::new(),
         }
+    }
+
+    fn validate_internal(&self) -> Result<()> {
+        Ok(())
     }
 
     /// Deconstruct the tree by taking its internal components.
@@ -252,15 +267,16 @@ macro_rules! tree {
              * May return a non-existing node if there is no sibling.
              */
             pub fn traverse(&self, node: usize) -> usize {
-                self.cache_traverse.get_or_init(|| self.compute_traverse())[node]
+                self.cache_traverse
+                    .get_or_init(|| Self::compute_traverse(&self.tree))[node]
             }
 
-            fn compute_traverse(&self) -> Vec<usize> {
-                let len = self.len();
+            fn compute_traverse(tree: &[TreeNode]) -> Vec<usize> {
+                let len = tree.len();
                 let mut next = vec![0usize; len];
 
                 for i in (0..len).rev() {
-                    next[i] = match &self[i] {
+                    next[i] = match &tree[i] {
                         $crate::TreeNode::Tau | $crate::TreeNode::Activity(_) => i + 1,
                         $crate::TreeNode::Operator(_, number_of_children) => {
                             let mut child = i + 1;
@@ -301,21 +317,49 @@ macro_rules! tree {
                 transition_2_node.binary_search(&node).ok()
             }
 
-            /**
-             * Removes a node from the tree.
-             * If the node has children, these will be moved to the parent of the removed node (return an error if there is no such parent.).
-             * If the parent has no children left, it will be removed as well.
-             * Returns an error if the node does not exist.
-             * If an error is returned, the tree may be left in an inconsistent state.
-             */
-            pub fn remove(&mut self, node: usize) -> $crate::anyhow::Result<()> {
-                self.remove_internal(node)?;
-                self.clear_caches();
-                Ok(())
-            }
-
+            /// Returns an iterator over the nodes of the tree.
             pub fn iter(&self) -> impl Iterator<Item = &$crate::TreeNode> {
                 self.tree.iter()
+            }
+
+            /// Returns whether the tree is valid (see [$t]).
+            pub fn validate(&self) -> Result<()> {
+                Self::validate_slice(&self.tree)?;
+                self.validate_internal()
+            }
+
+            /// Checks whether the tree is valid (see [ProcessTree]) and returns an error if it is not.
+            pub fn validate_slice(tree: &[TreeNode]) -> Result<()> {
+                if tree.is_empty() {
+                    return Ok(());
+                }
+
+                //check that there is only a single root
+                let traverses = Self::compute_traverse(tree);
+                if traverses[0] != traverses.len() {
+                    return Err(anyhow!("There are multiple roots in the tree."));
+                }
+
+                //check that the total number of children + 1 is the number of nodes
+                if tree
+                    .iter()
+                    .map(|node| node.number_of_children())
+                    .sum::<usize>()
+                    + 1
+                    != tree.len()
+                {
+                    return Err(anyhow!(
+                        "The number of nodes does not match 1 + the sum of children; there are either too few or too many nodes."
+                    ));
+                }
+
+                //check that every node has the right number of children
+                tree.iter().enumerate().try_for_each(|(index, node)| {
+                    node.validate()
+                        .with_context(|| anyhow!("Could not validate node {index}."))
+                })?;
+
+                Ok(())
             }
         }
 
@@ -445,11 +489,34 @@ pub(crate) use tree;
 tree!(ProcessTree, ChildrenIterator, ParentsIterator);
 
 impl PartialEq for ProcessTree {
+    /// Equality, ordering and hashing are robust to reordering of children when the operator allows it.
     fn eq(&self, other: &Self) -> bool {
         self.to_canonical_string() == other.to_canonical_string()
     }
 }
+
 impl Eq for ProcessTree {}
+
+impl PartialOrd for ProcessTree {
+    /// Equality, ordering and hashing are robust to reordering of children when the operator allows it.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ProcessTree {
+    /// Equality, ordering and hashing are robust to reordering of children when the operator allows it.
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_canonical_string().cmp(&other.to_canonical_string())
+    }
+}
+
+impl Hash for ProcessTree {
+    /// Equality, ordering and hashing are robust to reordering of children when the operator allows it.
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_canonical_string().hash(state);
+    }
+}
 
 /// A node in a process tree.
 #[derive(Debug, Clone, Copy)]
@@ -483,6 +550,7 @@ impl TreeNode {
 
     /// Sets the number of children of the node.
     /// Returns an error if `number_of_children` is zero or if the node is not an operator node.
+    /// However, it is the responsibility of the caller to ensure the tree of which the node is part is valid.
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
         match self {
             Self::Operator(_, _) if number_of_children == 0 => {
@@ -504,7 +572,7 @@ impl TreeNode {
     }
 
     /// Sets the number of children.
-    /// Allows `number_of_children`, and does not have any effect if the node is not an operator node.
+    /// It is the responsibility of the caller to ensure the operator has a allowed number of children.
     pub(super) fn set_number_of_children_unchecked(&mut self, number_of_children: usize) {
         if let Self::Operator(_, old_number_of_children) = self {
             *old_number_of_children = number_of_children;
@@ -560,6 +628,46 @@ impl TreeNode {
     pub fn is_operator_sequence(&self) -> bool {
         matches!(self, TreeNode::Operator(TreeOperator::Sequence, _))
     }
+
+    pub fn operator(&self) -> Option<TreeOperator> {
+        match self {
+            TreeNode::Tau => None,
+            TreeNode::Activity(_) => None,
+            TreeNode::Operator(tree_operator, _) => Some(*tree_operator),
+        }
+    }
+
+    /// Verify whether the node is valid and return an error if it is not.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            TreeNode::Activity(_) | TreeNode::Tau => Ok(()),
+            TreeNode::Operator(TreeOperator::Loop, number_of_children)
+                if *number_of_children >= 2 =>
+            {
+                Ok(())
+            }
+            TreeNode::Operator(TreeOperator::Loop, number_of_children) => Err(anyhow!(
+                "A loop node should have at least 2 children, where it has {number_of_children}."
+            )),
+            TreeNode::Operator(TreeOperator::Concurrent, number_of_children)
+            | TreeNode::Operator(TreeOperator::Interleaved, number_of_children)
+            | TreeNode::Operator(TreeOperator::Or, number_of_children)
+            | TreeNode::Operator(TreeOperator::Sequence, number_of_children)
+            | TreeNode::Operator(TreeOperator::Xor, number_of_children)
+                if *number_of_children >= 1 =>
+            {
+                Ok(())
+            }
+            TreeNode::Operator(TreeOperator::Concurrent, number_of_children)
+            | TreeNode::Operator(TreeOperator::Interleaved, number_of_children)
+            | TreeNode::Operator(TreeOperator::Or, number_of_children)
+            | TreeNode::Operator(TreeOperator::Sequence, number_of_children)
+            | TreeNode::Operator(TreeOperator::Xor, number_of_children) => Err(anyhow!(
+                "An {operator} node and should have at least 1 child, where it has {number_of_children}.",
+                operator = self.operator().unwrap(),
+            )),
+        }
+    }
 }
 
 /// The type of operator of a node in a process tree.
@@ -589,7 +697,7 @@ pub enum TreeOperator {
     /// Loop.
     ///
     /// On execution, executes its first child. Then, there is a choice between any non-first children followed by another execution of the first child.
-    /// If there is only a single child, then the loop behaves as if its second child was a tau.
+    /// Must have at least two children.
     Loop,
 }
 
@@ -618,19 +726,36 @@ pub mod edit {
     use itertools::Itertools;
 
     impl ProcessTree {
+        /// Perform any change on the process tree.
+        ///
+        /// This method is intended to perform multiple edits efficiently.
+        /// This method will return an error if the remaining tree is invalid.
+        /// In case an error is returned, the tree may be in an invalid state.
+        pub fn edit(
+            &mut self,
+            closure: impl FnOnce(&mut Vec<TreeNode>) -> Result<()>,
+        ) -> Result<()> {
+            closure(&mut self.tree)?;
+            self.clear_caches();
+            self.validate()
+        }
+
         /// Change the process tree in a closure.
+        ///
+        /// This method is intended to perform multiple edits efficiently.
         /// It is the responsibility of the caller to ensure that the tree remains valid.
-        /// That is, an operator must have >= 1 children, and there must not be multiple roots.
-        pub fn edit(&mut self, closure: impl FnOnce(&mut Vec<TreeNode>)) {
+        pub fn edit_unchecked(&mut self, closure: impl FnOnce(&mut Vec<TreeNode>)) {
             closure(&mut self.tree);
             self.clear_caches();
         }
 
         /// Removes and returns the node and all of its children from the tree.
-        /// If the parent of the node has no children left, it is removed (but not returned).
+        /// If the non-loop parent of the node has no children left, it is removed (but not returned).
+        /// If the loop parent of the node has less than two children left, returns an error.
         /// Returns an error if the node does not exist.
         ///
         /// Note that if the first child of a loop is removed, the second child moves to the first position, which makes it a body rather than a redo.
+        /// If the function returns an error, the tree may be left in an inconsistent state and should not be used further.
         pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
             if node >= self.len() {
                 return Err(anyhow!("Node {node} does not exist."));
@@ -645,6 +770,14 @@ pub mod edit {
             let mut target = node;
             while let Some((parent, _)) = self.parent(target) {
                 let number_of_children = self[parent].number_of_children();
+
+                // A loop cannot be left with one child.
+                if self[parent].is_operator_loop() && number_of_children == 2 {
+                    return Err(anyhow!(
+                        "Loop node {parent} would not have 2 children left."
+                    ));
+                }
+
                 self.tree[parent].set_number_of_children_unchecked(number_of_children - 1);
                 if number_of_children > 1 {
                     break;
@@ -665,10 +798,9 @@ pub mod edit {
         }
 
         /// Removes and returns the node from the tree (recursively) and replace it with another single node (recursively).
-        /// Returns an error if the node does not exist.
+        /// Returns an error if the node does not exist, or if `with` is invalid.
         /// Returns the removed node (recursively) if successful.
         ///
-        /// It is the responsibility of the caller to ensure the `with` parameter contains a valid tree.
         /// That is, an operator must have >= 1 children, and there must not be multiple roots.
         /// Providing an invalid `with` will result in an invalid tree.
         pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<TreeNode>>
@@ -678,16 +810,46 @@ pub mod edit {
             if node >= self.len() {
                 return Err(anyhow!("Node {node} does not exist."));
             }
+            let with = with.into_iter().collect_vec();
+            Self::validate_slice(&with)?;
             let subtree_ends = self.traverse(node);
             let result = self.tree.splice(node..subtree_ends, with).collect_vec();
             self.clear_caches();
             Ok(result)
+        }
+
+        /// Removes and returns the node from the tree (recursively) and replace it with another single node (recursively).
+        /// Returns the removed node (recursively) if successful.
+        ///
+        /// It is the responsibility of the caller to ensure the `with` parameter contains a valid tree.
+        /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+        /// Providing an invalid `with` will result in an invalid tree.
+        pub fn replace_unchecked<W>(&mut self, node: usize, with: W) -> Vec<TreeNode>
+        where
+            W: IntoIterator<Item = TreeNode>,
+        {
+            let subtree_ends = self.traverse(node);
+            let result = self.tree.splice(node..subtree_ends, with).collect_vec();
+            self.clear_caches();
+            result
         }
     }
 
     macro_rules! tree_edit {
         ($t:tt) => {
             impl $t {
+                /// Removes a node from the tree.
+                ///
+                /// If the node has children, these will be moved to the parent of the removed node (return an error if there is no such parent.).
+                /// If the parent has no children left, it will be removed as well.
+                /// Returns an error if the node does not exist.
+                /// If an error is returned, the tree may be left in an inconsistent state.
+                pub fn remove(&mut self, node: usize) -> $crate::anyhow::Result<()> {
+                    self.remove_internal(node)?;
+                    self.clear_caches();
+                    Ok(())
+                }
+
                 /// Perform the removal of a node without clearing caches.
                 /// It is the responsibility of the caller to clear the caches after calling this method.
                 pub(super) fn remove_internal(
@@ -703,28 +865,39 @@ pub mod edit {
                         let children_of_node = self[node].number_of_children();
                         let children_of_parent = self[parent].number_of_children();
                         self.remove_internal_do(node);
-                        match (children_of_node, children_of_parent) {
-                            (_, 0) => return Err($crate::anyhow::anyhow!("Invalid tree.")),
-                            (0, 1) => {
+                        match (
+                            children_of_node,
+                            children_of_parent,
+                            self[parent].is_operator_loop(),
+                        ) {
+                            (_, 0, _) => return Err($crate::anyhow::anyhow!("Invalid tree.")),
+                            (0, 1, false) => {
                                 //p(n) -> p() -> recurse
                                 //parent won't have any children left; recurse
                                 self.tree[parent].set_number_of_children_unchecked(0);
                                 self.remove_internal(parent)?;
                             }
-                            (0, _) => {
+                            (0, _, false) => {
                                 //p(n, ..) -> p(..)
                                 self.tree[parent]
                                     .set_number_of_children_unchecked(children_of_parent - 1);
                             }
-                            (1, _) => {
+                            (0, 1, true) => return Err($crate::anyhow::anyhow!("Invalid tree.")),
+                            (0, 2, true) => return Err($crate::anyhow::anyhow!("Invalid tree.")),
+                            (0, _, true) => {
+                                //loop(n, ...) -> loop(...)
+                                self.tree[parent]
+                                    .set_number_of_children_unchecked(children_of_parent - 1);
+                            }
+                            (1, _, _) => {
                                 //p(n(c), ..) -> p(c, ..)
                             }
-                            (_, 1) => {
+                            (_, 1, _) => {
                                 //p(n(c, ..)) -> p(c, ..)
                                 self.tree[parent]
                                     .set_number_of_children_unchecked(children_of_node);
                             }
-                            (_, _) => {
+                            (_, _, _) => {
                                 //p(n(c, ..), ..) -> p(c, .., ..)
                                 self.tree[parent].set_number_of_children_unchecked(
                                     children_of_parent + children_of_node - 1,
@@ -900,13 +1073,10 @@ pub(crate) mod graph {
 
                     child = ProcessTree::node_to_dot(self, graph, child, &split, &join);
 
-                    if number_of_children == 1 {
-                        graphable::create_edge(graph, join.handle(), split.handle(), "");
-                    } else {
-                        for _ in 1..number_of_children {
-                            child = ProcessTree::node_to_dot(self, graph, child, &join, &split);
-                        }
+                    for _ in 1..number_of_children {
+                        child = ProcessTree::node_to_dot(self, graph, child, &join, &split);
                     }
+
                     child
                 }
             }
@@ -1009,7 +1179,7 @@ pub mod io {
 
             let mut activity_key = ActivityKey::default();
             let mut tree = vec![];
-            Self::string_to_tree(&mut lreader, &mut tree, &mut activity_key, true)?;
+            Self::parse_node(&mut lreader, &mut tree, &mut activity_key, true)?;
 
             if lreader.next_line().is_ok() {
                 return Err(anyhow!(
@@ -1018,7 +1188,7 @@ pub mod io {
                 ));
             }
 
-            Ok((activity_key, tree).into())
+            (activity_key, tree).try_into()
         }
     }
     from_string!(ProcessTree);
@@ -1064,7 +1234,7 @@ pub mod io {
                     Ok(node + 1)
                 }
                 TreeNode::Operator(operator, number_of_children) => {
-                    writeln!(f, "{}{}", id, operator.to_string())?;
+                    writeln!(f, "{}{}", id, operator)?;
                     writeln!(
                         f,
                         "{}# number of children\n{}{}",
@@ -1080,7 +1250,7 @@ pub mod io {
         }
 
         ///read one node, recursively
-        fn string_to_tree(
+        fn parse_node(
             lreader: &mut LineReader<'_>,
             tree: &mut Vec<TreeNode>,
             activity_key: &mut ActivityKey,
@@ -1112,16 +1282,11 @@ pub mod io {
                         lreader.get_last_line_number()
                     )
                 })?;
-                if number_of_children < 1 {
-                    return Err(anyhow!(
-                        "The {operator} node with number {} at line {} has no children.",
-                        tree.len(),
-                        lreader.get_last_line_number()
-                    ));
-                }
-                tree.push(TreeNode::Operator(operator, number_of_children));
+                let mut node = TreeNode::Operator(operator, 1);
+                node.set_number_of_children(number_of_children).with_context(|| anyhow!("Could not set number of children of {operator} node with number {number} at line {line} to {number_of_children}.", number = tree.len(), line = lreader.get_last_line_number()))?;
+                tree.push(node);
                 for _ in 0..number_of_children {
-                    Self::string_to_tree(lreader, tree, activity_key, false)?;
+                    Self::parse_node(lreader, tree, activity_key, false)?;
                 }
             } else if root && node_type_line.trim_start().is_empty() {
                 //empty tree
@@ -1265,10 +1430,6 @@ pub mod semantics {
                         //if the loop is closed, it can terminate
                         return true;
                     }
-                    if number_of_children == 1 {
-                        // single-child loop: the loop may stop whenever the body may stop
-                        return can_terminate(tree, state, body_child);
-                    }
                     if state[body_child] == NodeState::Enabled {
                         //the first child is enabled, which means that the loop cannot terminate in this state
                         return false;
@@ -1300,36 +1461,6 @@ pub mod semantics {
                     })
                 }
             }
-        }
-
-        /// Starts a new iteration of a loop with a single child.
-        fn restart_loop_body(tree: &$t, state: &mut TreeMarking, loop_node: usize) {
-            let body = loop_node + 1;
-            withdraw_enablement(tree, state, body);   // close the old iteration
-            enable_node(tree, state, body);           // fresh iteration
-            // the exit is no longer available until this iteration completes
-            withdraw_enablement_next_sequential_nodes(tree, state, loop_node);
-        }
-
-        /// If `leaf` is closed but would be enabled in a fresh iteration of a
-        /// single-child loop above it, returns that loop (innermost first).
-        fn single_child_loop_for(tree: &$t, state: &TreeMarking, leaf: usize) -> Option<usize> {
-            if state[leaf] != NodeState::Closed {
-                return None;
-            }
-            for (ancestor, _) in tree.ancestors(leaf) {
-                if matches!(tree.tree[ancestor], TreeNode::Operator(TreeOperator::Loop, 1))
-                    && state[ancestor] == NodeState::Started
-                    && can_terminate(tree, state, ancestor + 1)
-                {
-                    let mut restarted = state.clone();
-                    restart_loop_body(tree, &mut restarted, ancestor);
-                    if can_execute(tree, &restarted, leaf) {
-                        return Some(ancestor);
-                    }
-                }
-            }
-            None
         }
 
         /// Returns whether it is possible to withdraw the enablement.
@@ -1726,7 +1857,7 @@ pub mod semantics {
             let mut result = vec![];
 
             for (transition_index, node) in tree.leaves().iter().enumerate() {
-                if can_execute(tree, state, *node) || single_child_loop_for(tree, state, *node).is_some() {
+                if can_execute(tree, state, *node) {
                     result.push(transition_index);
                 }
             }
@@ -1782,9 +1913,6 @@ pub mod semantics {
                 state.states.fill(NodeState::Closed);
             } else {
                 let node = tree.transition_to_node(transition).unwrap();
-                if let Some(loop_node) = single_child_loop_for(tree, state, node) {
-                    restart_loop_body(tree, state, loop_node);
-                }
                 start_node(tree, state, node, None);
                 close_node(tree, state, node);
             }
@@ -1810,7 +1938,7 @@ impl TestActivityKey for ProcessTree {
 #[cfg(test)]
 mod tests {
     use crate::{
-        HasActivityKey, ProcessTree, StochasticProcessTree, activity, con,
+        HasActivityKey, ProcessTree, StochasticProcessTree, TreeOperator, activity, con,
         ebi_objects::{
             process_tree::{
                 TreeNode,
@@ -1821,7 +1949,7 @@ mod tests {
             },
             scalable_vector_graphics::ToSVG,
         },
-        or, seq, tau, tloop, xor,
+        seq, tau, tloop, xor,
     };
     use std::fs;
 
@@ -2429,211 +2557,103 @@ mod tests {
         let mut tree = seq!(activity!("a"), xor!(activity!("b")));
         tree.remove(3).unwrap();
         assert_eq!(tree, seq!(activity!("a")));
+
+        let mut tree = seq!(activity!("a"), xor!(activity!("b")));
+        tree.remove(2).unwrap();
+        assert_eq!(tree, seq!(activity!("a"), activity!("b")));
     }
 
     #[test]
-    fn tau_loop() {
-        let fin = "process tree\nloop\n1\nactivity a";
-        let tree = fin.parse::<ProcessTree>().unwrap();
+    fn remove_loop() {
+        let mut tree = tloop!(activity!("a"), activity!("b"));
+        tree.remove_recursive(2).unwrap_err();
 
-        const A: usize = 0;
-        const FIN: usize = 1;
+        let mut tree = tloop!(activity!("a"), activity!("b"));
+        tree.remove(2).unwrap_err();
 
-        let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
-
-        execute_transition(&tree, &mut state, FIN).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), vec![0; 0]);
+        let mut tree = tloop!(activity!("a"), activity!("b"), activity!("c"));
+        tree.remove(2).unwrap();
+        assert_eq!(tree, tloop!(activity!("a"), activity!("c")));
     }
 
     #[test]
-    fn loop_seq() {
-        let tree = tloop!(seq!(activity!("a"), activity!("b")));
-
-        const A: usize = 0;
-        const B: usize = 1;
-        const FIN: usize = 2;
-
-        let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [B]);
-
-        execute_transition(&tree, &mut state, B).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, FIN]);
-
-        execute_transition(&tree, &mut state, FIN).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), vec![0; 0]);
+    fn edit() {
+        let mut tree = tloop!(activity!("a"), activity!("b"));
+        tree.edit(|tree| {
+            tree.clear();
+            Ok(())
+        })
+        .unwrap();
+        assert!(tree.is_empty());
     }
 
     #[test]
-    fn loop_or() {
-        let tree = tloop!(or!(activity!("a"), activity!("b")));
-
-        const A: usize = 0;
-        const B: usize = 1;
-        const FIN: usize = 2;
-
-        let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        execute_transition(&tree, &mut state, B).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        execute_transition(&tree, &mut state, FIN).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    fn edit_2() {
+        let mut tree = tloop!(activity!("a"), activity!("b"));
+        tree.edit(|tree| {
+            tree.remove(0);
+            Ok(())
+        })
+        .unwrap_err();
     }
 
     #[test]
-    fn loop_or_seq() {
-        let tree = tloop!(or!(activity!("a"), seq!(activity!("b"), activity!("c"))));
-
-        const A: usize = 0;
-        const B: usize = 1;
-        const C: usize = 2;
-        const FIN: usize = 3;
-
-        let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        execute_transition(&tree, &mut state, B).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [C]);
-
-        execute_transition(&tree, &mut state, C).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        execute_transition(&tree, &mut state, FIN).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    fn edit_3() {
+        let mut tree = tloop!(activity!("a"), activity!("b"));
+        tree.edit(|tree| {
+            tree.remove(0);
+            tree[0].set_number_of_children(1)
+        })
+        .unwrap_err();
     }
 
     #[test]
-    fn seq_loop_or_seq_tau() {
-        let tree = seq!(
-            tloop!(
-                or!(activity!("a"), seq!(activity!("b1"), activity!("b2"))),
-                tau!()
-            ),
-            activity!("c")
-        );
-
-        const A: usize = 0;
-        const B1: usize = 1;
-        const B2: usize = 2;
-        const TAU: usize = 3;
-        const C: usize = 4;
-        const FIN: usize = 5;
-
-        let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [B1, TAU, C]);
-
-        execute_transition(&tree, &mut state, B1).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [B2]);
-
-        execute_transition(&tree, &mut state, B2).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [TAU, C]);
-
-        execute_transition(&tree, &mut state, C).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
-
-        execute_transition(&tree, &mut state, FIN).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    fn edit_invalid() {
+        //removing the activity leaves the loop with the wrong number of children
+        let mut tree = tloop!(activity!("a"), activity!("b"));
+        tree.edit(|tree| {
+            tree.remove(1);
+            Ok(())
+        })
+        .unwrap_err();
     }
 
     #[test]
-    fn seq_loop_or_seq() {
-        let tree = seq!(
-            tloop!(or!(activity!("a"), seq!(activity!("b1"), activity!("b2")))),
-            activity!("c")
-        );
+    fn invalid_check() {
+        let tree = vec![
+            TreeNode::Operator(TreeOperator::Loop, 2),
+            TreeNode::Tau,
+            TreeNode::Tau,
+            TreeNode::Tau,
+        ];
+        ProcessTree::validate_slice(&tree).unwrap_err();
 
-        const A: usize = 0;
-        const B1: usize = 1;
-        const B2: usize = 2;
-        const C: usize = 3;
-        const FIN: usize = 4;
+        let tree = vec![TreeNode::Operator(TreeOperator::Loop, 2)];
+        ProcessTree::validate_slice(&tree).unwrap_err();
 
-        let mut state = get_initial_state(&tree).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1]);
+        let tree = vec![
+            TreeNode::Operator(TreeOperator::Loop, 2),
+            TreeNode::Operator(TreeOperator::Loop, 2),
+            TreeNode::Tau,
+            TreeNode::Tau,
+        ];
+        ProcessTree::validate_slice(&tree).unwrap_err();
 
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1, C]);
+        let tree = vec![
+            TreeNode::Operator(TreeOperator::Loop, 2),
+            TreeNode::Operator(TreeOperator::Loop, 2),
+            TreeNode::Tau,
+            TreeNode::Tau,
+            TreeNode::Tau,
+        ];
+        ProcessTree::validate_slice(&tree).unwrap();
 
-        execute_transition(&tree, &mut state, B1).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [B2]);
-
-        execute_transition(&tree, &mut state, B2).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B1, C]);
-
-        execute_transition(&tree, &mut state, C).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [FIN]);
-
-        execute_transition(&tree, &mut state, FIN).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
-    }
-
-    #[test]
-    fn single_child_loop_or_enabled_leaf_can_start_fresh_iteration() {
-        let tree = tloop!(or!(activity!("a"), seq!(activity!("b"), activity!("c"))));
-
-        const A: usize = 0;
-        const B: usize = 1;
-        const C: usize = 2;
-        const FIN: usize = 3;
-
-        let mut state = get_initial_state(&tree).unwrap();
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        // b may belong to the current iteration, or open iteration 2.
-        // In iteration 2, `a` is still available as the other or-branch.
-        execute_transition(&tree, &mut state, B).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, C]);
-
-        execute_transition(&tree, &mut state, A).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [C]);
-
-        execute_transition(&tree, &mut state, C).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-    }
-
-    #[test]
-    fn nested_single_child_loops_outer_restart() {
-        let tree = tloop!(con!(tloop!(activity!("a")), activity!("b")));
-
-        const A: usize = 0;
-        const B: usize = 1;
-        const FIN: usize = 2;
-
-        let mut state = get_initial_state(&tree).unwrap();
-        execute_transition(&tree, &mut state, A).unwrap();
-        execute_transition(&tree, &mut state, B).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
-
-        // `a` can restart the inner loop (same outer iteration) or the outer loop (new iteration).
-        execute_transition(&tree, &mut state, A).unwrap();
-        execute_transition(&tree, &mut state, B).unwrap();
-        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+        let tree = vec![
+            TreeNode::Operator(TreeOperator::Loop, 2),
+            TreeNode::Operator(TreeOperator::Loop, 1),
+            TreeNode::Tau,
+            TreeNode::Tau,
+        ];
+        ProcessTree::validate_slice(&tree).unwrap_err();
     }
 }

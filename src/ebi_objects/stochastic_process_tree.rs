@@ -132,7 +132,7 @@ impl StochasticProcessTree {
                 Ok(node + 1)
             }
             TreeNode::Operator(operator, number_of_children) => {
-                writeln!(f, "{}{}", id, operator.to_string())?;
+                writeln!(f, "{}{}", id, operator)?;
                 writeln!(
                     f,
                     "{}# number of children\n{}{}",
@@ -382,6 +382,31 @@ impl StochasticProcessTree {
                 child
             }
         }
+    }
+
+    fn validate_internal(&self) -> Result<()> {
+        //validate the stochastic parts
+        if self.termination_weight.is_not_positive() {
+            return Err(anyhow!("Termination weight must be positive."));
+        }
+
+        //validate that there are weights for every transition
+        if self.transition_2_weight.len() != self.number_of_leaves() {
+            return Err(anyhow!(
+                "The number of weights does not match the number of leaves."
+            ));
+        }
+
+        //validate that all transition weights are positive
+        if let Some(index) = self
+            .transition_2_weight
+            .iter()
+            .position(|weight| weight.is_not_positive())
+        {
+            return Err(anyhow!("Node {index} must have positive weight."));
+        }
+
+        Ok(())
     }
 }
 

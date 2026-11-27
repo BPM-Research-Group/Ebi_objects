@@ -227,7 +227,7 @@ impl State {
                 ));
             }
 
-            Ok((self.activity_key, tree).into())
+            (self.activity_key, tree).try_into()
         } else {
             //safety: an absent root is allowed, but then there should not be any nodes
             if !self.nodes.is_empty() {
