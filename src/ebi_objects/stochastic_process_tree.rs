@@ -34,7 +34,7 @@ pub struct StochasticProcessTree {
     activity_key: ActivityKey,
     pub(crate) tree: Vec<TreeNode>,
 
-    /// Weights must be strictly positive; no deadlocks or livelocks in trees. Index are transitions, not nodes.
+    /// Weights must be strictly positive; no deadlocks or livelocks in trees. Indices are transitions, not nodes.
     transition_2_weight: Vec<Fraction>,
 
     /// Weights must be strictly positive.
@@ -89,11 +89,9 @@ impl StochasticProcessTree {
     }
 
     fn remove_internal_do(&mut self, node: usize) {
-        if matches!(
-            self.get(node),
-            Some(TreeNode::Tau) | Some(TreeNode::Activity(_))
-        ) {
-            self.transition_2_weight.remove(node);
+        if let Some(transition) = self.node_to_transition(node) {
+            //node is a transition; remove its weight
+            self.transition_2_weight.remove(transition);
         }
         self.tree.remove(node);
     }
