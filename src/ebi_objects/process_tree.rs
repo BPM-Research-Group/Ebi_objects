@@ -12,9 +12,10 @@ pub const HEADER: &str = "process tree";
 
 /// A process tree is a block-structured process model.
 ///
-/// Its implementation keeps a list of nodes.
 /// A tree is valid if every operator node has at least one child (loops: two), there is only one node without parent, and there is no shortage or surplus of children.
-/// All methods whose name does not end in `_unchecked` guarantee that if they do not return an error, the tree is valid.
+/// All methods whose name does not end in `_unchecked` guarantee that either the tree is valid or they return an error.
+///
+/// Please note that the only way to obtain mutable references to nodes is through [ProcessTree::edit()] and [ProcessTree::edit_unchecked()].
 ///
 /// Equality, ordering and hashing are robust to reordering of children when the operator allows it.
 #[derive(Debug, ActivityKey, Clone, Default)]
@@ -35,15 +36,18 @@ pub struct ProcessTree {
 impl ProcessTree {
     /// Create a new process tree with the given activity key and node array.
     ///
-    /// Returns an error when the tree is not valid.
+    /// Returns an error when the tree is not [valid](ProcessTree).
+    ///
+    /// See also: [ProcessTree::new_unchecked()].
     pub fn new(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Result<Self> {
         let result = Self::new_unchecked(activity_key, tree);
         result.validate()?;
         Ok(result)
     }
 
-    /// It is the responsibility of the caller to ensure the tree is valid.
-    /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+    /// It is the responsibility of the caller to ensure the tree is [valid](ProcessTree).
+    ///
+    /// See also: [ProcessTree::new_unchecked()].
     pub fn new_unchecked(activity_key: ActivityKey, tree: Vec<TreeNode>) -> Self {
         Self {
             activity_key,
@@ -312,13 +316,13 @@ macro_rules! tree {
                 self.tree.iter()
             }
 
-            /// Returns whether the tree is valid (see [$t]).
+            #[doc= concat!("Checks whether the tree is [valid](", stringify!($t), ") and returns an error if it is not.")]
             pub fn validate(&self) -> $crate::anyhow::Result<()> {
                 Self::validate_slice(&self.tree)?;
                 self.validate_internal()
             }
 
-            /// Checks whether the tree is valid (see [crate::ProcessTree]) and returns an error if it is not.
+            #[doc= concat!("Checks whether the tree is [valid](", stringify!($t), ") and returns an error if it is not.")]
             pub fn validate_slice(tree: &[$crate::TreeNode]) -> $crate::anyhow::Result<()> {
                 if tree.is_empty() {
                     return Ok(());
@@ -538,8 +542,9 @@ impl TreeNode {
     }
 
     /// Sets the number of children of the node.
-    /// Returns an error if `number_of_children` is zero or if the node is not an operator node.
-    /// However, it is the responsibility of the caller to ensure the tree of which the node is part is valid.
+    ///
+    /// Returns an error if `number_of_children` is zero (loop: one or zero), or if the node is not an operator node.
+    /// However, it is the responsibility of the caller to ensure the tree of which the node is a part remains [valid](ProcessTree).
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
         match self {
             Self::Operator(_, _) if number_of_children == 0 => {
@@ -571,7 +576,7 @@ impl TreeNode {
     /// Set the node to the given operator type.
     ///
     /// Has no effect if the node is a leaf.
-    /// Has no effect and returns an error if the tree would become invalid.
+    /// Has no effect and returns an error if the tree would become [invalid](ProcessTree).
     pub fn set_operator(&mut self, operator: TreeOperator) -> Result<()> {
         if self.is_leaf() {
             return Ok(());
@@ -588,7 +593,7 @@ impl TreeNode {
     /// If the node is an operator, set it to the given operator type.
     /// Otherwise, has no effect.
     ///
-    /// It is the responsibility of the caller to ensure that the tree remains valid.
+    /// It is the responsibility of the caller to ensure that the tree remains [valid](ProcessTree).
     pub fn set_operator_unchecked(&mut self, operator: TreeOperator) {
         if let TreeNode::Operator(op, _) = self {
             *op = operator;
@@ -653,7 +658,7 @@ impl TreeNode {
         }
     }
 
-    /// Verify whether the node is valid and return an error if it is not.
+    /// Verify whether the node is [valid](ProcessTree) and return an error if it is not.
     pub fn validate(&self) -> Result<()> {
         match self {
             TreeNode::Activity(_) | TreeNode::Tau => Ok(()),
@@ -745,9 +750,13 @@ pub(crate) mod edit {
     impl ProcessTree {
         /// Perform any change on the process tree.
         ///
-        /// This method is intended to perform multiple edits efficiently.
-        /// This method will return an error if the remaining tree is invalid.
-        /// In case an error is returned, the tree may be in an invalid state.
+        /// This method is intended to perform multiple edits efficiently, however it performs checks afterwards.
+        /// As such, it may be more efficient to use more specific edit methods when available.
+        ///
+        /// This method will return an error if the remaining tree is [invalid](ProcessTree).
+        /// In case an error is returned, the tree may be left in an [invalid](ProcessTree) state.
+        ///
+        /// See also: [ProcessTree::edit_unchecked()].
         pub fn edit(
             &mut self,
             closure: impl FnOnce(&mut Vec<TreeNode>) -> Result<()>,
@@ -760,18 +769,25 @@ pub(crate) mod edit {
         /// Change the process tree in a closure.
         ///
         /// This method is intended to perform multiple edits efficiently.
-        /// It is the responsibility of the caller to ensure that the tree remains valid.
+        /// It is the responsibility of the caller to ensure that the tree remains [valid](ProcessTree).
+        ///
+        /// See also: [ProcessTree::edit()].
         pub fn edit_unchecked(&mut self, closure: impl FnOnce(&mut Vec<TreeNode>)) {
             closure(&mut self.tree);
             self.clear_caches();
         }
 
         /// Removes and returns the node and all of its children from the tree.
+        ///
+        /// Has no effect and returns an error if the tree would become [invalid](ProcessTree).
+        ///
         /// If the non-loop parent of the node has no children left, it is removed (but not returned).
         /// If the loop parent of the node has less than two children left, returns an error.
         /// Returns an error if the node does not exist.
         ///
         /// Note that if the first child of a loop is removed, the second child moves to the first position, which makes it a body rather than a redo.
+        ///
+        /// See also: [ProcessTree::remove()].
         pub fn remove_recursive(&mut self, node: usize) -> Result<Vec<TreeNode>> {
             if node >= self.len() {
                 return Err(anyhow!("Node {node} does not exist."));
@@ -821,11 +837,13 @@ pub(crate) mod edit {
         }
 
         /// Removes and returns the node from the tree (recursively) and replace it with another single node (recursively).
-        /// Returns an error if the node does not exist, or if `with` is invalid.
+        /// Returns an error if the node does not exist, or if `with` is [invalid](ProcessTree).
         /// Returns the removed node (recursively) if successful.
         /// If `with` is empty, removes the node recursively without replacing it (which may fail).
         ///
         /// That is, an operator must have >= 1 children, and there must not be multiple roots.
+        ///
+        /// See also: [ProcessTree::replace_unchecked()].
         pub fn replace<W>(&mut self, node: usize, with: W) -> Result<Vec<TreeNode>>
         where
             W: IntoIterator<Item = TreeNode>,
@@ -844,9 +862,11 @@ pub(crate) mod edit {
         /// Removes and returns the node from the tree (recursively) and replace it with another single node (recursively).
         /// Returns the removed node (recursively) if successful.
         ///
-        /// It is the responsibility of the caller to ensure the `with` parameter contains a valid non-empty tree.
+        /// It is the responsibility of the caller to ensure the `with` parameter contains a [valid](ProcessTree) non-empty tree.
         /// That is, an operator must have >= 1 children, and there must not be multiple roots.
-        /// Providing an invalid `with` will result in an invalid tree.
+        /// Providing an [invalid](ProcessTree) `with` will result in an [invalid](ProcessTree) tree.
+        ///
+        /// See also: [ProcessTree::replace()].
         pub fn replace_unchecked<W>(&mut self, node: usize, with: W) -> Vec<TreeNode>
         where
             W: IntoIterator<Item = TreeNode>,
@@ -861,12 +881,39 @@ pub(crate) mod edit {
     macro_rules! tree_edit {
         ($t:tt) => {
             impl $t {
-                /// Removes a node from the tree.
-                ///
-                /// If the node has children, these will be moved to the parent of the removed node (return an error if there is no such parent.).
-                /// If the parent has no children left, it will be removed as well.
-                /// Returns an error if the node does not exist.
-                /// If an error is returned, the tree may be left in an invalid state.
+                #[doc = concat!("Set the node to the given operator type.
+                
+Has no effect if the node is a leaf.
+Has no effect and returns an error if the tree would become [invalid](", stringify!($t), ").")]
+                pub fn set_operator(
+                    &mut self,
+                    node: usize,
+                    operator: $crate::TreeOperator,
+                ) -> Result<()> {
+                    let node = self
+                        .tree
+                        .get_mut(node)
+                        .ok_or_else(|| $crate::anyhow::anyhow!("Node {node} does not exist."))?;
+                    node.set_operator(operator)
+                }
+
+                #[doc = concat!("If the node is an operator, set it to the given operator type. Otherwise, has no effect.",
+                "\n\n",
+                "It is the responsibility of the caller to ensure that the tree remains [invalid](", stringify!($t), "). May panic if the node does not exist.")]
+                pub fn set_operator_unchecked(
+                    &mut self,
+                    node: usize,
+                    operator: $crate::TreeOperator,
+                ) {
+                    self.tree[node].set_operator_unchecked(operator)
+                }
+
+                #[doc = concat!("Removes a node from the tree.",
+                "\n\n",
+                "If the node has children, these will be moved to the parent of the removed node (return an error if there is no such parent.). If the parent has no children left, it will be removed as well. Returns an error if the node does not exist.
+                If an error is returned, the tree may be left in an [invalid](", stringify!($t), ") state.",
+                "\n\n",
+                "See also: [", stringify!($t), "::remove_recursive()].")]
                 pub fn remove(&mut self, node: usize) -> $crate::anyhow::Result<()> {
                     self.remove_internal(node)?;
                     self.clear_caches();

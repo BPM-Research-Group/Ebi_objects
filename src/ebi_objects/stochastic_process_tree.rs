@@ -29,6 +29,8 @@ use std::{fmt::Display, sync::OnceLock};
 
 pub const HEADER: &str = "stochastic process tree";
 
+/// A tree is valid if every operator node has at least one child (loops: two), there is only one node without parent, there is no shortage or surplus of children or weights, and every weight is positive.
+/// All methods whose name does not end in `_unchecked` guarantee that either the tree is valid or they return an error.
 #[derive(Debug, ActivityKey, Clone, Default)]
 pub struct StochasticProcessTree {
     activity_key: ActivityKey,
