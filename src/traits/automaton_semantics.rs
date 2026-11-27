@@ -120,7 +120,7 @@ impl<T> IndexMut<&AutomatonState> for Vec<T> {
     }
 }
 
-/// Constructs an automaton state of an usize.
+/// Constructs an automaton state of a usize.
 #[macro_export]
 macro_rules! a {
     ($u:expr) => {

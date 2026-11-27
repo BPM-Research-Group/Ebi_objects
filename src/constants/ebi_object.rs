@@ -1,6 +1,7 @@
 use crate::{
     BusinessProcessModelAndNotation, EventLogPython, EventLogTraceAttributes,
-    PortableDocumentFormat, PortableNetworkGraphics, StochasticNondeterministicFiniteAutomaton,
+    PortableDocumentFormat, PortableNetworkGraphics, ProcessTree,
+    StochasticNondeterministicFiniteAutomaton,
     constants::ebi_object_type::EbiObjectType,
     ebi_objects::{
         deterministic_finite_automaton::DeterministicFiniteAutomaton,
@@ -12,7 +13,7 @@ use crate::{
         finite_stochastic_partially_ordered_language::FiniteStochasticPartiallyOrderedLanguage,
         labelled_petri_net::LabelledPetriNet, language_of_alignments::LanguageOfAlignments,
         partially_ordered_workflow_language::PartiallyOrderedWorkflowLanguage,
-        process_tree::ProcessTree, scalable_vector_graphics::ScalableVectorGraphics,
+        scalable_vector_graphics::ScalableVectorGraphics,
         stochastic_deterministic_finite_automaton::StochasticDeterministicFiniteAutomaton,
         stochastic_directly_follows_model::StochasticDirectlyFollowsModel,
         stochastic_labelled_petri_net::StochasticLabelledPetriNet,

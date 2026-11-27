@@ -59,6 +59,7 @@ pub mod conversions {
     pub mod to_stochastic_process_tree;
 }
 
+#[doc(hidden)]
 /// Object structs.
 pub mod ebi_objects {
     pub mod business_process_model_and_notation;
