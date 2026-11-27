@@ -208,10 +208,13 @@ pub use int;
 /// ```
 #[macro_export]
 macro_rules! tloop {
-    ($($opt:expr),+) => {{
+    ($body:expr, $($opt:expr),+) => {{
         let mut activity_key = $crate::ActivityKey::default();
         let mut tree = vec![];
-        let mut len = 0;
+        let mut len = 1;
+        let body = $body;
+        let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);
+        tree.extend(body.into_iter().map(|node| if let $crate::TreeNode::Activity(act) = node {$crate::TreeNode::Activity(translator.translate_activity(&act))} else {*node}));
         $(
             let opt = $opt;
             let translator = $crate::ActivityKeyTranslator::new($crate::ebi_activity_key::HasActivityKey::activity_key(&opt), &mut activity_key);

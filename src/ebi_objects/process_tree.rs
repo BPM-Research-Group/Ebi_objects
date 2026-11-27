@@ -484,16 +484,22 @@ impl TreeNode {
     /// Sets the number of children of the node.
     /// Returns an error if `number_of_children` is zero or if the node is not an operator node.
     pub fn set_number_of_children(&mut self, number_of_children: usize) -> Result<()> {
-        if let Self::Operator(_, old_number_of_children) = self {
-            if number_of_children == 0 {
-                return Err(anyhow!("Cannot set a node to zero children."));
+        match self {
+            Self::Operator(_, _) if number_of_children == 0 => {
+                Err(anyhow!("Cannot set a node to zero children."))
             }
-            *old_number_of_children = number_of_children;
-            Ok(())
-        } else {
-            Err(anyhow!(
-                "Attempted to alter the number of children of a leaf (activity or a tau)."
-            ))
+            Self::Activity(_) | Self::Tau => Err(anyhow!(
+                "Cannot set the number of children of a leaf (activity or a tau)."
+            )),
+            Self::Operator(TreeOperator::Loop, old_number_of_children)
+                if number_of_children < 2 =>
+            {
+                Err(anyhow!("A loop must have at least two children."))
+            }
+            Self::Operator(_, old_number_of_children) => {
+                *old_number_of_children = number_of_children;
+                Ok(())
+            }
         }
     }
 
@@ -963,7 +969,7 @@ pub mod io {
         \\item The word `tau';
         \\item The name of an operator (`sequence', `xor', `concurrent', `loop', `interleaved', or `or') on its own line.
         The line thereafter contains the number of children of the node, after which the nodes are given.
-        An operator node must have at least one child.
+        An operator node must have at least one child (a loop must have at least two).
     \\end{itemize}
     Indentation of nodes is allowed, but not mandatory.
     A tree with the empty language is represented by a second empty line.
@@ -2585,5 +2591,49 @@ mod tests {
 
         execute_transition(&tree, &mut state, FIN).unwrap();
         assert_eq!(get_enabled_transitions(&tree, &state), [0; 0]);
+    }
+
+    #[test]
+    fn single_child_loop_or_enabled_leaf_can_start_fresh_iteration() {
+        let tree = tloop!(or!(activity!("a"), seq!(activity!("b"), activity!("c"))));
+
+        const A: usize = 0;
+        const B: usize = 1;
+        const C: usize = 2;
+        const FIN: usize = 3;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        // b may belong to the current iteration, or open iteration 2.
+        // In iteration 2, `a` is still available as the other or-branch.
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, C]);
+
+        execute_transition(&tree, &mut state, A).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [C]);
+
+        execute_transition(&tree, &mut state, C).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+    }
+
+    #[test]
+    fn nested_single_child_loops_outer_restart() {
+        let tree = tloop!(con!(tloop!(activity!("a")), activity!("b")));
+
+        const A: usize = 0;
+        const B: usize = 1;
+        const FIN: usize = 2;
+
+        let mut state = get_initial_state(&tree).unwrap();
+        execute_transition(&tree, &mut state, A).unwrap();
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
+
+        // `a` can restart the inner loop (same outer iteration) or the outer loop (new iteration).
+        execute_transition(&tree, &mut state, A).unwrap();
+        execute_transition(&tree, &mut state, B).unwrap();
+        assert_eq!(get_enabled_transitions(&tree, &state), [A, B, FIN]);
     }
 }
