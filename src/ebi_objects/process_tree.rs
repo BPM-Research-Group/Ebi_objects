@@ -328,7 +328,7 @@ macro_rules! tree {
                 self.validate_internal()
             }
 
-            /// Checks whether the tree is valid (see [ProcessTree]) and returns an error if it is not.
+            /// Checks whether the tree is valid (see [crate::ProcessTree]) and returns an error if it is not.
             pub fn validate_slice(tree: &[TreeNode]) -> Result<()> {
                 if tree.is_empty() {
                     return Ok(());
@@ -718,7 +718,8 @@ impl Display for TreeOperator {
     }
 }
 
-pub mod edit {
+/// Edit methods for process trees.
+pub(crate) mod edit {
     use crate::{
         ProcessTree, TreeNode,
         anyhow::{Result, anyhow},
@@ -1101,7 +1102,7 @@ pub(crate) mod graph {
 }
 
 /// Input and output for process trees.
-pub mod io {
+mod io {
     use strum::IntoEnumIterator;
 
     use crate::{
@@ -1325,7 +1326,9 @@ pub mod io {
 
 /// Semantics belongs in the Ebi crate, not here in Ebi_objects,
 /// however we use them to create a state space in several conversions.
-/// As such, its bases functions are here.
+/// As such, its basic methods are here.
+/// 
+/// If you have access to the Ebi crate, it is recommended to use the methods provided by EbiTraitSemantics.
 pub mod semantics {
     use crate::{
         Activity, ProcessTree, TreeNode, TreeOperator,
@@ -1334,6 +1337,14 @@ pub mod semantics {
     use std::ops::{Index, IndexMut};
     use strum_macros::EnumIs;
 
+    /// A [TreeMarking] represents a state of a process tree (or similar).
+    #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+    pub struct TreeMarking {
+        pub terminated: bool,
+        pub states: Vec<NodeState>,
+    }
+
+    /// A [NodeState] represents the state of a single node in a process tree.
     #[derive(
         Copy, Clone, strum_macros::Display, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, EnumIs,
     )]
@@ -1348,13 +1359,9 @@ pub mod semantics {
         Closed,
     }
 
-    #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
-    pub struct TreeMarking {
-        pub terminated: bool,
-        pub states: Vec<NodeState>,
-    }
-
     impl TreeMarking {
+
+        /// Create a new tree marking with `size` the number of nodes in the tree.
         pub fn new(size: usize) -> Self {
             Self {
                 terminated: false,
@@ -1362,6 +1369,7 @@ pub mod semantics {
             }
         }
 
+        /// Obtain the state of a node from the tree in the marking.
         pub fn get(&self, index: usize) -> Option<&NodeState> {
             self.states.get(index)
         }
@@ -1385,6 +1393,8 @@ pub mod semantics {
     /// To avoid confusion in the `Ebi` crate, these methods are not implemented on the struct, but merely add it to the file.
     macro_rules! tree_semantics {
     ($t:ident) => {
+
+        /// Returns the initial state of the tree, if there is any.
         pub fn get_initial_state(tree: &$t) -> Option<TreeMarking> {
             if tree.tree.is_empty() {
                 None
@@ -1468,6 +1478,7 @@ pub mod semantics {
             state[node] == NodeState::Enabled
         }
 
+        /// Returns whether a node can execute.
         pub(crate) fn can_execute(tree: &$t, state: &TreeMarking, node: usize) -> bool {
             match tree.get(node) {
                 Some(TreeNode::Activity(_)) => {}
@@ -1849,10 +1860,12 @@ pub mod semantics {
             }
         }
 
+        /// Returns the number of transitions in the tree.
         pub fn get_number_of_transitions(tree: &$t) -> usize {
-            tree.tree.iter().filter(|node| node.is_leaf()).count() + 1 //the last transition is explicit termination, which is required by the semantics of Ebi
+            tree.number_of_leaves() + 1 //the last transition is explicit termination, which is required by the semantics of Ebi
         }
 
+        /// Returns the transitions that are enabled in the given [TreeMarking].
         pub fn get_enabled_transitions(tree: &$t, state: &TreeMarking) -> Vec<$crate::TransitionIndex> {
             let mut result = vec![];
 
@@ -1869,10 +1882,12 @@ pub mod semantics {
             result
         }
 
+        /// Returns whether the given [TreeMarking] is a final marking.
         pub fn is_final_state(_tree: &$t, state: &TreeMarking) -> bool {
             state.terminated
         }
 
+        /// Returns the activity of a given transition, if there is any.
         pub fn get_transition_activity(tree: &$t, transition: $crate::TransitionIndex) -> Option<Activity> {
             let node = tree.transition_to_node(transition)?;
             match tree.tree[node] {
@@ -1898,7 +1913,7 @@ pub mod semantics {
             Ok(())
         }
 
-        /// Execute the given transition.
+        /// Executes the given transition.
         ///
         /// For performance reasons, this method does not check whether the transition is actually enabled.
         /// It is the responsibility of the caller to ensure the transition is enabled.
